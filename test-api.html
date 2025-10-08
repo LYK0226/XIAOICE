@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gemini API 测试</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Arial', 'Microsoft YaHei', sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+        }
+        
+        .status {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+        
+        .status.pending {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .input-group {
+            margin-bottom: 20px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #333;
+            font-weight: bold;
+        }
+        
+        input[type="text"], textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        input[type="text"]:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        textarea {
+            min-height: 80px;
+            resize: vertical;
+            font-family: inherit;
+        }
+        
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: transform 0.2s;
+            width: 100%;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+        }
+        
+        button:active {
+            transform: translateY(0);
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            display: none;
+        }
+        
+        .response.show {
+            display: block;
+        }
+        
+        .response-text {
+            color: #333;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+        
+        .info {
+            background: #e7f3ff;
+            border-left: 4px solid #2196F3;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .info-title {
+            font-weight: bold;
+            color: #1976D2;
+            margin-bottom: 5px;
+        }
+        
+        .info-text {
+            color: #555;
+            font-size: 14px;
+        }
+        
+        code {
+            background: #f4f4f4;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: 'Courier New', monospace;
+            color: #d63384;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🤖 Gemini API 测试</h1>
+        <p class="subtitle">测试您的 Gemini API 密钥是否正确配置</p>
+        
+        <div class="info">
+            <div class="info-title">📝 使用说明</div>
+            <div class="info-text">
+                1. 在 <code>script.js</code> 第 21 行填入您的 API 密钥<br>
+                2. 或在下方输入框临时测试<br>
+                3. 点击"测试连接"验证 API 是否可用
+            </div>
+        </div>
+        
+        <div id="status" class="status pending">
+            ⏳ 等待测试...
+        </div>
+        
+        <div class="input-group">
+            <label for="apiKey">Gemini API 密钥</label>
+            <input type="text" id="apiKey" placeholder="粘贴您的 API 密钥（可选，测试用）">
+        </div>
+        
+        <div class="input-group">
+            <label for="testMessage">测试消息</label>
+            <textarea id="testMessage" placeholder="输入要发送给 AI 的测试消息...">你好！请用中文自我介绍一下。</textarea>
+        </div>
+        
+        <button id="testBtn" onclick="testGeminiAPI()">🚀 测试连接</button>
+        
+        <div id="response" class="response">
+            <strong>AI 回复：</strong>
+            <div id="responseText" class="response-text"></div>
+        </div>
+    </div>
+    
+    <script>
+        // 从 script.js 读取的 API 密钥（如果有）
+        const DEFAULT_API_KEY = 'YOUR_API_KEY_HERE';
+        
+        async function testGeminiAPI() {
+            const statusEl = document.getElementById('status');
+            const responseEl = document.getElementById('response');
+            const responseTextEl = document.getElementById('responseText');
+            const testBtn = document.getElementById('testBtn');
+            const apiKeyInput = document.getElementById('apiKey').value.trim();
+            const testMessage = document.getElementById('testMessage').value.trim();
+            
+            // 获取 API 密钥（优先使用输入框的）
+            const apiKey = apiKeyInput || DEFAULT_API_KEY;
+            
+            if (!testMessage) {
+                statusEl.className = 'status error';
+                statusEl.textContent = '❌ 请输入测试消息';
+                return;
+            }
+            
+            if (!apiKey || apiKey === 'YOUR_API_KEY_HERE') {
+                statusEl.className = 'status error';
+                statusEl.textContent = '❌ 请先配置 API 密钥';
+                responseEl.classList.remove('show');
+                return;
+            }
+            
+            // 显示测试中状态
+            statusEl.className = 'status pending';
+            statusEl.textContent = '⏳ 正在测试连接...';
+            responseEl.classList.remove('show');
+            testBtn.disabled = true;
+            testBtn.textContent = '测试中...';
+            
+            try {
+                const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        contents: [{
+                            parts: [{
+                                text: testMessage
+                            }]
+                        }]
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(`API Error ${response.status}: ${errorData.error?.message || 'Unknown error'}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.candidates && data.candidates.length > 0) {
+                    const aiResponse = data.candidates[0].content.parts[0].text;
+                    statusEl.className = 'status success';
+                    statusEl.textContent = '✅ API 连接成功！';
+                    responseTextEl.textContent = aiResponse;
+                    responseEl.classList.add('show');
+                } else {
+                    throw new Error('No response from Gemini');
+                }
+            } catch (error) {
+                console.error('Test error:', error);
+                statusEl.className = 'status error';
+                statusEl.textContent = `❌ 测试失败: ${error.message}`;
+                responseEl.classList.remove('show');
+            } finally {
+                testBtn.disabled = false;
+                testBtn.textContent = '🚀 测试连接';
+            }
+        }
+        
+        // 按 Enter 键发送
+        document.getElementById('testMessage').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter' && e.ctrlKey) {
+                testGeminiAPI();
+            }
+        });
+    </script>
+</body>
+</html>
