@@ -26,6 +26,9 @@
         </div>
         
         <div class="sidebar-footer">
+            <a href="scrollbar-test.html" target="_blank" style="display: block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 10px; text-align: center; border-radius: 8px; margin-bottom: 10px; text-decoration: none; font-weight: bold;">
+                🔍 测试滚动条
+            </a>
             <button class="sidebar-btn" id="newChat"><i class="fas fa-plus"></i> 新对话</button>
             <button class="sidebar-btn" id="newImages"><i class="fas fa-image"></i> 新图像</button>
             <button class="sidebar-btn" id="myCopilots"><i class="fas fa-robot"></i> 我的副驾驶</button>
@@ -161,6 +164,15 @@
             
             <!-- Background Settings Tab -->
             <div class="settings-content" id="backgroundTab">
+                <!-- 自定义滚动进度指示器 -->
+                <div style="position: sticky; top: 0; z-index: 10; background: white; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 2px solid #e0e0e0;">
+                    <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px; text-align: center; border-radius: 8px; font-weight: bold; font-size: 13px; margin-bottom: 8px;">
+                        ⬇️ 用鼠标滚轮向下滚动查看更多选项！ ⬇️
+                    </div>
+                    <div style="background: #e9ecef; height: 6px; border-radius: 3px; overflow: hidden;">
+                        <div id="scrollProgress" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; width: 0%; transition: width 0.3s; border-radius: 3px;"></div>
+                    </div>
+                </div>
                 <div class="background-settings">
                     <h3>背景类型 / Background Type</h3>
                     <div class="bg-type-selector">

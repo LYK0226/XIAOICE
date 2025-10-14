@@ -417,7 +417,7 @@ body {
     position: absolute;
     bottom: 80px;
     right: 20px;
-    width: 320px;
+    width: 360px;
     height: 350px;
     background: white;
     border-radius: 12px;
@@ -426,6 +426,8 @@ body {
     display: flex;
     flex-direction: column;
     animation: slideUp 0.3s ease-out;
+    overflow: hidden !important;
+    box-sizing: border-box;
 }
 
 @keyframes slideUp {
@@ -442,18 +444,22 @@ body {
 .emoji-header {
     display: flex;
     justify-content: space-around;
-    padding: 12px 10px;
+    padding: 10px 5px;
     border-bottom: 1px solid #e0e0e0;
     background: #f8f9fa;
     border-radius: 12px 12px 0 0;
+    flex-shrink: 0;
+    overflow: hidden;
+    box-sizing: border-box;
 }
 
 .emoji-tab {
-    font-size: 24px;
+    font-size: 22px;
     cursor: pointer;
-    padding: 5px 10px;
+    padding: 5px 8px;
     border-radius: 8px;
     transition: background 0.2s;
+    flex-shrink: 0;
 }
 
 .emoji-tab:hover {
@@ -466,50 +472,88 @@ body {
 
 .emoji-content {
     flex: 1;
-    overflow-y: auto;
-    padding: 15px;
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+    padding: 12px;
+    padding-right: 5px;
     display: grid;
-    grid-template-columns: repeat(8, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     gap: 8px;
     align-content: start;
+    max-height: 280px;
+    box-sizing: border-box;
 }
 
 .emoji-item {
-    font-size: 28px;
+    font-size: 26px;
     cursor: pointer;
     text-align: center;
-    padding: 8px;
-    border-radius: 8px;
+    padding: 4px;
+    border-radius: 6px;
     transition: all 0.2s;
     user-select: none;
+    width: 100%;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    overflow: hidden;
 }
 
 .emoji-item:hover {
     background: #f0f0f0;
-    transform: scale(1.2);
-}
-
-.emoji-item:active {
     transform: scale(1.1);
 }
 
-/* Scrollbar styling for emoji picker */
+.emoji-item:active {
+    transform: scale(1.0);
+}
+
+/* 超级明显的橙红色表情选择器滚动条 - 可以滚动！ */
 .emoji-content::-webkit-scrollbar {
-    width: 6px;
+    width: 18px !important;
+    background: #ffffff !important;
 }
 
 .emoji-content::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 10px;
+    background: linear-gradient(to bottom, #ffd89b 0%, #19547b 100%) !important;
+    border-radius: 10px !important;
+    margin: 8px 0 !important;
+    border: 2px solid #fff !important;
+    box-shadow: inset 0 0 8px rgba(0,0,0,0.2) !important;
 }
 
 .emoji-content::-webkit-scrollbar-thumb {
-    background: #888;
-    border-radius: 10px;
+    background: linear-gradient(180deg, #ff6b6b 0%, #ff8e53 50%, #ffd93d 100%) !important;
+    border-radius: 10px !important;
+    border: 3px solid #ffffff !important;
+    min-height: 40px !important;
+    box-shadow: 0 0 20px rgba(255, 107, 107, 0.8), inset 0 2px 5px rgba(255, 255, 255, 0.5) !important;
 }
 
 .emoji-content::-webkit-scrollbar-thumb:hover {
-    background: #555;
+    background: linear-gradient(180deg, #ffd93d 0%, #ff8e53 50%, #ff6b6b 100%) !important;
+    box-shadow: 0 0 30px rgba(255, 211, 61, 1), inset 0 2px 8px rgba(255, 255, 255, 0.7) !important;
+    cursor: grab !important;
+}
+
+.emoji-content::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(180deg, #ee5a6f 0%, #ff6b35 50%, #ffca3a 100%) !important;
+    cursor: grabbing !important;
+}
+
+.emoji-content::-webkit-scrollbar-button {
+    display: block !important;
+    height: 18px !important;
+    background: linear-gradient(135deg, #ff6b6b 0%, #ff8e53 100%) !important;
+    border-radius: 9px !important;
+    border: 2px solid #fff !important;
+}
+
+.emoji-content::-webkit-scrollbar-button:hover {
+    background: linear-gradient(135deg, #ffd93d 0%, #ff8e53 100%) !important;
+    box-shadow: 0 0 15px rgba(255, 211, 61, 0.8) !important;
 }
 
 /* Avatar Modal Styles */
@@ -527,13 +571,34 @@ body {
 
 .modal-content {
     background-color: white;
-    margin: 5% auto;
+    margin: 3% auto;
     padding: 30px;
     border-radius: 12px;
-    width: 80%;
-    max-width: 600px;
+    width: 85%;
+    max-width: 800px;
+    max-height: 85vh;
+    overflow: visible;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
     animation: slideIn 0.3s;
+}
+
+/* Custom scrollbar for modal content */
+.modal-content::-webkit-scrollbar {
+    width: 10px;
+}
+
+.modal-content::-webkit-scrollbar-track {
+    background: #f8f9fa;
+    border-radius: 10px;
+}
+
+.modal-content::-webkit-scrollbar-thumb {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 10px;
+}
+
+.modal-content::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
 }
 
 @keyframes slideIn {
@@ -665,6 +730,18 @@ body {
 
 .settings-content {
     display: none;
+    height: 400px !important;
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+    padding-right: 15px !important;
+    scrollbar-width: thick !important;
+    scrollbar-color: #667eea #ffffff !important;
+}
+
+/* 确保滚动条永远可见 */
+.settings-content::-webkit-scrollbar {
+    -webkit-appearance: none !important;
+    appearance: none !important;
 }
 
 .settings-content.active {
@@ -672,11 +749,65 @@ body {
     animation: fadeIn 0.3s;
 }
 
+/* 超级明显的滚动条 - 20px 宽！ */
+.settings-content::-webkit-scrollbar {
+    width: 20px !important;
+    background: #f8f9fa !important;
+}
+
+.settings-content::-webkit-scrollbar-track {
+    background: linear-gradient(to right, #d0d0d0 0%, #e5e5e5 50%, #d0d0d0 100%) !important;
+    border-radius: 12px !important;
+    margin: 8px 0 !important;
+    border: 2px solid #c0c0c0 !important;
+    box-shadow: inset 0 0 10px rgba(0,0,0,0.15) !important;
+}
+
+.settings-content::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #667eea 0%, #764ba2 40%, #f093fb 80%, #667eea 100%) !important;
+    border-radius: 12px !important;
+    border: 4px solid #ffffff !important;
+    min-height: 100px !important;
+    box-shadow: 0 0 20px rgba(102, 126, 234, 0.9), inset 0 2px 5px rgba(255,255,255,0.5) !important;
+}
+
+.settings-content::-webkit-scrollbar-thumb:hover {
+    background: linear-gradient(180deg, #f093fb 0%, #764ba2 40%, #667eea 80%, #f093fb 100%) !important;
+    border-color: #f0f0f0 !important;
+    box-shadow: 0 0 30px rgba(240, 147, 251, 1), inset 0 2px 8px rgba(255,255,255,0.7) !important;
+    cursor: grab !important;
+}
+
+.settings-content::-webkit-scrollbar-thumb:active {
+    background: linear-gradient(180deg, #5568d3 0%, #6a3f91 50%, #e082ea 100%) !important;
+    cursor: grabbing !important;
+}
+
+.settings-content::-webkit-scrollbar-button {
+    display: block !important;
+    height: 20px !important;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+    border-radius: 10px !important;
+}
+
+.settings-content::-webkit-scrollbar-button:hover {
+    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%) !important;
+}
+
+.settings-content::-webkit-scrollbar-corner {
+    background: #f8f9fa !important;
+}
+
 /* Background Settings */
 .background-settings h3 {
-    font-size: 18px;
-    margin-bottom: 15px;
+    font-size: 16px;
+    margin-bottom: 12px;
+    margin-top: 15px;
     color: #333;
+}
+
+.background-settings h3:first-child {
+    margin-top: 0;
 }
 
 .background-settings h4 {
@@ -732,25 +863,25 @@ body {
 }
 
 /* Gradient Presets */
-.gradient-presets {
+.gradient-grid {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
-    gap: 15px;
+    gap: 12px;
     margin-bottom: 20px;
 }
 
 .gradient-item {
     cursor: pointer;
-    border: 3px solid #e0e0e0;
-    border-radius: 10px;
-    padding: 10px;
+    border: 2px solid #e0e0e0;
+    border-radius: 8px;
+    padding: 8px;
     transition: all 0.3s;
     text-align: center;
 }
 
 .gradient-item:hover {
     border-color: #667eea;
-    transform: scale(1.05);
+    transform: scale(1.03);
 }
 
 .gradient-item.active {
@@ -759,13 +890,13 @@ body {
 }
 
 .gradient-preview {
-    height: 80px;
+    height: 60px;
     border-radius: 6px;
-    margin-bottom: 8px;
+    margin-bottom: 6px;
 }
 
 .gradient-item span {
-    font-size: 13px;
+    font-size: 12px;
     color: #666;
     font-weight: 500;
 }
@@ -773,26 +904,27 @@ body {
 /* Custom Gradient */
 .custom-gradient {
     background: #f8f9fa;
-    padding: 15px;
+    padding: 12px;
     border-radius: 8px;
+    margin-bottom: 15px;
 }
 
 .color-input-group {
     display: flex;
     align-items: center;
     gap: 10px;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
 }
 
 .color-input-group label {
     flex: 1;
-    font-size: 14px;
+    font-size: 13px;
     color: #666;
 }
 
 .color-input-group input[type="color"] {
-    width: 60px;
-    height: 40px;
+    width: 50px;
+    height: 35px;
     border: 2px solid #e0e0e0;
     border-radius: 6px;
     cursor: pointer;
@@ -802,20 +934,20 @@ body {
 .color-presets {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
-    gap: 12px;
+    gap: 10px;
     margin-bottom: 20px;
 }
 
 .color-item {
-    height: 50px;
-    border-radius: 8px;
+    height: 45px;
+    border-radius: 6px;
     cursor: pointer;
-    border: 3px solid #e0e0e0;
+    border: 2px solid #e0e0e0;
     transition: all 0.3s;
 }
 
 .color-item:hover {
-    transform: scale(1.1);
+    transform: scale(1.05);
     border-color: white;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
@@ -827,22 +959,23 @@ body {
 
 .custom-color {
     background: #f8f9fa;
-    padding: 15px;
+    padding: 12px;
     border-radius: 8px;
     display: flex;
     align-items: center;
     gap: 10px;
+    margin-bottom: 15px;
 }
 
 .custom-color label {
     flex: 1;
-    font-size: 14px;
+    font-size: 13px;
     color: #666;
 }
 
 .custom-color input[type="color"] {
-    width: 60px;
-    height: 40px;
+    width: 50px;
+    height: 35px;
     border: 2px solid #e0e0e0;
     border-radius: 6px;
     cursor: pointer;
@@ -851,14 +984,14 @@ body {
 /* Background Image */
 .bg-image-preview {
     width: 100%;
-    height: 200px;
-    border: 3px dashed #e0e0e0;
-    border-radius: 10px;
+    height: 150px;
+    border: 2px dashed #e0e0e0;
+    border-radius: 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    margin-bottom: 15px;
+    margin-bottom: 12px;
     cursor: pointer;
     transition: all 0.3s;
     background-size: cover;
@@ -872,8 +1005,8 @@ body {
 }
 
 .bg-image-preview i {
-    font-size: 48px;
-    margin-bottom: 10px;
+    font-size: 36px;
+    margin-bottom: 8px;
 }
 
 .bg-image-preview.has-image {
@@ -882,13 +1015,13 @@ body {
 
 /* Apply and Reset Buttons */
 .apply-btn {
-    padding: 10px 20px;
+    padding: 8px 16px;
     border: none;
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: white;
     border-radius: 6px;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 13px;
     transition: opacity 0.3s;
 }
 
@@ -898,7 +1031,7 @@ body {
 
 .reset-btn {
     width: 100%;
-    padding: 12px;
+    padding: 10px;
     margin-top: 25px;
     border: 2px solid #e0e0e0;
     background: white;

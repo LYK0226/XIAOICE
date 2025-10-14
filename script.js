@@ -959,193 +959,194 @@ document.addEventListener('click', (e) => {
     }
 });
 
-// Background Customization Functionality
-const settingsTabs = document.querySelectorAll('.settings-tab');
-const settingsContents = document.querySelectorAll('.settings-content');
-const bgTypeBtns = document.querySelectorAll('.bg-type-btn');
-const bgOptions = document.querySelectorAll('.bg-option');
-const gradientItems = document.querySelectorAll('.gradient-item');
-const colorItems = document.querySelectorAll('.color-item');
-const bgImageInput = document.getElementById('bgImageInput');
-const bgImagePreview = document.getElementById('bgImagePreview');
-const applyCustomGradient = document.getElementById('applyCustomGradient');
-const applyCustomColor = document.getElementById('applyCustomColor');
-const clearBgImage = document.getElementById('clearBgImage');
-const resetBackground = document.getElementById('resetBackground');
+// Load saved language preference and background on page load
+window.addEventListener('DOMContentLoaded', () => {
+    // Background Customization Functionality
+    const settingsTabs = document.querySelectorAll('.settings-tab');
+    const settingsContents = document.querySelectorAll('.settings-content');
+    const bgTypeBtns = document.querySelectorAll('.bg-type-btn');
+    const bgOptions = document.querySelectorAll('.bg-option');
+    const gradientItems = document.querySelectorAll('.gradient-item');
+    const colorItems = document.querySelectorAll('.color-item');
+    const bgImageInput = document.getElementById('bgImageInput');
+    const bgImagePreview = document.getElementById('bgImagePreview');
+    const applyCustomGradient = document.getElementById('applyCustomGradient');
+    const applyCustomColor = document.getElementById('applyCustomColor');
+    const clearBgImage = document.getElementById('clearBgImage');
+    const resetBackground = document.getElementById('resetBackground');
 
-// Switch between settings tabs
-settingsTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-        const targetTab = tab.getAttribute('data-tab');
-        
-        // Update active tab
-        settingsTabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        
-        // Update active content
-        settingsContents.forEach(content => {
-            content.classList.remove('active');
-            if (content.id === targetTab + 'Tab') {
-                content.classList.add('active');
-            }
+    // Switch between settings tabs
+    settingsTabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const targetTab = tab.getAttribute('data-tab');
+            
+            // Update active tab
+            settingsTabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            // Update active content
+            settingsContents.forEach(content => {
+                content.classList.remove('active');
+                if (content.id === targetTab + 'Tab') {
+                    content.classList.add('active');
+                }
+            });
         });
     });
-});
 
-// Switch between background types
-bgTypeBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        const bgType = btn.getAttribute('data-type');
-        
-        // Update active button
-        bgTypeBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        
-        // Show corresponding options
-        bgOptions.forEach(option => {
-            option.classList.remove('active');
-            if (option.id === bgType + 'Options') {
-                option.classList.add('active');
-            }
+    // Switch between background types
+    bgTypeBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            const bgType = btn.getAttribute('data-type');
+            
+            // Update active button
+            bgTypeBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            
+            // Show corresponding options
+            bgOptions.forEach(option => {
+                option.classList.remove('active');
+                if (option.id === bgType + 'Options') {
+                    option.classList.add('active');
+                }
+            });
         });
     });
-});
 
-// Apply gradient presets
-gradientItems.forEach(item => {
-    item.addEventListener('click', () => {
-        const gradient = item.getAttribute('data-gradient');
+    // Apply gradient presets
+    gradientItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const gradient = item.getAttribute('data-gradient');
+            
+            // Update active state
+            gradientItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            
+            // Apply gradient
+            document.body.style.background = gradient;
+            
+            // Save to localStorage
+            localStorage.setItem('bgType', 'gradient');
+            localStorage.setItem('bgValue', gradient);
+        });
+    });
+
+    // Apply custom gradient
+    applyCustomGradient.addEventListener('click', () => {
+        const color1 = document.getElementById('gradientColor1').value;
+        const color2 = document.getElementById('gradientColor2').value;
+        const gradient = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
         
-        // Update active state
-        gradientItems.forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
-        
-        // Apply gradient
         document.body.style.background = gradient;
         
         // Save to localStorage
         localStorage.setItem('bgType', 'gradient');
         localStorage.setItem('bgValue', gradient);
+        
+        // Show confirmation
+        alert('自定义渐变已应用！/ Custom gradient applied!');
     });
-});
 
-// Apply custom gradient
-applyCustomGradient.addEventListener('click', () => {
-    const color1 = document.getElementById('gradientColor1').value;
-    const color2 = document.getElementById('gradientColor2').value;
-    const gradient = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
-    
-    document.body.style.background = gradient;
-    
-    // Save to localStorage
-    localStorage.setItem('bgType', 'gradient');
-    localStorage.setItem('bgValue', gradient);
-    
-    // Show confirmation
-    alert('自定义渐变已应用！/ Custom gradient applied!');
-});
+    // Apply solid color presets
+    colorItems.forEach(item => {
+        item.addEventListener('click', () => {
+            const color = item.getAttribute('data-color');
+            
+            // Update active state
+            colorItems.forEach(i => i.classList.remove('active'));
+            item.classList.add('active');
+            
+            // Apply color
+            document.body.style.background = color;
+            
+            // Save to localStorage
+            localStorage.setItem('bgType', 'solid');
+            localStorage.setItem('bgValue', color);
+        });
+    });
 
-// Apply solid color presets
-colorItems.forEach(item => {
-    item.addEventListener('click', () => {
-        const color = item.getAttribute('data-color');
+    // Apply custom solid color
+    applyCustomColor.addEventListener('click', () => {
+        const color = document.getElementById('customSolidColor').value;
         
-        // Update active state
-        colorItems.forEach(i => i.classList.remove('active'));
-        item.classList.add('active');
-        
-        // Apply color
         document.body.style.background = color;
         
         // Save to localStorage
         localStorage.setItem('bgType', 'solid');
         localStorage.setItem('bgValue', color);
+        
+        alert('自定义颜色已应用！/ Custom color applied!');
     });
-});
 
-// Apply custom solid color
-applyCustomColor.addEventListener('click', () => {
-    const color = document.getElementById('customSolidColor').value;
-    
-    document.body.style.background = color;
-    
-    // Save to localStorage
-    localStorage.setItem('bgType', 'solid');
-    localStorage.setItem('bgValue', color);
-    
-    alert('自定义颜色已应用！/ Custom color applied!');
-});
-
-// Upload background image
-bgImageInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            const imageData = event.target.result;
-            
-            // Update preview
-            bgImagePreview.style.backgroundImage = `url(${imageData})`;
-            bgImagePreview.classList.add('has-image');
-            bgImagePreview.innerHTML = '';
-            
-            // Apply to body
-            document.body.style.background = `url(${imageData}) center/cover no-repeat`;
-            
-            // Save to localStorage
-            localStorage.setItem('bgType', 'image');
-            localStorage.setItem('bgValue', imageData);
-        };
-        reader.readAsDataURL(file);
-    }
-});
-
-// Click preview to upload
-bgImagePreview.addEventListener('click', () => {
-    bgImageInput.click();
-});
-
-// Clear background image
-clearBgImage.addEventListener('click', () => {
-    bgImagePreview.style.backgroundImage = '';
-    bgImagePreview.classList.remove('has-image');
-    bgImagePreview.innerHTML = '<i class="fas fa-image"></i><p>点击上传图片 / Click to Upload</p>';
-    
-    // Reset to default gradient
-    const defaultGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-    document.body.style.background = defaultGradient;
-    
-    // Save to localStorage
-    localStorage.setItem('bgType', 'gradient');
-    localStorage.setItem('bgValue', defaultGradient);
-});
-
-// Reset to default background
-resetBackground.addEventListener('click', () => {
-    const defaultGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-    document.body.style.background = defaultGradient;
-    
-    // Clear localStorage
-    localStorage.removeItem('bgType');
-    localStorage.removeItem('bgValue');
-    
-    // Reset all active states
-    gradientItems.forEach((item, index) => {
-        item.classList.remove('active');
-        if (index === 0) item.classList.add('active');
+    // Upload background image
+    bgImageInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const imageData = event.target.result;
+                
+                // Update preview
+                bgImagePreview.style.backgroundImage = `url(${imageData})`;
+                bgImagePreview.classList.add('has-image');
+                bgImagePreview.innerHTML = '';
+                
+                // Apply to body
+                document.body.style.background = `url(${imageData}) center/cover no-repeat`;
+                
+                // Save to localStorage
+                localStorage.setItem('bgType', 'image');
+                localStorage.setItem('bgValue', imageData);
+            };
+            reader.readAsDataURL(file);
+        }
     });
-    colorItems.forEach(item => item.classList.remove('active'));
-    
-    // Reset preview
-    bgImagePreview.style.backgroundImage = '';
-    bgImagePreview.classList.remove('has-image');
-    bgImagePreview.innerHTML = '<i class="fas fa-image"></i><p>点击上传图片 / Click to Upload</p>';
-    
-    alert('已恢复默认背景！/ Default background restored!');
-});
 
-// Load saved language preference and background on page load
-window.addEventListener('DOMContentLoaded', () => {
+    // Click preview to upload
+    bgImagePreview.addEventListener('click', () => {
+        bgImageInput.click();
+    });
+
+    // Clear background image
+    clearBgImage.addEventListener('click', () => {
+        bgImagePreview.style.backgroundImage = '';
+        bgImagePreview.classList.remove('has-image');
+        bgImagePreview.innerHTML = '<i class="fas fa-image"></i><p>点击上传图片 / Click to Upload</p>';
+        
+        // Reset to default gradient
+        const defaultGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        document.body.style.background = defaultGradient;
+        
+        // Save to localStorage
+        localStorage.setItem('bgType', 'gradient');
+        localStorage.setItem('bgValue', defaultGradient);
+    });
+
+    // Reset to default background
+    resetBackground.addEventListener('click', () => {
+        const defaultGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        document.body.style.background = defaultGradient;
+        
+        // Clear localStorage
+        localStorage.removeItem('bgType');
+        localStorage.removeItem('bgValue');
+        
+        // Reset all active states
+        gradientItems.forEach((item, index) => {
+            item.classList.remove('active');
+            if (index === 0) item.classList.add('active');
+        });
+        colorItems.forEach(item => item.classList.remove('active'));
+        
+        // Reset preview
+        bgImagePreview.style.backgroundImage = '';
+        bgImagePreview.classList.remove('has-image');
+        bgImagePreview.innerHTML = '<i class="fas fa-image"></i><p>点击上传图片 / Click to Upload</p>';
+        
+        alert('已恢复默认背景！/ Default background restored!');
+    });
+
+    // Load saved language preference
     const savedLanguage = localStorage.getItem('preferredLanguage');
     if (savedLanguage) {
         currentLanguage = savedLanguage;
@@ -1175,5 +1176,18 @@ window.addEventListener('DOMContentLoaded', () => {
         } else {
             document.body.style.background = savedBgValue;
         }
+    }
+    
+    // 滚动进度指示器
+    const backgroundTab = document.getElementById('backgroundTab');
+    const scrollProgress = document.getElementById('scrollProgress');
+    
+    if (backgroundTab && scrollProgress) {
+        backgroundTab.addEventListener('scroll', () => {
+            const scrollTop = backgroundTab.scrollTop;
+            const scrollHeight = backgroundTab.scrollHeight - backgroundTab.clientHeight;
+            const scrollPercentage = (scrollTop / scrollHeight) * 100;
+            scrollProgress.style.width = scrollPercentage + '%';
+        });
     }
 });
