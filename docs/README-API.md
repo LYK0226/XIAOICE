@@ -13,7 +13,7 @@
 
 ### 2. 配置 API 密钥
 
-打开 `script.js` 文件，找到第 21 行：
+打开 `app/static/js/script.js` 文件，找到第 21 行：
 
 ```javascript
 const GEMINI_API_KEY = 'YOUR_API_KEY_HERE'; // 请替换为您的 Gemini API 密钥
@@ -100,13 +100,17 @@ python3 -m http.server 8000
 ```
 XIAOICE/
 ├── app/
-│   └── templates/
-│       ├── index.html        # 主页面
-│       ├── demo.html         # 功能展示页面
-│       ├── test-api.html     # API 测试页面
-│       └── scrollbar-test.html
-├── styles.css                # 样式文件
-├── script.js                 # 主要逻辑（包含 API 调用）
-├── config.example.js         # API 密钥配置示例
+│   ├── templates/
+│   │   ├── index.html        # 主页面
+│   │   ├── demo.html         # 功能展示页面
+│   │   ├── test-api.html     # API 测试页面
+│   │   └── scrollbar-test.html
+│   └── static/
+│       ├── css/
+│       │   ├── force-scrollbar.css
+│       │   └── styles.css
+│       └── js/
+│           ├── config.example.js
+│           └── script.js
 └── README-API.md             # 本文件
 ```

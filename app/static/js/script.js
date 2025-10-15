@@ -19,7 +19,7 @@ let botAvatar = null; // Will store bot avatar URL
 let currentImageData = null;
 
 // Gemini API Configuration
-const GEMINI_API_KEY = 'YOUR_API_KEY'; // 请替换为您的 Gemini API 密钥
+const GEMINI_API_KEY = 'YOUR_API_KEY_HERE'; // 请替换为您的 Gemini API 密钥
 const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
 const GEMINI_VISION_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent';
 

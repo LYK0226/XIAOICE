@@ -270,7 +270,7 @@
 ## 常见问题
 
 **Q: 按钮可以自定义颜色吗？**  
-A: 可以，编辑 styles.css 中的 `.page-switch-btn` 和 `.back-to-app` 类。
+A: 可以，编辑 app/static/css/styles.css 中的 `.page-switch-btn` 和 `.back-to-app` 类。
 
 **Q: 可以添加更多页面吗？**  
 A: 可以，只需创建新页面并添加相应的导航按钮。

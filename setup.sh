@@ -24,16 +24,18 @@ if [ -z "$1" ]; then
 fi
 
 API_KEY="$1"
+SCRIPT_PATH="app/static/js/script.js"
+BACKUP_PATH="${SCRIPT_PATH}.backup"
 
 # 备份原文件
 echo "📦 正在备份原文件..."
-cp script.js script.js.backup
-echo "✅ 备份完成: script.js.backup"
+cp "$SCRIPT_PATH" "$BACKUP_PATH"
+echo "✅ 备份完成: $BACKUP_PATH"
 echo ""
 
 # 替换 API 密钥
 echo "🔧 正在配置 API 密钥..."
-sed -i "s/const GEMINI_API_KEY = 'YOUR_API_KEY_HERE';/const GEMINI_API_KEY = '$API_KEY';/" script.js
+sed -i "s|const GEMINI_API_KEY = 'YOUR_API_KEY_HERE'|const GEMINI_API_KEY = '$API_KEY'|" "$SCRIPT_PATH"
 
 if [ $? -eq 0 ]; then
     echo "✅ API 密钥配置成功！"
@@ -46,6 +48,6 @@ if [ $? -eq 0 ]; then
     echo "  3. 测试 API: http://localhost:8000/app/templates/test-api.html"
     echo ""
 else
-    echo "❌ 配置失败，请手动编辑 script.js 文件"
+    echo "❌ 配置失败，请手动编辑 app/static/js/script.js 文件"
     exit 1
 fi

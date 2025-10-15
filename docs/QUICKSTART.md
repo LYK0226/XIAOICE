@@ -27,7 +27,7 @@
 
 ### 方法 2：手动配置
 
-1. 打开 `script.js` 文件
+1. 打开 `app/static/js/script.js` 文件
 2. 找到第 21 行：
    ```javascript
    const GEMINI_API_KEY = 'YOUR_API_KEY_HERE';

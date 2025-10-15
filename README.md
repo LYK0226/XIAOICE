@@ -38,7 +38,7 @@
 
 ### 2. 配置 API 密钥
 
-打开 `script.js` 文件，找到第 21 行：
+打开 `app/static/js/script.js` 文件，找到第 21 行：
 
 ```javascript
 const GEMINI_API_KEY = 'YOUR_API_KEY_HERE';
@@ -126,25 +126,31 @@ python3 -m http.server 8000
 XIAOICE/
 ├── app/
 │   ├── templates/
-│   │   ├── index.html          # 主聊天页面
-│   │   ├── demo.html           # 功能展示页面
-│   │   ├── test-api.html       # API 测试页面
-│   │   └── scrollbar-test.html # 滚动条样式测试页面
-│   └── static/                 # 静态资源目录
+│   │   ├── index.html              # 主聊天页面
+│   │   ├── demo.html               # 功能展示页面
+│   │   ├── test-api.html           # API 测试页面
+│   │   └── scrollbar-test.html     # 滚动条样式测试页面
+│   └── static/                     # 静态资源目录
 │       ├── css/
+│       │   ├── force-scrollbar.css # 滚动条样式覆盖
+│       │   └── styles.css          # 全局样式文件
 │       └── js/
-├── styles.css                  # 全局样式文件
-├── script.js                   # 主要逻辑（包含 API 调用）
-├── setup.sh                    # 快速配置脚本
-├── config.example.js           # API 密钥配置示例
-├── .gitignore                  # Git 忽略文件
-├── README.md                   # 本文件
-├── README-API.md               # API 详细文档
-├── QUICKSTART.md               # 快速开始指南
-├── BACKGROUND-GUIDE.md         # 背景自定义指南
-├── PRESETS-SHOWCASE.md         # 预设背景展示
-├── NAVIGATION-GUIDE.md         # 页面导航指南
-└── DEVELOPMENT-SUMMARY.md      # 开发总结文档
+│           ├── config.example.js   # API 密钥配置示例
+│           └── script.js           # 主要逻辑（包含 API 调用）
+├── docs/
+│   ├── BACKGROUND-GUIDE.md         # 背景自定义指南
+│   ├── COMPLETE-SUMMARY.md         # 完整总结
+│   ├── DEMO-WALKTHROUGH.md         # 功能演示说明
+│   ├── DEVELOPMENT-SUMMARY.md      # 开发总结文档
+│   ├── NAVIGATION-GUIDE.md         # 页面导航指南
+│   ├── PRESETS-SHOWCASE.md         # 预设背景展示
+│   ├── QUICKSTART.md               # 快速开始指南
+│   └── README-API.md               # API 详细文档
+├── fix-indentation.sh              # 缩进修复脚本
+├── setup.sh                        # 快速配置脚本
+├── .env.example                    # 环境变量示例
+├── .gitignore                      # Git 忽略文件
+└── README.md                       # 本文件
 ```
 
 ## 🔒 安全建议
