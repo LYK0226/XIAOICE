@@ -78,7 +78,7 @@
 ## 📁 新增/修改的文件
 
 ### HTML 文件
-✅ **index.html** - 添加背景设置界面
+✅ **app/templates/index.html** - 添加背景设置界面
 - 标签页导航结构
 - 渐变色选择区域
 - 纯色选择区域
@@ -107,7 +107,7 @@
 ### 文档文件
 ✅ **BACKGROUND-GUIDE.md** - 完整使用指南
 ✅ **PRESETS-SHOWCASE.md** - 预设展示文档
-✅ **demo.html** - 功能演示页面
+✅ **app/templates/demo.html** - 功能演示页面
 ✅ **README.md** - 更新主文档
 
 ---

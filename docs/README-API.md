@@ -29,7 +29,7 @@ python3 -m http.server 8000
 
 ### 4. 访问应用
 
-在浏览器中打开：`http://localhost:8000`
+在浏览器中打开：`http://localhost:8000/app/templates/index.html`
 
 ## 功能特性
 
@@ -99,9 +99,14 @@ python3 -m http.server 8000
 
 ```
 XIAOICE/
-├── index.html          # 主页面
-├── styles.css          # 样式文件
-├── script.js           # 主要逻辑（包含 API 调用）
-├── config.example.js   # API 密钥配置示例
-└── README-API.md       # 本文件
+├── app/
+│   └── templates/
+│       ├── index.html        # 主页面
+│       ├── demo.html         # 功能展示页面
+│       ├── test-api.html     # API 测试页面
+│       └── scrollbar-test.html
+├── styles.css                # 样式文件
+├── script.js                 # 主要逻辑（包含 API 调用）
+├── config.example.js         # API 密钥配置示例
+└── README-API.md             # 本文件
 ```

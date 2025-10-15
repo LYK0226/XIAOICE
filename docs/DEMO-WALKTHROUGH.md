@@ -5,7 +5,7 @@
 ### 功能 1: 从聊天页面跳转到功能展示
 
 **操作步骤**:
-1. 打开聊天应用 (`http://localhost:8000/index.html`)
+1. 打开聊天应用 (`http://localhost:8000/app/templates/index.html`)
 2. 在顶部语言栏右侧找到"功能展示"按钮
 3. 点击按钮
 4. 自动跳转到功能展示页面
@@ -19,7 +19,7 @@
 ### 功能 2: 从功能展示页面返回聊天
 
 **方式 A - 右上角浮动按钮**:
-1. 在功能展示页面 (`http://localhost:8000/demo.html`)
+1. 在功能展示页面 (`http://localhost:8000/app/templates/demo.html`)
 2. 查看右上角固定位置的"返回聊天"按钮
 3. 点击按钮
 4. 立即返回聊天界面
@@ -45,7 +45,7 @@
 ### 场景 1: 新用户首次访问
 
 ```
-访问主页 (index.html)
+访问主页 (app/templates/index.html)
     ↓
 看到欢迎消息
     ↓
@@ -247,9 +247,9 @@
 ## 测试场景
 
 ### 功能测试
-- ✅ 点击"功能展示"跳转到 demo.html
-- ✅ 点击"返回聊天"跳转到 index.html
-- ✅ 点击"立即开始使用"跳转到 index.html
+- ✅ 点击"功能展示"跳转到 app/templates/demo.html
+- ✅ 点击"返回聊天"跳转到 app/templates/index.html
+- ✅ 点击"立即开始使用"跳转到 app/templates/index.html
 - ✅ 所有链接可点击
 - ✅ 悬停效果正常
 

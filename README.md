@@ -59,11 +59,11 @@ python3 -m http.server 8000
 
 ### 4. 访问应用
 
-在浏览器中打开：`http://localhost:8000`
+在浏览器中打开：`http://localhost:8000/app/templates/index.html`
 
 ### 5. 测试 API（可选）
 
-访问 `http://localhost:8000/test-api.html` 来测试您的 API 配置是否正确。
+访问 `http://localhost:8000/app/templates/test-api.html` 来测试您的 API 配置是否正确。
 
 ## 📖 使用指南
 
@@ -124,21 +124,27 @@ python3 -m http.server 8000
 
 ```
 XIAOICE/
-├── index.html              # 主聊天页面
-├── demo.html               # 功能展示页面
-├── test-api.html           # API 测试页面
-├── styles.css              # 样式文件
-├── script.js               # 主要逻辑（包含 API 调用）
-├── setup.sh                # 快速配置脚本
-├── config.example.js       # API 密钥配置示例
-├── .gitignore              # Git 忽略文件
-├── README.md               # 本文件
-├── README-API.md           # API 详细文档
-├── QUICKSTART.md           # 快速开始指南
-├── BACKGROUND-GUIDE.md     # 背景自定义指南
-├── PRESETS-SHOWCASE.md     # 预设背景展示
-├── NAVIGATION-GUIDE.md     # 页面导航指南
-└── DEVELOPMENT-SUMMARY.md  # 开发总结文档
+├── app/
+│   ├── templates/
+│   │   ├── index.html          # 主聊天页面
+│   │   ├── demo.html           # 功能展示页面
+│   │   ├── test-api.html       # API 测试页面
+│   │   └── scrollbar-test.html # 滚动条样式测试页面
+│   └── static/                 # 静态资源目录
+│       ├── css/
+│       └── js/
+├── styles.css                  # 全局样式文件
+├── script.js                   # 主要逻辑（包含 API 调用）
+├── setup.sh                    # 快速配置脚本
+├── config.example.js           # API 密钥配置示例
+├── .gitignore                  # Git 忽略文件
+├── README.md                   # 本文件
+├── README-API.md               # API 详细文档
+├── QUICKSTART.md               # 快速开始指南
+├── BACKGROUND-GUIDE.md         # 背景自定义指南
+├── PRESETS-SHOWCASE.md         # 预设背景展示
+├── NAVIGATION-GUIDE.md         # 页面导航指南
+└── DEVELOPMENT-SUMMARY.md      # 开发总结文档
 ```
 
 ## 🔒 安全建议

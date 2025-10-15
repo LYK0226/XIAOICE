@@ -8,24 +8,24 @@
 
 ## 🔄 导航按钮位置
 
-### 1. 在聊天页面 (index.html)
+### 1. 在聊天页面 (app/templates/index.html)
 
 **位置**: 顶部语言栏右侧  
 **按钮文字**: "功能展示"  
 **图标**: ℹ️ (信息图标)  
-**功能**: 点击跳转到 demo.html 查看所有功能介绍
+**功能**: 点击跳转到 app/templates/demo.html 查看所有功能介绍
 
 **视觉效果**:
 - 半透明白色背景
 - 悬停时背景加深并上浮
 - 圆角设计，与语言切换按钮风格一致
 
-### 2. 在功能展示页面 (demo.html)
+### 2. 在功能展示页面 (app/templates/demo.html)
 
 **位置 1**: 右上角固定按钮（浮动）  
 **按钮文字**: "返回聊天 / Back to Chat"  
 **图标**: ← (左箭头图标)  
-**功能**: 点击返回 index.html 主聊天界面
+**功能**: 点击返回 app/templates/index.html 主聊天界面
 
 **位置 2**: 页面中部大按钮  
 **按钮文字**: "🚀 立即开始使用"  
@@ -60,7 +60,7 @@
 
 ## 📍 实现细节
 
-### index.html 中的按钮
+### app/templates/index.html 中的按钮
 
 ```html
 <a href="demo.html" class="page-switch-btn" title="查看功能展示 / View Demo">
@@ -70,7 +70,7 @@
 
 **位置**: 在 `#language-bar` 内部，语言选项右侧
 
-### demo.html 中的按钮
+### app/templates/demo.html 中的按钮
 
 **浮动按钮**:
 ```html
@@ -148,19 +148,19 @@
 ## 🔄 用户导航流程
 
 ```
-启动应用 (index.html)
+启动应用 (app/templates/index.html)
        ↓
    开始聊天
        ↓
 点击"功能展示"按钮
        ↓
-跳转到 demo.html
+跳转到 app/templates/demo.html
        ↓
 浏览功能介绍
        ↓
 点击"返回聊天"或"立即开始使用"
        ↓
-返回 index.html
+返回 app/templates/index.html
        ↓
 继续聊天
 ```
@@ -209,7 +209,7 @@
 2. 语言切换（次重要）
 3. 功能展示入口（辅助）
 
-**演示页面 (demo.html)**:
+**演示页面 (app/templates/demo.html)**:
 1. 功能介绍内容（最重要）
 2. 立即开始按钮（行动号召）
 3. 返回按钮（辅助导航）
@@ -236,8 +236,8 @@
 
 ## ✅ 测试清单
 
-- ✅ index.html 到 demo.html 导航正常
-- ✅ demo.html 到 index.html 导航正常
+- ✅ app/templates/index.html 到 app/templates/demo.html 导航正常
+- ✅ app/templates/demo.html 到 app/templates/index.html 导航正常
 - ✅ 按钮悬停效果正常
 - ✅ 移动端显示正常
 - ✅ 所有链接可点击

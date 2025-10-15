@@ -42,8 +42,8 @@ if [ $? -eq 0 ]; then
     echo ""
     echo "下一步："
     echo "  1. 启动服务器: python3 -m http.server 8000"
-    echo "  2. 打开浏览器访问: http://localhost:8000"
-    echo "  3. 测试 API: http://localhost:8000/test-api.html"
+    echo "  2. 打开浏览器访问: http://localhost:8000/app/templates/index.html"
+    echo "  3. 测试 API: http://localhost:8000/app/templates/test-api.html"
     echo ""
 else
     echo "❌ 配置失败，请手动编辑 script.js 文件"

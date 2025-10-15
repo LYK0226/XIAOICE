@@ -49,10 +49,10 @@ python3 -m http.server 8000
 ## 第四步：开始使用（1 分钟）
 
 1. **打开主应用**  
-   浏览器访问：http://localhost:8000
+   浏览器访问：http://localhost:8000/app/templates/index.html
 
 2. **测试 API（可选）**  
-   访问测试页面：http://localhost:8000/test-api.html
+   访问测试页面：http://localhost:8000/app/templates/test-api.html
 
 3. **开始聊天**  
    在输入框输入消息，AI 会自动回复！
@@ -75,7 +75,7 @@ python3 -m http.server 8000
 ### Q: API 调用失败怎么办？
 **A:** 
 1. 检查密钥是否正确复制（没有多余空格）
-2. 访问 test-api.html 测试连接
+2. 访问 app/templates/test-api.html 测试连接
 3. 查看浏览器控制台的错误信息
 
 ### Q: 每天能用多少次？
