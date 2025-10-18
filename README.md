@@ -3,8 +3,9 @@
 一个功能强大的 AI 聊天应用，集成了 Google Gemini API，支持智能对话和图像识别。
 
 ![Status](https://img.shields.io/badge/status-active-success.svg)
-![Version](https://img.shields.io/badge/version-2.0-blue.svg)
+![Version](https://img.shields.io/badge/version-3.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
+![Code](https://img.shields.io/badge/code-separated-orange.svg)
 
 ## ✨ 主要功能
 
@@ -132,11 +133,11 @@ XIAOICE/
 │   │   └── scrollbar-test.html     # 滚动条样式测试页面
 │   └── static/                     # 静态资源目录
 │       ├── css/
+│       │   ├── chatbox.css            # 主聊天页面专用样式
 │       │   ├── force-scrollbar.css # 滚动条样式覆盖
-│       │   └── styles.css          # 全局样式文件
 │       └── js/
+│           ├── script.js           # 主要逻辑（包含 API 调用）
 │           ├── config.example.js   # API 密钥配置示例
-│           └── script.js           # 主要逻辑（包含 API 调用）
 ├── docs/
 │   ├── BACKGROUND-GUIDE.md         # 背景自定义指南
 │   ├── COMPLETE-SUMMARY.md         # 完整总结
@@ -196,7 +197,20 @@ Gemini API 免费额度：
 
 ## 📝 更新日志
 
-### Version 2.2 (2024-10-08) 🆕
+### Version 3.0 (2025-10-18) 🎉 代码优化版
+- ✅ **CSS 文件分離** - 創建獨立的 chat.css 用於主聊天介面
+- ✅ **文件結構優化** - 清晰的文件組織和命名
+- ✅ **詳細文檔** - 添加完整的 README 和使用指南
+- ✅ **向後兼容** - 保留原始 styles.css 作為備份
+- ✅ **快速參考** - 提供開發者快速查詢指南
+- 📖 新增文檔：
+  - `docs/FILE-STRUCTURE.md` - 文件結構說明
+  - `docs/CODE-SEPARATION-SUMMARY.md` - 代碼分離總結
+  - `docs/QUICK-REFERENCE.md` - 快速參考指南
+  - `app/static/css/README.md` - CSS 文件說明
+  - `app/static/js/README.md` - JavaScript 文件說明
+
+### Version 2.2 (2024-10-08)
 - ✅ 添加页面导航功能
 - ✅ 聊天页面添加"功能展示"入口
 - ✅ 演示页面添加"返回聊天"按钮

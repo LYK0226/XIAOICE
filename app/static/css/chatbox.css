@@ -1,3 +1,5 @@
+/* Chat Page Styles - Main chatbox interface */
+
 /* Global styles */
 * {
     margin: 0;
@@ -510,7 +512,7 @@ body {
     transform: scale(1.0);
 }
 
-/* 超级明显的橙红色表情选择器滚动条 - 可以滚动！ */
+/* Emoji picker scrollbar */
 .emoji-content::-webkit-scrollbar {
     width: 18px !important;
     background: #ffffff !important;
@@ -556,7 +558,7 @@ body {
     box-shadow: 0 0 15px rgba(255, 211, 61, 0.8) !important;
 }
 
-/* Avatar Modal Styles */
+/* Modal Styles (Avatar & Settings) */
 .modal {
     display: none;
     position: fixed;
@@ -582,7 +584,6 @@ body {
     animation: slideIn 0.3s;
 }
 
-/* Custom scrollbar for modal content */
 .modal-content::-webkit-scrollbar {
     width: 10px;
 }
@@ -630,6 +631,7 @@ body {
     color: #333;
 }
 
+/* Avatar Settings */
 .avatar-settings {
     display: flex;
     gap: 30px;
@@ -738,7 +740,6 @@ body {
     scrollbar-color: #667eea #ffffff !important;
 }
 
-/* 确保滚动条永远可见 */
 .settings-content::-webkit-scrollbar {
     -webkit-appearance: none !important;
     appearance: none !important;
@@ -749,7 +750,6 @@ body {
     animation: fadeIn 0.3s;
 }
 
-/* 超级明显的滚动条 - 20px 宽！ */
 .settings-content::-webkit-scrollbar {
     width: 20px !important;
     background: #f8f9fa !important;

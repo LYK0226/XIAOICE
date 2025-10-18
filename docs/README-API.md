@@ -13,23 +13,21 @@
 
 ### 2. 配置 API 密钥
 
-打开 `app/static/js/script.js` 文件，找到第 21 行：
-
-```javascript
-const GEMINI_API_KEY = 'YOUR_API_KEY_HERE'; // 请替换为您的 Gemini API 密钥
+```bash
+cp .env.example .env
 ```
 
-将 `YOUR_API_KEY_HERE` 替换为您刚才复制的 API 密钥。
+在 `.env` 文件中填入 `GEMINI_API_KEY`，并可根据需要设置 `GEMINI_TEXT_MODEL` 与 `GEMINI_VISION_MODEL`。
 
 ### 3. 启动服务器
 
 ```bash
-python3 -m http.server 8000
+uvicorn app.main:app --reload
 ```
 
 ### 4. 访问应用
 
-在浏览器中打开：`http://localhost:8000/app/templates/index.html`
+在浏览器中打开：`http://localhost:8000/`
 
 ## 功能特性
 
@@ -105,6 +103,7 @@ XIAOICE/
 │   │   ├── demo.html         # 功能展示页面
 │   │   ├── test-api.html     # API 测试页面
 │   │   └── scrollbar-test.html
+│   ├── main.py
 │   └── static/
 │       ├── css/
 │       │   ├── force-scrollbar.css
