@@ -18,118 +18,54 @@ let botAvatar = null; // Will store bot avatar URL
 // Image recognition data
 let currentImageData = null;
 
-// Gemini API Configuration
-const GEMINI_API_KEY = 'YOUR_API_KEY_HERE'; // 请替换为您的 Gemini API 密钥
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
-const GEMINI_VISION_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent';
+// Gemini API Configuration - NO LONGER USED, WILL BE REMOVED
+// const GEMINI_API_KEY = 'YOUR_API_KEY_HERE'; 
+// const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+// const GEMINI_VISION_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent';
 
 // Conversation history for context
 let conversationHistory = [];
 
-// Call Gemini API for text chat
-async function callGeminiAPI(userMessage) {
+// Call backend API for chat
+async function callBackendAPI(userMessage, imageFile = null) {
+    const formData = new FormData();
+    formData.append('message', userMessage);
+    if (imageFile) {
+        formData.append('image', imageFile);
+    }
+
     try {
-        const response = await fetch(`${GEMINI_API_URL}?key=${GEMINI_API_KEY}`, {
+        const response = await fetch('/chat', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [{
-                        text: userMessage
-                    }]
-                }],
-                generationConfig: {
-                    temperature: 0.9,
-                    topK: 1,
-                    topP: 1,
-                    maxOutputTokens: 2048,
-                }
-            })
+            body: formData
         });
 
         if (!response.ok) {
-            throw new Error(`API Error: ${response.status}`);
+            const errorData = await response.json();
+            throw new Error(errorData.error || `API Error: ${response.status}`);
         }
 
         const data = await response.json();
-        
-        if (data.candidates && data.candidates.length > 0) {
-            return data.candidates[0].content.parts[0].text;
-        } else {
-            throw new Error('No response from Gemini');
-        }
+        return data.response;
+
     } catch (error) {
-        console.error('Gemini API Error:', error);
-        const t = translations[currentLanguage];
+        console.error('Backend API Error:', error);
         const errorMessages = {
-            'zh-CN': '抱歉，AI 服务暂时无法使用。请检查您的 API 密钥或稍后再试。',
-            'zh-TW': '抱歉，AI 服務暫時無法使用。請檢查您的 API 金鑰或稍後再試。',
-            'en': 'Sorry, AI service is temporarily unavailable. Please check your API key or try again later.'
+            'zh-CN': '抱歉，服务暂时无法使用。请稍后再试。',
+            'zh-TW': '抱歉，服務暫時無法使用。請稍後再試。',
+            'en': 'Sorry, the service is temporarily unavailable. Please try again later.'
         };
         return errorMessages[currentLanguage] || errorMessages['zh-CN'];
     }
 }
 
-// Call Gemini Vision API for image analysis
+// The callGeminiVisionAPI function is no longer needed as the backend handles image analysis.
+// We can remove it.
+/*
 async function callGeminiVisionAPI(imageData, promptText) {
-    try {
-        // Remove data URL prefix if present
-        const base64Image = imageData.includes('base64,') 
-            ? imageData.split('base64,')[1] 
-            : imageData;
-
-        const response = await fetch(`${GEMINI_VISION_API_URL}?key=${GEMINI_API_KEY}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                contents: [{
-                    parts: [
-                        {
-                            text: promptText
-                        },
-                        {
-                            inline_data: {
-                                mime_type: 'image/jpeg',
-                                data: base64Image
-                            }
-                        }
-                    ]
-                }],
-                generationConfig: {
-                    temperature: 0.4,
-                    topK: 32,
-                    topP: 1,
-                    maxOutputTokens: 4096,
-                }
-            })
-        });
-
-        if (!response.ok) {
-            throw new Error(`API Error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        
-        if (data.candidates && data.candidates.length > 0) {
-            return data.candidates[0].content.parts[0].text;
-        } else {
-            throw new Error('No response from Gemini Vision');
-        }
-    } catch (error) {
-        console.error('Gemini Vision API Error:', error);
-        const t = translations[currentLanguage];
-        const errorMessages = {
-            'zh-CN': '抱歉，图像识别服务暂时无法使用。请检查您的 API 密钥或稍后再试。',
-            'zh-TW': '抱歉，圖像識別服務暫時無法使用。請檢查您的 API 金鑰或稍後再試。',
-            'en': 'Sorry, image recognition service is temporarily unavailable. Please check your API key or try again later.'
-        };
-        return errorMessages[currentLanguage] || errorMessages['zh-CN'];
-    }
+    // ... (code removed)
 }
+*/
 
 // Emoji categories
 const emojiCategories = {
@@ -359,6 +295,34 @@ function createImageMessage(imageData, text, isUser = true) {
     return container;
 }
 
+// Function to create a typing/analyzing indicator
+function createTypingIndicator(text) {
+    const indicator = document.createElement('div');
+    indicator.className = 'bot-message-container typing-indicator';
+    const indicatorText = text || translations[currentLanguage].typing;
+    
+    const botAvatarEl = document.createElement('div');
+    botAvatarEl.className = 'avatar bot-avatar';
+    if (botAvatar) {
+        botAvatarEl.style.backgroundImage = `url(${botAvatar})`;
+        botAvatarEl.style.backgroundSize = 'cover';
+        botAvatarEl.style.backgroundPosition = 'center';
+    } else {
+        botAvatarEl.innerHTML = '<i class="fas fa-robot"></i>';
+    }
+
+    indicator.appendChild(botAvatarEl);
+
+    const messageContent = document.createElement('div');
+    messageContent.className = 'message-content';
+    const p = document.createElement('p');
+    p.textContent = indicatorText;
+    messageContent.appendChild(p);
+    indicator.appendChild(messageContent);
+    
+    return indicator;
+}
+
 // Simulated test paper detection and question extraction
 function detectTestPaper(imageData) {
     // In a real application, this would use OCR (like Tesseract.js) and AI to detect questions
@@ -516,16 +480,7 @@ function processTestPaperQuestions(questions, imageData) {
                     'en': 'Thinking about the answer...'
                 };
                 
-                const thinkingIndicator = document.createElement('div');
-                thinkingIndicator.className = 'bot-message-container typing-indicator';
-                thinkingIndicator.innerHTML = `
-                    <div class="avatar bot-avatar">
-                        <i class="fas fa-robot"></i>
-                    </div>
-                    <div class="message-content">
-                        <p>${thinkingTexts[currentLanguage]}</p>
-                    </div>
-                `;
+                const thinkingIndicator = createTypingIndicator();
                 messagesDiv.appendChild(thinkingIndicator);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
                 
@@ -573,55 +528,45 @@ translations['en'].question = 'Question';
 // Function to send a message
 async function sendMessage() {
     const message = messageInput.value.trim();
-    if (message) {
-        // Add user message
-        const userMessage = createMessage(message, true);
-        messagesDiv.appendChild(userMessage);
-        messageInput.value = '';
+    if (!message) return;
+
+    // Add user message
+    const userMessage = createMessage(message, true);
+    messagesDiv.appendChild(userMessage);
+    messageInput.value = '';
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    // Show typing indicator
+    const typingIndicator = createTypingIndicator();
+    messagesDiv.appendChild(typingIndicator);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    try {
+        // Call Backend API
+        const aiResponse = await callBackendAPI(message);
+        
+        // Remove typing indicator
+        messagesDiv.removeChild(typingIndicator);
+        
+        // Add bot response
+        const botMessage = createMessage(aiResponse, false);
+        messagesDiv.appendChild(botMessage);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
         
-        // Show typing indicator
-        const typingIndicator = document.createElement('div');
-        typingIndicator.className = 'bot-message-container typing-indicator';
-        const typingText = translations[currentLanguage].typing;
-        typingIndicator.innerHTML = `
-            <div class="avatar bot-avatar">
-                <i class="fas fa-robot"></i>
-            </div>
-            <div class="message-content">
-                <p>${typingText}</p>
-            </div>
-        `;
-        messagesDiv.appendChild(typingIndicator);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        // Save to conversation history
+        conversationHistory.push({
+            user: message,
+            bot: aiResponse
+        });
+    } catch (error) {
+        console.error('Error:', error);
+        messagesDiv.removeChild(typingIndicator);
         
-        try {
-            // Call Gemini API
-            const aiResponse = await callGeminiAPI(message);
-            
-            // Remove typing indicator
-            messagesDiv.removeChild(typingIndicator);
-            
-            // Add bot response
-            const botMessage = createMessage(aiResponse, false);
-            messagesDiv.appendChild(botMessage);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            
-            // Save to conversation history
-            conversationHistory.push({
-                user: message,
-                bot: aiResponse
-            });
-        } catch (error) {
-            console.error('Error:', error);
-            messagesDiv.removeChild(typingIndicator);
-            
-            const t = translations[currentLanguage];
-            const errorMsg = t.errorMsg || '抱歉，发生了错误。';
-            const botMessage = createMessage(errorMsg, false);
-            messagesDiv.appendChild(botMessage);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        }
+        const t = translations[currentLanguage];
+        const errorMsg = t.errorMsg || '抱歉，发生了错误。';
+        const botMessage = createMessage(errorMsg, false);
+        messagesDiv.appendChild(botMessage);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
     }
 }
 
@@ -812,54 +757,36 @@ imageInput.addEventListener('change', async function(e) {
     if (file) {
         const reader = new FileReader();
         reader.onload = async function(event) {
-            currentImageData = event.target.result;
+            const imageData = event.target.result;
             const t = translations[currentLanguage];
+            const userMessageText = messageInput.value.trim() || t.analyzeImage;
             
             // Create user message with image
-            const imageMessage = createImageMessage(currentImageData, t.analyzeImage, true);
+            const imageMessage = createImageMessage(imageData, userMessageText, true);
             messagesDiv.appendChild(imageMessage);
+            messageInput.value = ''; // Clear input after sending
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
             
-            // Show typing indicator
-            const typingIndicator = document.createElement('div');
-            typingIndicator.className = 'bot-message-container typing-indicator';
-            typingIndicator.innerHTML = `
-                <div class="avatar bot-avatar">
-                    <i class="fas fa-robot"></i>
-                </div>
-                <div class="message-content">
-                    <p>${t.analyzing}</p>
-                </div>
-            `;
-            messagesDiv.appendChild(typingIndicator);
+            // Show analyzing indicator
+            const analyzingIndicator = createTypingIndicator(t.analyzing);
+            messagesDiv.appendChild(analyzingIndicator);
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
             
             try {
-                // Create prompt based on current language
-                let prompt = '';
-                if (currentLanguage === 'zh-CN') {
-                    prompt = '请详细分析这张图片的内容。如果这是一张试卷或包含问题，请识别并列出所有问题。';
-                } else if (currentLanguage === 'zh-TW') {
-                    prompt = '請詳細分析這張圖片的內容。如果這是一張試卷或包含問題，請識別並列出所有問題。';
-                } else {
-                    prompt = 'Please analyze this image in detail. If this is a test paper or contains questions, please identify and list all questions.';
-                }
+                // Call backend API with image and text
+                const analysis = await callBackendAPI(userMessageText, file);
                 
-                // Call Gemini Vision API
-                const analysis = await callGeminiVisionAPI(currentImageData, prompt);
-                
-                // Remove typing indicator
-                messagesDiv.removeChild(typingIndicator);
+                // Remove analyzing indicator
+                messagesDiv.removeChild(analyzingIndicator);
                 
                 // Display analysis result
                 const botMessage = createMessage(analysis, false);
                 messagesDiv.appendChild(botMessage);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
                 
-                currentImageData = null;
             } catch (error) {
                 console.error('Image analysis error:', error);
-                messagesDiv.removeChild(typingIndicator);
+                messagesDiv.removeChild(analyzingIndicator);
                 
                 const errorMsg = t.errorMsg || '抱歉，图像分析失败。';
                 const botMessage = createMessage(errorMsg, false);

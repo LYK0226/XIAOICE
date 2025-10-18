@@ -26,3 +26,15 @@ package-lock.json
 # 忽略临时文件
 tmp/
 temp/
+
+# Environments
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+.credentials/
+
+# Spyder project settings
+.spyderproject
