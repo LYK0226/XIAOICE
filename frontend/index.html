@@ -60,12 +60,27 @@
                 <span>聊天盒子</span>
             </div>
             <div class="chat-info">
-                <span>您好，GPT-4o</span>
+                <span id="userGreeting">您好，GPT-4o</span>
                 <i class="fas fa-edit"></i>
             </div>
             <div class="chat-actions">
                 <button class="icon-btn"><i class="fas fa-search"></i></button>
-                <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
+                <div class="dropdown-menu-trigger">
+                    <button class="icon-btn" id="userMenuBtn"><i class="fas fa-user-circle"></i></button>
+                    <div class="dropdown-menu" id="userDropdown">
+                        <div class="user-info-display">
+                            <i class="fas fa-user-circle"></i>
+                            <span id="displayUserEmail">用户</span>
+                        </div>
+                        <hr>
+                        <button class="dropdown-item" onclick="openSettings()">
+                            <i class="fas fa-cog"></i> 設置
+                        </button>
+                        <button class="dropdown-item" onclick="logout()">
+                            <i class="fas fa-sign-out-alt"></i> 登出
+                        </button>
+                    </div>
+                </div>
                 <button class="icon-btn"><i class="fas fa-ellipsis-h"></i></button>
             </div>
         </div>

@@ -246,6 +246,11 @@ body {
 .chat-actions {
     display: flex;
     gap: 10px;
+    position: relative;
+}
+
+.dropdown-menu-trigger {
+    position: relative;
 }
 
 .icon-btn {
@@ -260,6 +265,83 @@ body {
 
 .icon-btn:hover {
     background: #f0f0f0;
+}
+
+/* User Dropdown Menu */
+.dropdown-menu {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    background: white;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    min-width: 200px;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: none;
+    overflow: hidden;
+    margin-top: 8px;
+}
+
+.dropdown-menu.show {
+    display: block;
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.user-info-display {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    color: #333;
+    font-weight: 500;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.user-info-display i {
+    font-size: 20px;
+    color: #667eea;
+}
+
+.dropdown-menu hr {
+    margin: 0;
+    border: none;
+    border-top: 1px solid #f0f0f0;
+}
+
+.dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: #333;
+    font-size: 14px;
+    transition: background 0.2s;
+    text-align: left;
+}
+
+.dropdown-item:hover {
+    background: #f5f5f5;
+}
+
+.dropdown-item i {
+    color: #667eea;
+    font-size: 14px;
 }
 
 /* Messages area */

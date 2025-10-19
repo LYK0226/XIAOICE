@@ -2,6 +2,8 @@
 
 一个功能强大的 AI 聊天应用，集成了 Google Gemini API，支持智能对话和图像识别。
 
+**📚 快速導航：** [文檔索引](docs/DOCUMENTATION-INDEX.md) | [快速開始](docs/GETTING-STARTED.md) | [結構說明](docs/STRUCTURE.md)
+
 ![Status](https://img.shields.io/badge/status-active-success.svg)
 ![Version](https://img.shields.io/badge/version-2.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -122,24 +124,23 @@ python3 -m http.server 8000
 
 ## 📁 项目结构
 
+**詳細的完整文件結構，請查看：** [STRUCTURE.md](docs/STRUCTURE.md)
+
 ```
 XIAOICE/
-├── index.html              # 主聊天页面
-├── demo.html               # 功能展示页面
-├── test-api.html           # API 测试页面
-├── styles.css              # 样式文件
-├── script.js               # 主要逻辑（包含 API 调用）
-├── setup.sh                # 快速配置脚本
-├── config.example.js       # API 密钥配置示例
-├── .gitignore              # Git 忽略文件
-├── README.md               # 本文件
-├── README-API.md           # API 详细文档
-├── QUICKSTART.md           # 快速开始指南
-├── BACKGROUND-GUIDE.md     # 背景自定义指南
-├── PRESETS-SHOWCASE.md     # 预设背景展示
-├── NAVIGATION-GUIDE.md     # 页面导航指南
-└── DEVELOPMENT-SUMMARY.md  # 开发总结文档
+├── docs/                 📚 完整文檔（19 個）
+│   ├── guides/          🎨 功能指南
+│   ├── api/             🔌 API 文檔
+│   └── technical/       🔧 技術文檔
+├── frontend/            🎨 前端應用（HTML/CSS/JS）
+├── backend/             🔧 後端應用（Flask）
+└── scripts/             🛠️ 工具腳本
 ```
+
+**快速查看：**
+- **登入系統：** `frontend/` 中的 HTML 文件
+- **API 文檔：** `docs/api/README-BACKEND.md`
+- **快速開始：** `docs/GETTING-STARTED.md`
 
 ## 🔒 安全建议
 

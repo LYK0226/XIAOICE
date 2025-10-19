@@ -18,7 +18,7 @@ if [ -z "$1" ]; then
     echo "  1. 访问 https://makersuite.google.com/app/apikey"
     echo "  2. 使用 Google 账号登录"
     echo "  3. 点击 'Create API Key' 创建新密钥"
-    echo "  4. 复制密钥并运行: ./setup.sh YOUR_COPIED_KEY"
+    echo "  4. 复制密钥并运行以下命令替换 YOUR_API_KEY: ./setup.sh sk-2ea678b1c93e4590a9271cb603a87682"
     echo ""
     exit 1
 fi
