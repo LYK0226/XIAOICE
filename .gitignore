@@ -1,5 +1,4 @@
 # 忽略敏感配置文件
-.env
 config.js
 
 # 忽略备份文件
@@ -34,7 +33,16 @@ venv/
 ENV/
 env.bak/
 venv.bak/
-.credentials/
+.credentials/*
+!.credentials/.gitkeep
 
 # Spyder project settings
 .spyderproject
+
+# Python cache files
+__pycache__/
+*/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
