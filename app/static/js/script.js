@@ -18,54 +18,11 @@ let botAvatar = null; // Will store bot avatar URL
 // Image recognition data
 let currentImageData = null;
 
-// Gemini API Configuration - NO LONGER USED, WILL BE REMOVED
-// const GEMINI_API_KEY = 'YOUR_API_KEY_HERE'; 
-// const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
-// const GEMINI_VISION_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent';
+// API 模塊已分離到 api.js
+// 確保在 HTML 中先載入 api.js，然後再載入 script.js
 
 // Conversation history for context
 let conversationHistory = [];
-
-// Call backend API for chat
-async function callBackendAPI(userMessage, imageFile = null) {
-    const formData = new FormData();
-    formData.append('message', userMessage);
-    if (imageFile) {
-        formData.append('image', imageFile);
-    }
-
-    try {
-        const response = await fetch('/chat', {
-            method: 'POST',
-            body: formData
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json();
-            throw new Error(errorData.error || `API Error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data.response;
-
-    } catch (error) {
-        console.error('Backend API Error:', error);
-        const errorMessages = {
-            'zh-CN': '抱歉，服务暂时无法使用。请稍后再试。',
-            'zh-TW': '抱歉，服務暫時無法使用。請稍後再試。',
-            'en': 'Sorry, the service is temporarily unavailable. Please try again later.'
-        };
-        return errorMessages[currentLanguage] || errorMessages['zh-CN'];
-    }
-}
-
-// The callGeminiVisionAPI function is no longer needed as the backend handles image analysis.
-// We can remove it.
-/*
-async function callGeminiVisionAPI(imageData, promptText) {
-    // ... (code removed)
-}
-*/
 
 // Emoji categories
 const emojiCategories = {
@@ -542,8 +499,8 @@ async function sendMessage() {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
     
     try {
-        // Call Backend API
-        const aiResponse = await callBackendAPI(message);
+        // 使用 API 模塊發送訊息
+        const aiResponse = await chatAPI.sendTextMessage(message, currentLanguage);
         
         // Remove typing indicator
         messagesDiv.removeChild(typingIndicator);
@@ -773,8 +730,8 @@ imageInput.addEventListener('change', async function(e) {
             messagesDiv.scrollTop = messagesDiv.scrollHeight;
             
             try {
-                // Call backend API with image and text
-                const analysis = await callBackendAPI(userMessageText, file);
+                // 使用 API 模塊發送帶圖片的訊息
+                const analysis = await chatAPI.sendImageMessage(userMessageText, file, currentLanguage);
                 
                 // Remove analyzing indicator
                 messagesDiv.removeChild(analyzingIndicator);
