@@ -9,8 +9,8 @@ def create_app():
     """Create and configure an instance of the Flask application."""
     app = Flask(__name__)
 
-    # Load configuration from config.py
-    app.config.from_object('config.Config')
+    # Load configuration from app/config.py
+    app.config.from_object('app.config.Config')
 
     # Create an uploads folder if it doesn't exist
     if not os.path.exists(app.config['UPLOAD_FOLDER']):

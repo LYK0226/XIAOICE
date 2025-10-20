@@ -30,41 +30,54 @@
 
 ## 🚀 快速开始
 
-### 1. 获取 Gemini API 密钥
+### 1. 获取 Google AI Studio API 密钥
 
 1. 访问 [Google AI Studio](https://makersuite.google.com/app/apikey)
 2. 使用 Google 账号登录
 3. 点击 **"Create API Key"** 创建新密钥
 4. 复制生成的 API 密钥
 
-### 2. 配置 API 密钥
+### 2. 配置环境变量
 
-打开 `app/static/js/script.js` 文件，找到第 21 行：
+1. 复制 `.env` 文件（如果不存在，创建一个）
+2. 在 `.env` 文件中设置您的 API 密钥：
 
-```javascript
-const GEMINI_API_KEY = 'YOUR_API_KEY_HERE';
+```bash
+# Google AI Studio API Key
+GOOGLE_API_KEY="YOUR_ACTUAL_API_KEY_HERE"
+
+# Gemini Model (可选)
+GEMINI_MODEL="gemini-1.5-flash"
 ```
 
-将 `YOUR_API_KEY_HERE` 替换为您的真实 API 密钥。
+⚠️ **重要**：请勿将 `.env` 文件提交到 Git 仓库！
 
-### 3. 启动应用
+### 3. 安装依赖并启动应用
 
 ```bash
 # 克隆项目
 git clone https://github.com/LYK0226/XIAOICE.git
 cd XIAOICE
 
-# 启动本地服务器
-python3 -m http.server 8000
+# 安装 Python 依赖
+pip install -r requirements.txt
+
+# 测试 API 连接（可选但推荐）
+python test_api.py
+
+# 启动应用
+python run.py
 ```
 
 ### 4. 访问应用
 
-在浏览器中打开：`http://localhost:8000/app/templates/index.html`
+在浏览器中打开：`http://localhost:5000`
 
 ### 5. 测试 API（可选）
 
-访问 `http://localhost:8000/app/templates/test-api.html` 来测试您的 API 配置是否正确。
+访问 `http://localhost:5000/test-api` 来测试您的 API 配置是否正确。
+
+📚 **详细设置指南**：查看 [GOOGLE_AI_SETUP.md](GOOGLE_AI_SETUP.md) 获取完整的设置说明和故障排除。
 
 ## 📖 使用指南
 
@@ -114,12 +127,14 @@ python3 -m http.server 8000
 
 ## 🛠️ 技术栈
 
+- **后端**: Flask 3.1.2, Python 3.x
 - **前端**: HTML5, CSS3, JavaScript (ES6+)
-- **AI 服务**: Google Gemini API
-  - Gemini Pro (文字对话)
-  - Gemini Pro Vision (图像识别)
+- **AI 服务**: Google AI Studio API
+  - Gemini 1.5 Flash (文字对话，默认)
+  - Gemini 1.5 Pro (高级对话，可选)
+  - 支持图像识别和分析
 - **图标**: Font Awesome 6.0
-- **存储**: localStorage
+- **存储**: localStorage (前端), Flask Session (后端)
 
 ## 📁 项目结构
 
