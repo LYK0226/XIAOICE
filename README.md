@@ -47,7 +47,7 @@
 GOOGLE_API_KEY="YOUR_ACTUAL_API_KEY_HERE"
 
 # Gemini Model (可选)
-GEMINI_MODEL="gemini-1.5-flash"
+GEMINI_MODEL="gemini-2.5-flash-lite"
 ```
 
 ⚠️ **重要**：请勿将 `.env` 文件提交到 Git 仓库！

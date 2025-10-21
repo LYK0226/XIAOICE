@@ -9,6 +9,16 @@ def index():
     """Render the main chat page."""
     return render_template('index.html')
 
+@bp.route('/demo')
+def demo():
+    """Render the demo page."""
+    return render_template('demo.html')
+
+@bp.route('/scrollbar-test')
+def scrollbar_test():
+    """Render the scrollbar test page."""
+    return render_template('scrollbar-test.html')
+
 @bp.route('/chat', methods=['POST'])
 def chat():
     """Handle chat messages and image uploads."""
