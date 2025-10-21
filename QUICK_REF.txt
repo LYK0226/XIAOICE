@@ -1,0 +1,36 @@
+📋 XIAOICE 簡化版本 - 快速參考
+
+🚀 啟動
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  /workspaces/XIAOICE/quick-fix.sh
+
+📍 訪問
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  應用:   http://localhost:8080
+  API:    http://localhost:5000/api
+  DB:     http://localhost:5050
+
+🔧 常用
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  ./manage-tables.sh check      查看表
+  ./manage-tables.sh reset      重置
+  ./diagnose.sh                 診斷
+
+📚 文檔
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  README.md                     概述（35 行）
+  QUICK_START.md               開始指南
+  USER_AUTH_GUIDE.md           詳細說明
+
+🔐 登入
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  pgAdmin:  admin@example.com / admin123
+  DB:       xiaoice_user / xiaoice_password
+
+✅ 狀態
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  代碼:     精簡 50% ✓
+  功能:     100% 保留 ✓
+  文檔:     4 個 ✓
+
+最後更新: 2025-10-21

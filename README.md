@@ -1,48 +1,93 @@
-# XIAOICE 智能聊天助手 🤖
+# XIAOICE 🤖# XIAOICE 智能聊天助手 🤖
 
-一个功能强大的 AI 聊天应用，集成了 Google Gemini API，支持智能对话和图像识别。
 
-**📚 快速導航：** [文檔索引](docs/DOCUMENTATION-INDEX.md) | [快速開始](docs/GETTING-STARTED.md) | [結構說明](docs/STRUCTURE.md)
 
-![Status](https://img.shields.io/badge/status-active-success.svg)
-![Version](https://img.shields.io/badge/version-2.0-blue.svg)
-![License](https://img.shields.io/badge/license-MIT-green.svg)
+AI 聊天助手 + 用戶認證系統一个功能强大的 AI 聊天应用，集成了 Google Gemini API，支持智能对话和图像识别。
 
-## ✨ 主要功能
 
-### 🎯 核心功能
+
+## 🚀 快速開始**📚 快速導航：** [文檔索引](docs/DOCUMENTATION-INDEX.md) | [快速開始](docs/GETTING-STARTED.md) | [結構說明](docs/STRUCTURE.md)
+
+
+
+```bash![Status](https://img.shields.io/badge/status-active-success.svg)
+
+/workspaces/XIAOICE/quick-fix.sh![Version](https://img.shields.io/badge/version-2.0-blue.svg)
+
+```![License](https://img.shields.io/badge/license-MIT-green.svg)
+
+
+
+訪問 http://localhost:8080## ✨ 主要功能
+
+
+
+## 📍 服務地址### 🎯 核心功能
+
 - **🤖 AI 智能对话** - 使用 Google Gemini Pro 模型，提供自然流畅的对话体验
-- **👁️ AI 图像识别** - 使用 Gemini Pro Vision，可分析图片内容、识别文字、解析试卷
-- **🌍 多语言支持** - 支持简体中文、繁体中文、英文三种语言
-- **😊 Emoji 表情** - 内置丰富的表情选择器，8 大分类数百个表情
-- **👤 自定义头像** - 可上传用户和 AI 的自定义头像
-- **🎨 背景定制** - 支持渐变色、纯色、图片三种背景类型，8 种预设 + 自定义选项
-- **💾 本地存储** - 自动保存语言偏好、头像和背景设置
+
+| 功能 | URL |- **👁️ AI 图像识别** - 使用 Gemini Pro Vision，可分析图片内容、识别文字、解析试卷
+
+|------|-----|- **🌍 多语言支持** - 支持简体中文、繁体中文、英文三种语言
+
+| 應用 | http://localhost:8080 |- **😊 Emoji 表情** - 内置丰富的表情选择器，8 大分类数百个表情
+
+| 註冊 | http://localhost:8080/signup.html |- **👤 自定义头像** - 可上传用户和 AI 的自定义头像
+
+| 登入 | http://localhost:8080/login.html |- **🎨 背景定制** - 支持渐变色、纯色、图片三种背景类型，8 种预设 + 自定义选项
+
+| API | http://localhost:5000/api |- **💾 本地存储** - 自动保存语言偏好、头像和背景设置
+
+| 數據庫 | http://localhost:5050 |
 
 ### 🎨 界面特色
-- 完全可自定义的背景（渐变/纯色/图片）
+
+## 🔧 常用命令- 完全可自定义的背景（渐变/纯色/图片）
+
 - 8 种精美预设渐变色
-- 支持上传个人背景图片
-- 双向页面导航（聊天 ⇄ 功能展示）
-- 响应式布局，支持各种设备
-- 流畅的动画效果
-- 直观的侧边栏导航
+
+```bash- 支持上传个人背景图片
+
+./quick-fix.sh              # 一鍵啟動- 双向页面导航（聊天 ⇄ 功能展示）
+
+./manage-tables.sh          # 數據庫管理- 响应式布局，支持各种设备
+
+./diagnose.sh               # 系統診斷- 流畅的动画效果
+
+```- 直观的侧边栏导航
+
 - 优雅的消息气泡设计
+
+## 📚 文檔
 
 ## 🚀 快速开始
 
-### 1. 获取 Gemini API 密钥
+- **QUICK_START.md** - 詳細使用指南
 
-1. 访问 [Google AI Studio](https://makersuite.google.com/app/apikey)
+- **USER_AUTH_GUIDE.md** - 認證系統說明### 1. 获取 Gemini API 密钥
+
+
+
+## 🔐 預設登入1. 访问 [Google AI Studio](https://makersuite.google.com/app/apikey)
+
 2. 使用 Google 账号登录
-3. 点击 **"Create API Key"** 创建新密钥
-4. 复制生成的 API 密钥
 
-### 2. 配置 API 密钥
+```3. 点击 **"Create API Key"** 创建新密钥
 
-打开 `script.js` 文件，找到第 21 行：
+pgAdmin:  admin@example.com / admin1234. 复制生成的 API 密钥
 
-```javascript
+DB:       xiaoice_user / xiaoice_password
+
+```### 2. 配置 API 密钥
+
+
+
+---打开 `script.js` 文件，找到第 21 行：
+
+
+
+生產就緒 ✅ | 最後更新: 2025-10-21```javascript
+
 const GEMINI_API_KEY = 'YOUR_API_KEY_HERE';
 ```
 

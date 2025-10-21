@@ -1,69 +1,47 @@
-version: '3.9'
+version: '3.8'
 
 services:
-  # PostgreSQL Database
+  # PostgreSQL 数据库
   postgres:
     image: postgres:15-alpine
-    container_name: xiaoice-postgres
+    container_name: xiaoice_postgres
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
       POSTGRES_DB: xiaoice
+      POSTGRES_USER: xiaoice_user
+      POSTGRES_PASSWORD: xiaoice_password
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - xiaoice_network
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U xiaoice_user"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - xiaoice-network
 
-  # pgAdmin - PostgreSQL Management Tool
+  # pgAdmin - 数据库管理工具
   pgadmin:
     image: dpage/pgadmin4:latest
-    container_name: xiaoice-pgadmin
+    container_name: xiaoice_pgadmin
     environment:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
-      PGADMIN_DEFAULT_PASSWORD: admin
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_DEFAULT_PASSWORD: admin123
     ports:
       - "5050:80"
     depends_on:
-      postgres:
-        condition: service_healthy
+      - postgres
     networks:
-      - xiaoice-network
-    restart: unless-stopped
-
-  # Flask Application
-  flask:
-    build:
-      context: .
-      dockerfile: backend/Dockerfile
-    container_name: xiaoice-flask
-    command: gunicorn --bind 0.0.0.0:5000 --workers 4 --threads 2 --worker-class gthread --timeout 120 'run:app'
-    ports:
-      - "5000:5000"
-    environment:
-      - FLASK_ENV=production
-      - SQLALCHEMY_DATABASE_URI=postgresql://postgres:password@postgres:5432/xiaoice
-      - FLASK_APP=run.py
-    depends_on:
-      postgres:
-        condition: service_healthy
+      - xiaoice_network
     volumes:
-      - ./backend:/app
-      - ./frontend:/app/frontend
-    networks:
-      - xiaoice-network
-    restart: unless-stopped
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin_servers.xml:/pgadmin4/servers.xml
 
 volumes:
   postgres_data:
+  pgadmin_data:
 
 networks:
-  xiaoice-network:
+  xiaoice_network:
     driver: bridge
