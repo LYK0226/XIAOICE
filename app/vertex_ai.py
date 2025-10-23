@@ -26,9 +26,10 @@ def generate_response(message, image_path=None, image_mime_type=None):
             with open(image_path, 'rb') as f:
                 image_data = f.read()
             
-            # Upload the image using Google AI
-            uploaded_file = genai.upload_file(image_path)
-            parts.append(uploaded_file)
+            # Create an image part directly from bytes
+            from PIL import Image
+            image = Image.open(image_path)
+            parts.append(image)
             
         except FileNotFoundError:
             current_app.logger.error(f"Image file not found: {image_path}")
