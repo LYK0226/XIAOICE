@@ -61,7 +61,7 @@
                 <span>聊天盒子</span>
             </div>
             <div class="chat-info">
-                <span>您好，Gemini</span>
+                <span>您好, GPT-4o</span>
                 <i class="fas fa-edit"></i>
             </div>
             <div class="chat-actions">
@@ -87,9 +87,10 @@
                 <button class="toolbar-btn" title="附加文件"><i class="fas fa-paperclip"></i></button>
                 <button class="toolbar-btn" id="imageRecognitionBtn" title="图像识别"><i class="fas fa-image"></i></button>
                 <button class="toolbar-btn" id="emojiBtn" title="表情符号"><i class="fas fa-smile"></i></button>
-                <button class="toolbar-btn" title="语音输入"><i class="fas fa-microphone"></i></button>
+                <button class="toolbar-btn" id="voiceInputBtn" title="语音输入"><i class="fas fa-microphone"></i></button>
                 <button class="toolbar-btn" title="代码块"><i class="fas fa-code"></i></button>
                 <button class="toolbar-btn" title="插入表格"><i class="fas fa-table"></i></button>
+                <button class="toolbar-btn" id="webcamBtn" title="Webcam"><i class="fas fa-camera"></i></button>
             </div>
             <div class="input-wrapper">
                 <input type="text" id="messageInput" placeholder="在这里输入您的问题...">
@@ -287,6 +288,25 @@
                     </button>
                 </div>
             </div>
+        </div>
+    </div>
+    
+    <!-- Custom Alert Modal -->
+    <div id="customAlertModal" class="modal">
+        <div class="modal-content" style="max-width: 450px;">
+            <h3 id="customAlertTitle" style="text-align: center;">提示</h3>
+            <p id="customAlertMessage" style="margin: 20px 0; text-align: center;"></p>
+            <button id="customAlertCloseBtn" class="sidebar-btn" style="width: 50%; margin: 0 auto; text-align: center; display: block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold;">确定</button>
+        </div>
+    </div>
+
+    <!-- Webcam Modal -->
+    <div id="webcamModal" class="modal">
+        <div class="modal-content">
+            <span class="close-webcam">&times;</span>
+            <h2>Webcam Input</h2>
+            <video id="webcamFeed" autoplay style="width: 100%; border-radius: 8px;"></video>
+            <button id="captureBtn" class="sidebar-btn" style="width: 100%; margin-top: 10px;"><i class="fas fa-camera"></i> Capture & Send</button>
         </div>
     </div>
     

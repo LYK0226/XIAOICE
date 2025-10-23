@@ -180,11 +180,27 @@ function createMessage(text, isUser = false) {
     const paragraph = document.createElement('p');
     paragraph.textContent = text;
     messageContent.appendChild(paragraph);
+
+    if (!isUser) {
+        const speakBtn = document.createElement('button');
+        speakBtn.className = 'speak-btn';
+        speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+        speakBtn.title = '朗讀訊息';
+        speakBtn.onclick = () => speakMessage(text);
+        messageContent.appendChild(speakBtn);
+    }
     
     container.appendChild(avatar);
     container.appendChild(messageContent);
     
     return container;
+}
+
+// Text-to-Speech Functionality
+function speakMessage(text) {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.lang = currentLanguage;
+    speechSynthesis.speak(utterance);
 }
 
 // Function to create a message with image
@@ -1074,4 +1090,158 @@ window.addEventListener('DOMContentLoaded', () => {
             scrollProgress.style.width = scrollPercentage + '%';
         });
     }
+});
+// Update initial bot message avatar
+function updateInitialBotAvatar() {
+    const initialBotAvatar = document.querySelector('.bot-message-container .avatar');
+    if (initialBotAvatar) {
+        if (botAvatar) {
+            initialBotAvatar.style.backgroundImage = `url(${botAvatar})`;
+            initialBotAvatar.style.backgroundSize = 'cover';
+            initialBotAvatar.style.backgroundPosition = 'center';
+            initialBotAvatar.innerHTML = '';
+        } else {
+            initialBotAvatar.style.backgroundImage = 'none';
+            initialBotAvatar.innerHTML = '<i class="fas fa-robot"></i>';
+        }
+    }
+}
+
+// Load saved avatars from localStorage on page load
+window.addEventListener('load', () => {
+    const savedUserAvatar = localStorage.getItem('userAvatar');
+    const savedBotAvatar = localStorage.getItem('botAvatar');
+    
+    if (savedUserAvatar) {
+        userAvatar = savedUserAvatar;
+        userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
+        userAvatarPreview.style.backgroundSize = 'cover';
+        userAvatarPreview.style.backgroundPosition = 'center';
+        userAvatarPreview.innerHTML = '';
+    }
+    
+    if (savedBotAvatar) {
+        botAvatar = savedBotAvatar;
+        botAvatarPreview.style.backgroundImage = `url(${botAvatar})`;
+        botAvatarPreview.style.backgroundSize = 'cover';
+        botAvatarPreview.style.backgroundPosition = 'center';
+        botAvatarPreview.innerHTML = '';
+        updateInitialBotAvatar();
+    }
+});
+
+// Voice Input Functionality
+const voiceInputBtn = document.getElementById('voiceInputBtn');
+const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+recognition.lang = 'zh-CN'; // Default language
+recognition.interimResults = false;
+
+voiceInputBtn.addEventListener('click', () => {
+    recognition.lang = currentLanguage;
+    try {
+        recognition.start();
+        voiceInputBtn.classList.add('active');
+        voiceInputBtn.title = '正在聆聽...';
+    } catch (error) {
+        console.error("Speech recognition could not be started: ", error);
+        alert('語音辨識無法啟動。您的瀏覽器可能不支援，或未授予麥克風權限。');
+    }
+});
+
+recognition.onresult = (event) => {
+    const transcript = event.results[0][0].transcript;
+    messageInput.value = transcript;
+    sendMessage(); // Automatically send after recognition
+};
+
+recognition.onend = () => {
+    voiceInputBtn.classList.remove('active');
+    voiceInputBtn.title = '語音輸入';
+};
+
+recognition.onerror = (event) => {
+    console.error('Speech recognition error:', event.error);
+    if (event.error === 'not-allowed') {
+        alert('語音辨識失敗：您需要允許麥克風存取。\n\n請檢查您瀏覽器網址列左側的網站設定，並確保麥克風權限已設為「允許」。');
+    } else {
+        alert(`語音辨識錯誤: ${event.error}`);
+    }
+};
+
+// Webcam Functionality
+const webcamBtn = document.getElementById('webcamBtn');
+const webcamModal = document.getElementById('webcamModal');
+const closeWebcamBtn = document.querySelector('.close-webcam');
+const webcamFeed = document.getElementById('webcamFeed');
+const captureBtn = document.getElementById('captureBtn');
+let stream;
+
+webcamBtn.addEventListener('click', async () => {
+    webcamModal.style.display = 'block';
+    try {
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        webcamFeed.srcObject = stream;
+    } catch (err) {
+        console.error("Error accessing webcam:", err);
+        alert('無法存取網路攝影機。請檢查權限。');
+        webcamModal.style.display = 'none';
+    }
+});
+
+function closeWebcam() {
+    if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+    }
+    webcamModal.style.display = 'none';
+}
+
+closeWebcamBtn.addEventListener('click', closeWebcam);
+
+captureBtn.addEventListener('click', () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = webcamFeed.videoWidth;
+    canvas.height = webcamFeed.videoHeight;
+    const context = canvas.getContext('2d');
+    context.drawImage(webcamFeed, 0, 0, canvas.width, canvas.height);
+    
+    const imageData = canvas.toDataURL('image/jpeg');
+    closeWebcam();
+
+    const t = translations[currentLanguage];
+    const userMessageText = messageInput.value.trim() || t.analyzeImage;
+
+    // Create user message with image
+    const imageMessage = createImageMessage(imageData, userMessageeText, true);
+    messagesDiv.appendChild(imageMessage);
+    messageInput.value = ''; // Clear input after sending
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    // Show analyzing indicator
+    const analyzingIndicator = createTypingIndicator(t.analyzing);
+    messagesDiv.appendChild(analyzingIndicator);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    // Convert data URL to blob for sending to API
+    fetch(imageData)
+        .then(res => res.blob())
+        .then(async (blob) => {
+            try {
+                const analysis = await chatAPI.sendImageMessage(userMessageText, blob, currentLanguage);
+                
+                messagesDiv.removeChild(analyzingIndicator);
+                
+                const botMessage = createMessage(analysis, false);
+                messagesDiv.appendChild(botMessage);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                
+            } catch (error) {
+                console.error('Image analysis error:', error);
+                messagesDiv.removeChild(analyzingIndicator);
+                
+                const errorMsg = t.errorMsg || '抱歉，图像分析失败。';
+                const botMessage = createMessage(errorMsg, false);
+                messagesDiv.appendChild(botMessage);
+                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            }
+        });
 });
