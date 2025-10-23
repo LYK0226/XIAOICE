@@ -1,5 +1,9 @@
 # XIAOICE 智能聊天助手 🤖
 
+```bash
+google-genai
+```
+
 一个功能强大的 AI 聊天应用，集成了 Google Gemini API，支持智能对话和图像识别。
 
 ![Status](https://img.shields.io/badge/status-active-success.svg)
