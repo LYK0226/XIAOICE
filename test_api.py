@@ -23,19 +23,19 @@ if not api_key:
 
 print(f"✅ API Key 已找到（長度：{len(api_key)} 字元）")
 
-# 嘗試導入 google.generativeai
+# 嘗試導入 google.genai
 try:
-    import google.generativeai as genai
-    print("✅ google.generativeai 套件已正確安裝")
+    from google import genai
+    print("✅ google-genai 套件已正確安裝")
 except ImportError as e:
-    print("❌ 錯誤：無法導入 google.generativeai")
+    print("❌ 錯誤：無法導入 google.genai")
     print(f"   {e}")
-    print("   請執行：pip install google-generativeai")
+    print("   請執行：pip install google-genai")
     sys.exit(1)
 
 # 配置 API
 try:
-    genai.configure(api_key=api_key)
+    client = genai.Client(api_key=api_key)
     print("✅ API 已成功配置")
 except Exception as e:
     print(f"❌ 錯誤：無法配置 API")
@@ -46,20 +46,15 @@ except Exception as e:
 model_name = os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash')
 print(f"\n📡 測試模型：{model_name}")
 
-try:
-    model = genai.GenerativeModel(model_name)
-    print("✅ 模型初始化成功")
-except Exception as e:
-    print(f"❌ 錯誤：無法初始化模型")
-    print(f"   {e}")
-    sys.exit(1)
-
 # 發送測試請求
 print("\n💬 發送測試請求...")
 try:
-    response = model.generate_content("請用繁體中文說：Hello! 測試成功！")
+    response = client.models.generate_content(
+        model=model_name,
+        contents="請用繁體中文說：Hello! 測試成功！"
+    )
     print("✅ API 請求成功！")
-    print(f"\n📝 AI 回應：\n{response.text}\n")
+    print(f"\n📝 AI 回應：\n{response.candidates[0].content.parts[0].text}\n")
 except Exception as e:
     print(f"❌ 錯誤：API 請求失敗")
     print(f"   {e}")
@@ -83,7 +78,7 @@ except Exception as e:
 print("🖼️  測試圖像上傳功能...")
 try:
     # 列出可用的文件（如果有的話）
-    files = genai.list_files()
+    files = client.files.list()
     print(f"✅ 圖像上傳功能可用（當前已上傳 {len(list(files))} 個文件）")
 except Exception as e:
     print(f"⚠️  警告：圖像功能測試失敗：{e}")
