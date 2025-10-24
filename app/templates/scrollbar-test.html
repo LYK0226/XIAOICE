@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>滚动条测试 / Scrollbar Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .test-container {
+            background: white;
+            padding: 30px;
+            border-radius: 12px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #667eea;
+            text-align: center;
+        }
+        
+        .scroll-box {
+            height: 400px;
+            overflow-y: scroll !important;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border: 3px solid #667eea;
+            margin: 20px 0;
+        }
+        
+        /* 超级明显的滚动条 */
+        .scroll-box::-webkit-scrollbar {
+            width: 20px !important;
+            background: #ffffff !important;
+        }
+        
+        .scroll-box::-webkit-scrollbar-track {
+            background: linear-gradient(to right, #d0d0d0 0%, #e5e5e5 50%, #d0d0d0 100%) !important;
+            border-radius: 12px !important;
+            margin: 8px 0 !important;
+            border: 2px solid #c0c0c0 !important;
+        }
+        
+        .scroll-box::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #667eea 0%, #764ba2 50%, #f093fb 100%) !important;
+            border-radius: 12px !important;
+            border: 4px solid #ffffff !important;
+            min-height: 80px !important;
+            box-shadow: 0 0 20px rgba(102, 126, 234, 0.9) !important;
+        }
+        
+        .scroll-box::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #f093fb 0%, #764ba2 50%, #667eea 100%) !important;
+            box-shadow: 0 0 30px rgba(240, 147, 251, 1) !important;
+        }
+        
+        .content-block {
+            background: white;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .indicator {
+            background: #667eea;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🎯 滚动条测试页面 / Scrollbar Test</h1>
+        <p style="text-align: center; color: #666;">
+            如果你能看到右侧有一个<strong style="color: #667eea;">20px 宽的紫色渐变滚动条</strong>，说明滚动条工作正常！
+        </p>
+        
+        <div class="indicator">
+            👇 看这里！右侧应该有一个超级明显的紫色滚动条！ 👇
+        </div>
+        
+        <div class="scroll-box">
+            <div class="content-block">
+                <h3>📦 内容块 1</h3>
+                <p>这是一个测试内容块。滚动条应该在右侧显示。</p>
+            </div>
+            
+            <div class="content-block">
+                <h3>📦 内容块 2</h3>
+                <p>继续向下滚动查看更多内容...</p>
+            </div>
+            
+            <div class="content-block">
+                <h3>📦 内容块 3</h3>
+                <p>滚动条是紫色渐变的，宽度 20px。</p>
+            </div>
+            
+            <div class="content-block">
+                <h3>📦 内容块 4</h3>
+                <p>当你鼠标悬停在滚动条上时，颜色会反转。</p>
+            </div>
+            
+            <div class="content-block">
+                <h3>📦 内容块 5</h3>
+                <p>继续滚动...</p>
+            </div>
+            
+            <div class="content-block">
+                <h3>📦 内容块 6</h3>
+                <p>滚动条有发光效果！</p>
+            </div>
+            
+            <div class="content-block">
+                <h3>📦 内容块 7</h3>
+                <p>几乎到底了...</p>
+            </div>
+            
+            <div class="content-block">
+                <h3>📦 内容块 8</h3>
+                <p>还有一点...</p>
+            </div>
+            
+            <div class="content-block">
+                <h3>✅ 内容块 9 - 最后一个！</h3>
+                <p>恭喜！如果你能看到滚动条，说明一切正常！</p>
+            </div>
+        </div>
+        
+        <div style="text-align: center; margin-top: 20px;">
+            <p><strong>✅ 看到滚动条了吗？</strong></p>
+            <p style="color: #666; font-size: 14px;">
+                如果看到了，返回 <a href="/" style="color: #667eea; font-weight: bold;">主页面</a>，
+                滚动条应该也能正常工作！
+            </p>
+        </div>
+    </div>
+</body>
+</html>
