@@ -1,5 +1,6 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
 import os
+import json
 from . import vertex_ai
 
 bp = Blueprint('main', __name__)
@@ -45,11 +46,21 @@ def chat():
             image_file.save(image_path)
             image_mime_type = image_file.mimetype
 
-        # Get response from Vertex AI
+        # Parse optional conversation history sent from client
+        history = None
+        history_raw = request.form.get('history')
+        if history_raw:
+            try:
+                history = json.loads(history_raw)
+            except Exception:
+                current_app.logger.warning('Unable to parse history from request; ignoring history.')
+
+        # Get response from Vertex AI (pass history for memory/context)
         response_text = vertex_ai.generate_response(
-            message, 
-            image_path=image_path, 
-            image_mime_type=image_mime_type
+            message,
+            image_path=image_path,
+            image_mime_type=image_mime_type,
+            history=history,
         )
         
         return jsonify({'response': response_text})

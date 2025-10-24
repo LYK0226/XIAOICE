@@ -110,6 +110,6 @@ XIAOICE/
 │       │   └── styles.css
 │       └── js/
 │           ├── config.example.js
-│           └── script.js
+│           └── chatbox.js
 └── README-API.md             # 本文件
 ```

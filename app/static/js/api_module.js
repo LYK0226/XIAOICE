@@ -18,12 +18,17 @@ class ChatAPI {
      * @param {string} currentLanguage - 當前語言設置
      * @returns {Promise<string>} - AI 回應文字
      */
-    async sendChatMessage(userMessage, imageFile = null, currentLanguage = 'zh-CN') {
+    async sendChatMessage(userMessage, imageFile = null, currentLanguage = 'zh-CN', history = null) {
         const formData = new FormData();
         formData.append('message', userMessage);
         
         if (imageFile) {
             formData.append('image', imageFile);
+        }
+
+        if (history) {
+            // attach conversation history as JSON string
+            formData.append('history', JSON.stringify(history));
         }
 
         try {
@@ -60,8 +65,8 @@ class ChatAPI {
      * @param {string} language - 語言設置
      * @returns {Promise<string>}
      */
-    async sendTextMessage(message, language = 'zh-CN') {
-        return this.sendChatMessage(message, null, language);
+    async sendTextMessage(message, language = 'zh-CN', history = null) {
+        return this.sendChatMessage(message, null, language, history);
     }
 
     /**
@@ -71,8 +76,8 @@ class ChatAPI {
      * @param {string} language - 語言設置
      * @returns {Promise<string>}
      */
-    async sendImageMessage(message, imageFile, language = 'zh-CN') {
-        return this.sendChatMessage(message, imageFile, language);
+    async sendImageMessage(message, imageFile, language = 'zh-CN', history = null) {
+        return this.sendChatMessage(message, imageFile, language, history);
     }
 
     /**

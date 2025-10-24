@@ -4,8 +4,8 @@
 
 ```
 app/static/js/
-├── api.js       # 新增：API 交互模塊（與後端通信）
-├── script.js    # 主要：UI 邏輯和用戶交互
+├── api_module.js       # 新增：API 交互模塊（與後端通信）
+├── chatbox.js    # 主要：UI 邏輯和用戶交互
 └── config.example.js
 ```
 
@@ -15,7 +15,7 @@ app/static/js/
 
 ### **之前（耦合架構）**
 ```
-script.js (1000+ 行)
+chatbox.js (1000+ 行)
 ├── UI 邏輯
 ├── API 調用
 ├── 事件處理
@@ -24,19 +24,19 @@ script.js (1000+ 行)
 
 ### **現在（分離架構）**
 ```
-api.js (100 行)
+api_module.js (100 行)
 └── API 交互邏輯
     ├── sendChatMessage()
     ├── sendTextMessage()
     ├── sendImageMessage()
     └── checkConnection()
 
-script.js (900+ 行)
+chatbox.js (900+ 行)
 └── UI 和業務邏輯
     ├── DOM 操作
     ├── 事件處理
     ├── 語言管理
-    └── 調用 api.js
+    └── 調用 api_module.js
 ```
 
 ---
@@ -44,12 +44,12 @@ script.js (900+ 行)
 ## 🎯 優點
 
 ### 1. **關注點分離**
-- `api.js`：專注於後端通信
-- `script.js`：專注於用戶界面
+- `api_module.js`：專注於後端通信
+- `chatbox.js`：專注於用戶界面
 
 ### 2. **易於維護**
-- API 變更只需修改 `api.js`
-- UI 變更只需修改 `script.js`
+- API 變更只需修改 `api_module.js`
+- UI 變更只需修改 `chatbox.js`
 
 ### 3. **可重用性**
 ```javascript
@@ -145,16 +145,15 @@ myAPI.sendTextMessage('你好', 'zh-CN');
 
 ## 📝 HTML 載入順序
 
-**重要：** 必須先載入 `api.js`，再載入 `script.js`
+**重要：** 必須先載入 `api_module.js`，再載入 `chatbox.js`
 
 ```html
 <!-- ✅ 正確順序 -->
-<script src="../static/js/api.js"></script>
-<script src="../static/js/script.js"></script>
-
-<!-- ❌ 錯誤順序 -->
-<script src="../static/js/script.js"></script>
-<script src="../static/js/api.js"></script>
+    <script src="../static/js/api_module.js"></script>
+    <script src="../static/js/chatbox.js"></script><!-- ❌ 錯誤順序 -->
+    <script src="../static/js/chatbox.js"></script>
+</body>
+<script src="../static/js/api_module.js"></script>
 ```
 
 ---
@@ -163,7 +162,7 @@ myAPI.sendTextMessage('你好', 'zh-CN');
 
 ### **之前的方式**
 ```javascript
-// script.js 中直接寫 API 調用
+// chatbox.js 中直接寫 API 調用
 async function callBackendAPI(userMessage, imageFile = null) {
     const formData = new FormData();
     formData.append('message', userMessage);
@@ -181,14 +180,14 @@ async function callBackendAPI(userMessage, imageFile = null) {
 
 ### **現在的方式**
 ```javascript
-// api.js 中定義
+// api_module.js 中定義
 class ChatAPI {
     async sendChatMessage(userMessage, imageFile, language) {
         // ... API 邏輯
     }
 }
 
-// script.js 中使用
+// chatbox.js 中使用
 const response = await chatAPI.sendTextMessage(message, currentLanguage);
 ```
 
@@ -215,7 +214,7 @@ class ChatAPI {
 
 ## ⚠️ 注意事項
 
-1. **依賴順序**：確保 HTML 中 `api.js` 在 `script.js` 之前載入
+1. **依賴順序**：確保 HTML 中 `api_module.js` 在 `chatbox.js` 之前載入
 2. **全域變量**：`chatAPI` 是全域實例，可在任何地方使用
 3. **錯誤處理**：所有方法都會拋出錯誤，需要用 `try-catch` 捕獲
 4. **語言參數**：記得傳遞正確的語言代碼（'zh-CN', 'zh-TW', 'en'）
@@ -225,9 +224,9 @@ class ChatAPI {
 ## 📊 影響範圍
 
 ### 修改的文件
-- ✅ `app/static/js/api.js` - **新建**
-- ✅ `app/static/js/script.js` - **修改**（移除 API 代碼）
-- ✅ `app/templates/index.html` - **修改**（添加 api.js 引用）
+- ✅ `app/static/js/api_module.js` - **新建**
+- ✅ `app/static/js/chatbox.js` - **修改**（移除 API 代碼）
+- ✅ `app/templates/index.html` - **修改**（添加 api_module.js 引用）
 
 ### 不需要修改的文件
 - ✅ `app/routes.py` - 後端 API 不變

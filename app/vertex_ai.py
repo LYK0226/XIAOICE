@@ -9,7 +9,7 @@ def init_gemini():
         raise ValueError("GOOGLE_API_KEY is not set in environment variables")
     return genai.Client(api_key=api_key)
 
-def generate_response(message, image_path=None, image_mime_type=None):
+def generate_response(message, image_path=None, image_mime_type=None, history=None):
     """
     Generates a response from the Gemini model.
     Can handle both text and image inputs.
@@ -19,6 +19,36 @@ def generate_response(message, image_path=None, image_mime_type=None):
     model_name = current_app.config['GEMINI_MODEL']
 
     contents = []
+
+    # If history provided, convert to a context string and prepend
+    if history:
+        try:
+            # history can be a list of message objects
+            convo_lines = ["Conversation history:"]
+            # Support two formats: list of {role, content} or list of {user, bot} pairs
+            if isinstance(history, list):
+                for item in history:
+                    if isinstance(item, dict) and 'role' in item and 'content' in item:
+                        role = item.get('role')
+                        content = item.get('content', '')
+                        if role == 'user':
+                            convo_lines.append(f"User: {content}")
+                        else:
+                            convo_lines.append(f"Assistant: {content}")
+                    elif isinstance(item, dict) and 'user' in item and 'bot' in item:
+                        convo_lines.append(f"User: {item.get('user','')}")
+                        convo_lines.append(f"Assistant: {item.get('bot','')}")
+                    else:
+                        # unknown item, stringify
+                        convo_lines.append(str(item))
+            else:
+                convo_lines.append(str(history))
+
+            context_text = "\n".join(convo_lines)
+            contents.append(context_text)
+        except Exception as e:
+            current_app.logger.warning(f"Failed to process history for context: {e}")
+
     if message:
         contents.append(message)
     

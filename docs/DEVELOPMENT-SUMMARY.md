@@ -95,7 +95,7 @@
 - 按钮和交互效果
 
 ### JavaScript 文件
-✅ **app/static/js/script.js** - 添加 200+ 行逻辑
+✅ **app/static/js/chatbox.js** - 添加 200+ 行逻辑
 - 标签页切换功能
 - 背景类型切换
 - 渐变色应用逻辑

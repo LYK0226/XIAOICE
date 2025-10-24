@@ -18,10 +18,10 @@ let botAvatar = null; // Will store bot avatar URL
 // Image recognition data
 let currentImageData = null;
 
-// API 模塊已分離到 api.js
-// 確保在 HTML 中先載入 api.js，然後再載入 script.js
+// API 模塊已分離到 api_module.js
+// 確保在 HTML 中先載入 api_module.js，然後再載入 chatbox.js
 
-// Conversation history for context
+// Conversation history for context (array of {role: 'user'|'bot', content: string, time?: number})
 let conversationHistory = [];
 
 // Emoji categories
@@ -198,6 +198,9 @@ function createMessage(text, isUser = false) {
 
 // Text-to-Speech Functionality
 function speakMessage(text) {
+    // Cancel any ongoing speech before starting new one
+    speechSynthesis.cancel();
+    
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = currentLanguage;
     speechSynthesis.speak(utterance);
@@ -506,8 +509,11 @@ async function sendMessage() {
     // Add user message
     const userMessage = createMessage(message, true);
     messagesDiv.appendChild(userMessage);
-    messageInput.value = '';
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    messageInput.value = '';
+
+    // Save user turn to history
+    conversationHistory.push({ role: 'user', content: message, time: Date.now() });
     
     // Show typing indicator
     const typingIndicator = createTypingIndicator();
@@ -515,8 +521,8 @@ async function sendMessage() {
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
     
     try {
-        // 使用 API 模塊發送訊息
-        const aiResponse = await chatAPI.sendTextMessage(message, currentLanguage);
+        // 使用 API 模塊發送訊息，並傳送會話歷史作為上下文
+        const aiResponse = await chatAPI.sendTextMessage(message, currentLanguage, conversationHistory);
         
         // Remove typing indicator
         messagesDiv.removeChild(typingIndicator);
@@ -526,11 +532,8 @@ async function sendMessage() {
         messagesDiv.appendChild(botMessage);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
         
-        // Save to conversation history
-        conversationHistory.push({
-            user: message,
-            bot: aiResponse
-        });
+        // Save assistant turn to history
+        conversationHistory.push({ role: 'bot', content: aiResponse, time: Date.now() });
     } catch (error) {
         console.error('Error:', error);
         messagesDiv.removeChild(typingIndicator);
@@ -747,7 +750,7 @@ imageInput.addEventListener('change', async function(e) {
             
             try {
                 // 使用 API 模塊發送帶圖片的訊息
-                const analysis = await chatAPI.sendImageMessage(userMessageText, file, currentLanguage);
+                const analysis = await chatAPI.sendImageMessage(userMessageText, file, currentLanguage, conversationHistory);
                 
                 // Remove analyzing indicator
                 messagesDiv.removeChild(analyzingIndicator);
@@ -756,6 +759,9 @@ imageInput.addEventListener('change', async function(e) {
                 const botMessage = createMessage(analysis, false);
                 messagesDiv.appendChild(botMessage);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+                // Save assistant turn to history
+                conversationHistory.push({ role: 'bot', content: analysis, time: Date.now() });
                 
             } catch (error) {
                 console.error('Image analysis error:', error);
@@ -1211,10 +1217,13 @@ captureBtn.addEventListener('click', () => {
     const userMessageText = messageInput.value.trim() || t.analyzeImage;
 
     // Create user message with image
-    const imageMessage = createImageMessage(imageData, userMessageeText, true);
+    const imageMessage = createImageMessage(imageData, userMessageText, true);
     messagesDiv.appendChild(imageMessage);
-    messageInput.value = ''; // Clear input after sending
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    messageInput.value = ''; // Clear input after sending
+
+    // Save user turn to history
+    conversationHistory.push({ role: 'user', content: userMessageText, time: Date.now() });
 
     // Show analyzing indicator
     const analyzingIndicator = createTypingIndicator(t.analyzing);
@@ -1226,13 +1235,16 @@ captureBtn.addEventListener('click', () => {
         .then(res => res.blob())
         .then(async (blob) => {
             try {
-                const analysis = await chatAPI.sendImageMessage(userMessageText, blob, currentLanguage);
+                const analysis = await chatAPI.sendImageMessage(userMessageText, blob, currentLanguage, conversationHistory);
                 
                 messagesDiv.removeChild(analyzingIndicator);
                 
                 const botMessage = createMessage(analysis, false);
                 messagesDiv.appendChild(botMessage);
                 messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+                // Save assistant turn to history
+                conversationHistory.push({ role: 'bot', content: analysis, time: Date.now() });
                 
             } catch (error) {
                 console.error('Image analysis error:', error);

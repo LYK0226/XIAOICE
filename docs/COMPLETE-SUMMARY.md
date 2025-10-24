@@ -224,7 +224,7 @@
 ### 文件统计
 - **HTML 文件**: 3 个 (index, demo, test-api)
 - **CSS 文件**: 1 个 (app/static/css/styles.css, ~900 行)
-- **JavaScript 文件**: 1 个 (app/static/js/script.js, ~1200 行)
+- **JavaScript 文件**: 1 个 (app/static/js/chatbox.js, ~1200 行)
 - **文档文件**: 10+ 个
 - **配置文件**: 4 个
 
@@ -291,7 +291,7 @@ python3 -m http.server 8000
 ```
 
 ### 手动配置
-1. 编辑 `app/static/js/script.js` 第 21 行
+1. 编辑 `app/static/js/chatbox.js` 第 21 行
 2. 替换 API 密钥
 3. 保存文件
 4. 启动服务器
