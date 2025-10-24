@@ -47,3 +47,18 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+
+# Migration files (Flask-Migrate / Alembic)
+migrations/
+migrations/*
+
+# Local SQLite DB and DB files
+app.db
+*.db
+
+# Environment files
+.env
+.env.*
+
+# Flask instance folder
+instance/
