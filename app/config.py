@@ -17,3 +17,11 @@ class Config:
     # Uploads
     UPLOAD_FOLDER = 'app/static/uploads'
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
+
+    # Database
+    # Use DATABASE_URL environment variable if provided (Postgres, MySQL, etc.),
+    # otherwise fall back to a local SQLite file at project root.
+    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL', 'sqlite:///app.db')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    # When True, create DB tables automatically on app startup (useful for dev)
+    CREATE_DB_ON_STARTUP = os.environ.get('CREATE_DB_ON_STARTUP', 'true').lower() == 'true'

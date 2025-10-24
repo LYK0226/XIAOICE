@@ -106,7 +106,6 @@ XIAOICE/
 │   ├── main.py
 │   └── static/
 │       ├── css/
-│       │   ├── force-scrollbar.css
 │       │   └── styles.css
 │       └── js/
 │           ├── config.example.js
