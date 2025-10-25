@@ -23,14 +23,20 @@ python test_api.py
 python run.py
 flask --debug run --host=0.0.0.0
 ```
-# 啟動 Docker 伺服器
+### 啟動 Docker 伺服器
+```bash
 cd .devcontainer && docker-compose up -d
+```
 
-# 停止 Docker 伺服器
+### 停止 Docker 伺服器
+```bash
 cd .devcontainer && docker-compose down
+```
 
-# 列出 Docker 伺服器
+### 列出 Docker 伺服器
+```bash
 cd .devcontainer && docker ps
+```
 
 ### 查看資料庫資料
 
