@@ -1,6 +1,28 @@
 version: '3.8'
 
 services:
+  # Python Flask Application
+  app:
+    build:
+      context: ..
+      dockerfile: .devcontainer/Dockerfile
+    container_name: xiaoice_app
+    volumes:
+      - ..:/workspaces:cached
+    working_dir: /workspaces
+    command: sleep infinity
+    ports:
+      - "5000:5000"  # Flask application port
+    depends_on:
+      - postgres
+      - mailhog
+    networks:
+      - xiaoice_network
+    environment:
+      - FLASK_APP=run.py
+      - FLASK_ENV=development
+      - DATABASE_URL=postgresql://xiaoice_user:xiaoice_password@postgres:5432/xiaoice
+
   # PostgreSQL 数据库
   postgres:
     image: postgres:15-alpine
@@ -10,7 +32,7 @@ services:
       POSTGRES_USER: xiaoice_user
       POSTGRES_PASSWORD: xiaoice_password
     ports:
-      - "5432:5432"
+      - "5432:5432"  # PostgreSQL database port
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -29,7 +51,7 @@ services:
       PGADMIN_DEFAULT_EMAIL: admin@example.com
       PGADMIN_DEFAULT_PASSWORD: admin123
     ports:
-      - "5050:80"
+      - "5050:80"  # pgAdmin web interface
     depends_on:
       - postgres
     networks:
@@ -43,8 +65,8 @@ services:
     logging:
       driver: 'none' # disable saving logs
     ports:
-      - 1025:1025 # smtp server
-      - 8025:8025 # web ui
+      - "1025:1025"  # MailHog SMTP server
+      - "8025:8025"  # MailHog web UI
     networks:
       - xiaoice_network
 volumes:
