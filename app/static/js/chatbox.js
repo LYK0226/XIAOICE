@@ -1257,3 +1257,26 @@ captureBtn.addEventListener('click', () => {
             }
         });
 });
+
+// Logout functionality
+document.getElementById('logout').addEventListener('click', async () => {
+    try {
+        const response = await fetch('/auth/logout', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        });
+        
+        if (response.ok) {
+            // Redirect to login page
+            window.location.href = '/login';
+        } else {
+            console.error('Logout failed');
+            alert('退出登录失败，请重试。');
+        }
+    } catch (error) {
+        console.error('Logout error:', error);
+        alert('退出登录失败，请重试。');
+    }
+});
