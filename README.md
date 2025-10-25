@@ -23,18 +23,17 @@ python test_api.py
 python run.py
 flask --debug run --host=0.0.0.0
 ```
-### 啟動 Docker 伺服器
+
+###Docker 伺服器
+
 ```bash
+# 啟動 Docker 伺服器
 cd .devcontainer && docker-compose up -d
-```
 
-### 停止 Docker 伺服器
-```bash
+# 停止 Docker 伺服器
 cd .devcontainer && docker-compose down
-```
 
-### 列出 Docker 伺服器
-```bash
+# 列出 Docker 伺服器
 cd .devcontainer && docker ps
 ```
 
@@ -42,30 +41,20 @@ cd .devcontainer && docker ps
 
 ```bash
 python view_database.py
-```
 
-**查看所有用戶:**
-```bash
+#查看所有用戶
 python view_database.py users
-```
 
-**查看所有個人資料:**
-```bash
+#查看所有個人資料
 python view_database.py profiles
-```
 
-**資料庫統計資訊:**
-```bash
+#資料庫統計資訊
 python view_database.py stats
-```
 
-**搜尋用戶:**
-```bash
+#搜尋用戶
 python view_database.py search "ryan"
-```
 
-**刪除用戶（謹慎使用！）:**
-```bash
+#刪除用戶（謹慎使用！
 python view_database.py delete 5
 ```
 
