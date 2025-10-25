@@ -6,17 +6,7 @@
 
 ```bash
 # 建立並啟動虛擬環境
-python -m venv .venv
-source .venv/bin/activate 
-
-# 啟動 Docker 伺服器
-cd .devcontainer && docker-compose up -d
-
-# 停止 Docker 伺服器
-cd .devcontainer && docker-compose down
-
-# 列出 Docker 伺服器
-cd .devcontainer && docker ps
+python -m venv .venv && source .venv/bin/activate
 
 # 安裝 Python 依賴
 pip install -r requirements.txt
@@ -33,6 +23,14 @@ python test_api.py
 python run.py
 flask --debug run --host=0.0.0.0
 ```
+# 啟動 Docker 伺服器
+cd .devcontainer && docker-compose up -d
+
+# 停止 Docker 伺服器
+cd .devcontainer && docker-compose down
+
+# 列出 Docker 伺服器
+cd .devcontainer && docker ps
 
 ### 查看資料庫資料
 
