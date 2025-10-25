@@ -1,45 +1,21 @@
 # XIAOICE 智能聊天助手 🤖
 
-一個功能強大的 AI 聊天應用，整合了 Google Gemini API，支援智慧對話和圖像辨識。
-
-##  快速開始
-
-### 1. 取得 Google AI Studio API 金鑰
-
-1. 造訪 [Google AI Studio](https://makersuite.google.com/app/apikey)
-2. 使用 Google 帳號登錄
-3. 點選 **"Create API Key"** 建立新金鑰
-4. 複製產生的 API 金鑰
-
-### 2. 設定環境變數
-
-1. 複製 `.env` 檔案（如果不存在，建立一個）
-2. 在 `.env` 檔案中設定您的 API 金鑰：
-
-```bash
-# Google AI Studio API Key
-GOOGLE_API_KEY="YOUR_ACTUAL_API_KEY_HERE"
-
-# Gemini Model (可選)
-GEMINI_MODEL="gemini-2.5-flash-lite"
-```
-
 ⚠️ **重要**：請勿將 API Key提交到 Git 倉庫！
 
-### 3. 安裝依賴並啟動應用
+### 安裝依賴並啟動應用
 
 ```bash
 # 建立並啟動虛擬環境
 python -m venv .venv
 source .venv/bin/activate 
 
+# 安裝 Python 依賴
+pip install -r requirements.txt
+
 # 初始化遷移資料庫
 flask db init
 flask db migrate 
 flask db upgrade
-
-# 安裝 Python 依賴
-pip install -r requirements.txt
 
 # 測試 API 連接（可選但建議）
 python test_api.py
@@ -48,13 +24,36 @@ python test_api.py
 python run.py
 ```
 
-### 4. 存取應用
+### 查看資料庫資料
 
-在瀏覽器中開啟：`http://localhost:5000`
+```bash
+python view_database.py
+```
 
-### 5. 測試 API（可選）
+**查看所有用戶:**
+```bash
+python view_database.py users
+```
 
-造訪 `http://localhost:5000/test-api` 來測試您的 API 設定是否正確。
+**查看所有個人資料:**
+```bash
+python view_database.py profiles
+```
+
+**資料庫統計資訊:**
+```bash
+python view_database.py stats
+```
+
+**搜尋用戶:**
+```bash
+python view_database.py search "ryan"
+```
+
+**刪除用戶（謹慎使用！）:**
+```bash
+python view_database.py delete 5
+```
 
 ##  專案結構
 
