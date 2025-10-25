@@ -80,3 +80,14 @@ document.getElementById('signin-form').addEventListener('submit', async (e) => {
         console.error('Error:', error);
     }
 });
+
+// Handle "Forget Your Password?" link
+document.addEventListener('DOMContentLoaded', function() {
+    const forgetPasswordLink = document.querySelector('a[href="#"]');
+    if (forgetPasswordLink && forgetPasswordLink.textContent.includes('Forget Your Password')) {
+        forgetPasswordLink.addEventListener('click', function(e) {
+            e.preventDefault();
+            window.location.href = '/forgot-password';
+        });
+    }
+});
