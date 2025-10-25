@@ -22,6 +22,7 @@ python test_api.py
 
 # 啟動應用
 python run.py
+flask --debug run --host=0.0.0.0
 ```
 
 ### 查看資料庫資料
