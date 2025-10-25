@@ -7,9 +7,9 @@
     "cpus": 2
   },
   "waitFor": "onCreateCommand",
-  "postCreateCommand": "",
+  "postCreateCommand": "python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt",
   "postAttachCommand": {
-    "server": "flask --debug run --host=0.0.0.0"
+    "server": "source .venv/bin/activate && flask --debug run --host=0.0.0.0"
   },
   "portsAttributes": {
     "5000": {
