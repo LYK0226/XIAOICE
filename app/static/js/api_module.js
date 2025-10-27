@@ -31,12 +31,17 @@ class ChatAPI {
             formData.append('history', JSON.stringify(history));
         }
 
+        // Get access token from localStorage
+        const accessToken = localStorage.getItem('access_token');
+        const headers = {};
+        if (accessToken) {
+            headers['Authorization'] = `Bearer ${accessToken}`;
+        }
+
         try {
             const response = await fetch(this.endpoints.chat, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                },
+                headers: headers,
                 body: formData
             });
 
@@ -89,11 +94,8 @@ class ChatAPI {
      */
     async checkConnection() {
         try {
-            const response = await fetch('/', {
-                method: 'GET',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                }
+            const response = await fetch('/login', {
+                method: 'GET'
             });
             return response.ok;
         } catch (error) {

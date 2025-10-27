@@ -32,7 +32,7 @@ def test_signup():
     return response.status_code in [200, 201]
 
 def test_login():
-    """Test user login and return session."""
+    """Test user login and return tokens."""
     print("\n=== Testing User Login ===")
     
     login_data = {
@@ -40,8 +40,7 @@ def test_login():
         "password": "password123"
     }
     
-    session = requests.Session()
-    response = session.post(
+    response = requests.post(
         f"{BASE_URL}/auth/login",
         json=login_data,
         headers={"Content-Type": "application/json"}
@@ -51,48 +50,59 @@ def test_login():
     print(f"Response: {json.dumps(response.json(), indent=2)}")
     
     if response.status_code == 200:
-        return session
+        data = response.json()
+        return {
+            'access_token': data.get('access_token'),
+            'refresh_token': data.get('refresh_token')
+        }
     return None
 
-def test_auth_check(session):
+def test_auth_check(tokens):
     """Test authentication check."""
     print("\n=== Testing Auth Check ===")
     
-    response = session.get(f"{BASE_URL}/auth/check")
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    response = requests.get(f"{BASE_URL}/auth/check", headers=headers)
     print(f"Status Code: {response.status_code}")
     print(f"Response: {json.dumps(response.json(), indent=2)}")
 
-def test_get_user_info(session):
+def test_get_user_info(tokens):
     """Test getting current user information."""
     print("\n=== Testing Get Current User ===")
     
-    response = session.get(f"{BASE_URL}/auth/me")
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    response = requests.get(f"{BASE_URL}/auth/me", headers=headers)
     print(f"Status Code: {response.status_code}")
     print(f"Response: {json.dumps(response.json(), indent=2)}")
 
-def test_protected_route(session):
+def test_protected_route(tokens):
     """Test accessing a protected route."""
     print("\n=== Testing Protected Route (Main Page) ===")
     
-    response = session.get(f"{BASE_URL}/")
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    response = requests.get(f"{BASE_URL}/", headers=headers)
     print(f"Status Code: {response.status_code}")
     print(f"Can access main page: {response.status_code == 200}")
 
-def test_logout(session):
+def test_logout(tokens):
     """Test user logout."""
     print("\n=== Testing Logout ===")
     
-    response = session.post(f"{BASE_URL}/auth/logout")
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    response = requests.post(f"{BASE_URL}/auth/logout", headers=headers)
     print(f"Status Code: {response.status_code}")
     print(f"Response: {json.dumps(response.json(), indent=2)}")
 
-def test_access_after_logout(session):
+def test_access_after_logout(tokens):
     """Test that protected routes are inaccessible after logout."""
     print("\n=== Testing Access After Logout ===")
     
-    response = session.get(f"{BASE_URL}/")
+    # Note: Since JWT is stateless, logout doesn't invalidate tokens
+    # In a real app, you'd implement token blacklisting
+    headers = {"Authorization": f"Bearer {tokens['access_token']}"}
+    response = requests.get(f"{BASE_URL}/", headers=headers)
     print(f"Status Code: {response.status_code}")
-    print(f"Should be redirected to login: {response.status_code == 302}")
+    print(f"Still accessible (JWT stateless): {response.status_code == 200}")
 
 def main():
     """Run all tests."""
@@ -108,26 +118,26 @@ def main():
         print("    the test user already exists. Continuing with login test...")
     
     # Test 2: Login
-    session = test_login()
+    tokens = test_login()
     
-    if not session:
+    if not tokens:
         print("\n❌ Login failed! Cannot continue with remaining tests.")
         return
     
     # Test 3: Check authentication status
-    test_auth_check(session)
+    test_auth_check(tokens)
     
     # Test 4: Get current user info
-    test_get_user_info(session)
+    test_get_user_info(tokens)
     
     # Test 5: Access protected route
-    test_protected_route(session)
+    test_protected_route(tokens)
     
     # Test 6: Logout
-    test_logout(session)
+    test_logout(tokens)
     
     # Test 7: Try accessing protected route after logout
-    test_access_after_logout(session)
+    test_access_after_logout(tokens)
     
     print("\n" + "=" * 60)
     print("✅ All tests completed!")

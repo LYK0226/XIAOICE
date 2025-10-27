@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from .models import db, User, UserProfile
 import re
 
@@ -87,13 +87,16 @@ def login():
         if not user.is_active:
             return jsonify({'error': 'Account is disabled'}), 403
         
-        # Log in the user and create token
-        access_token = create_access_token(identity=user.id)
+
+        # Log in the user and create JWT tokens
+        access_token = create_access_token(identity=str(user.id))
+        refresh_token = create_refresh_token(identity=str(user.id))
         
         return jsonify({
             'message': 'Login successful',
+            'user': user.to_dict(),
             'access_token': access_token,
-            'user': user.to_dict()
+            'refresh_token': refresh_token
         }), 200
         
     except Exception as e:
@@ -103,14 +106,13 @@ def login():
 @jwt_required()
 def logout():
     """Handle user logout."""
-    # For JWT, logout is handled client-side by discarding the token
     return jsonify({'message': 'Logged out successfully'}), 200
 
 @auth_bp.route('/me', methods=['GET'])
 @jwt_required()
 def get_current_user():
     """Get current logged-in user information."""
-    user_id = get_jwt_identity()
+    user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
@@ -122,14 +124,17 @@ def get_current_user():
 @jwt_required(optional=True)
 def check_auth():
     """Check if user is authenticated."""
-    user_id = get_jwt_identity()
-    if user_id:
+    try:
+        user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
         if user:
             return jsonify({
                 'authenticated': True,
                 'user': user.to_dict()
             }), 200
+    except:
+        pass
+
     return jsonify({
         'authenticated': False
     }), 200

@@ -743,6 +743,3 @@ chatListItems.forEach(item => {
         messagesDiv.appendChild(botMessage);
     });
 });
-
-// Settings functionality moved to settings.js
-// This includes: Avatar Modal, Background Customization, Theme Settings, Font Settings, Language Options, etc.

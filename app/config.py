@@ -5,6 +5,7 @@ class Config:
 
     # General Config
     SECRET_KEY = os.environ.get('SECRET_KEY', 'a_default_secret_key')
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', SECRET_KEY)
     FLASK_APP = os.environ.get('FLASK_APP', 'run.py')
     FLASK_ENV = os.environ.get('FLASK_ENV', 'development')
 
@@ -12,7 +13,7 @@ class Config:
     GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
     
     # Gemini Model
-    GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash')
+    GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
 
     # Uploads
     UPLOAD_FOLDER = 'app/static/uploads'

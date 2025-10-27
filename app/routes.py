@@ -22,6 +22,7 @@ def forgot_password_page():
     return render_template('forget_password.html')
 
 @bp.route('/demo')
+@jwt_required()
 def demo():
     """Render the demo page."""
     return render_template('demo.html')
@@ -81,6 +82,7 @@ def chat():
             os.remove(image_path)
 
 @bp.route('/test-api')
+@jwt_required()
 def test_api_page():
     """Render the API testing page."""
     return render_template('test-api.html')
