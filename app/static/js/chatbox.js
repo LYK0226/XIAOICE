@@ -2,11 +2,21 @@
 const messagesDiv = document.getElementById('messages');
 const messageInput = document.getElementById('messageInput');
 const sendButton = document.getElementById('sendButton');
-const imageInput = document.getElementById('imageInput');
-const imageRecognitionBtn = document.getElementById('imageRecognitionBtn');
+const fileInput = document.getElementById('fileInput');
+const fileUploadBtn = document.getElementById('fileUploadBtn');
 const emojiBtn = document.getElementById('emojiBtn');
 const emojiPicker = document.getElementById('emojiPicker');
 const emojiContent = document.getElementById('emojiContent');
+const voiceInputBtn = document.getElementById('voiceInputBtn');
+const webcamBtn = document.getElementById('webcamBtn');
+const webcamModal = document.getElementById('webcamModal');
+const closeWebcam = document.getElementById('closeWebcam');
+const webcamVideo = document.getElementById('webcamVideo');
+const webcamCanvas = document.getElementById('webcamCanvas');
+const captureBtn = document.getElementById('captureBtn');
+const retakeBtn = document.getElementById('retakeBtn');
+const usePhotoBtn = document.getElementById('usePhotoBtn');
+const filePreviewContainer = document.getElementById('filePreviewContainer');
 
 // Language support
 let currentLanguage = 'zh-CN'; // Default to Simplified Chinese
@@ -15,11 +25,15 @@ let currentLanguage = 'zh-CN'; // Default to Simplified Chinese
 let userAvatar = null; // Will store user avatar URL
 let botAvatar = null; // Will store bot avatar URL
 
-// Image recognition data
-let currentImageData = null;
+// File and image storage
+let selectedFiles = [];
+let webcamStream = null;
+let capturedPhoto = null;
 
-// API 模塊已分離到 api_module.js
-// 確保在 HTML 中先載入 api_module.js，然後再載入 chatbox.js
+// Voice recognition
+let recognition = null;
+let isRecording = false;
+
 
 // Conversation history for context (array of {role: 'user'|'bot', content: string, time?: number})
 let conversationHistory = [];
@@ -93,7 +107,12 @@ const translations = {
         imagesComingSoon: '图像生成功能即将推出！',
         copilotsComingSoon: '我的副驾驶功能即将推出！',
         langSwitched: '语言已切换为简体中文',
-        logout: '登出'
+        logout: '登出',
+        voiceRecording: '正在录音...',
+        voiceNotSupported: '您的浏览器不支持语音识别',
+        micPermissionDenied: '麦克风权限被拒绝，请在浏览器设置中允许访问麦克风',
+        webcamPermissionDenied: '无法访问摄像头，请在浏览器设置中允许访问摄像头',
+        errorMsg: '抱歉，发生了错误。请稍后再试。'
     },
     'zh-TW': {
         chatbox: '聊天盒子',
@@ -113,7 +132,12 @@ const translations = {
         imagesComingSoon: '圖像生成功能即將推出！',
         copilotsComingSoon: '我的副駕駛功能即將推出！',
         langSwitched: '語言已切換為繁體中文',
-        logout: '登出'
+        logout: '登出',
+        voiceRecording: '正在錄音...',
+        voiceNotSupported: '您的瀏覽器不支持語音識別',
+        micPermissionDenied: '麥克風權限被拒絕，請在瀏覽器設定中允許訪問麥克風',
+        webcamPermissionDenied: '無法訪問攝像頭，請在瀏覽器設定中允許訪問攝像頭',
+        errorMsg: '抱歉，發生了錯誤。請稍後再試。'
     },
     'en': {
         chatbox: 'Chatbox',
@@ -133,7 +157,12 @@ const translations = {
         imagesComingSoon: 'Image generation feature coming soon!',
         copilotsComingSoon: 'My Copilots feature coming soon!',
         langSwitched: 'Language switched to English',
-        logout: 'Logout'
+        logout: 'Logout',
+        voiceRecording: 'Recording...',
+        voiceNotSupported: 'Your browser does not support speech recognition',
+        micPermissionDenied: 'Microphone permission denied. Please allow microphone access in browser settings.',
+        webcamPermissionDenied: 'Cannot access webcam. Please allow camera access in browser settings.',
+        errorMsg: 'Sorry, an error occurred. Please try again later.'
     },
     'ja': {
         chatbox: 'チャットボックス',
@@ -153,7 +182,12 @@ const translations = {
         imagesComingSoon: '画像生成機能は近日公開！',
         copilotsComingSoon: 'マイコパイロット機能は近日公開！',
         langSwitched: '言語が日本語に切り替わりました',
-        logout: 'ログアウト'
+        logout: 'ログアウト',
+        voiceRecording: '録音中...',
+        voiceNotSupported: 'お使いのブラウザは音声認識をサポートしていません',
+        micPermissionDenied: 'マイクの許可が拒否されました。ブラウザの設定でマイクへのアクセスを許可してください。',
+        webcamPermissionDenied: 'カメラにアクセスできません。ブラウザの設定でカメラへのアクセスを許可してください。',
+        errorMsg: '申し訳ありませんが、エラーが発生しました。後でもう一度お試しください。'
     },
     'ko': {
         chatbox: '채팅박스',
@@ -173,7 +207,12 @@ const translations = {
         imagesComingSoon: '이미지 생성 기능 곧 출시!',
         copilotsComingSoon: '내 코파일럿 기능 곧 출시!',
         langSwitched: '언어가 한국어로 전환되었습니다',
-        logout: '로그아웃'
+        logout: '로그아웃',
+        voiceRecording: '녹음 중...',
+        voiceNotSupported: '브라우저가 음성 인식을 지원하지 않습니다',
+        micPermissionDenied: '마이크 권한이 거부되었습니다. 브라우저 설정에서 마이크 액세스를 허용하세요.',
+        webcamPermissionDenied: '카메라에 액세스할 수 없습니다. 브라우저 설정에서 카메라 액세스를 허용하세요.',
+        errorMsg: '죄송합니다. 오류가 발생했습니다. 나중에 다시 시도하세요.'
     },
     'es': {
         chatbox: 'Caja de chat',
@@ -193,7 +232,12 @@ const translations = {
         imagesComingSoon: '¡Función de generación de imágenes próximamente!',
         copilotsComingSoon: '¡Función de mis copilotos próximamente!',
         langSwitched: 'Idioma cambiado a español',
-        logout: 'Cerrar sesión'
+        logout: 'Cerrar sesión',
+        voiceRecording: 'Grabando...',
+        voiceNotSupported: 'Su navegador no admite reconocimiento de voz',
+        micPermissionDenied: 'Permiso de micrófono denegado. Permita el acceso al micrófono en la configuración del navegador.',
+        webcamPermissionDenied: 'No se puede acceder a la cámara. Permita el acceso a la cámara en la configuración del navegador.',
+        errorMsg: 'Lo siento, ocurrió un error. Por favor, inténtelo de nuevo más tarde.'
     }
 };
 
@@ -645,47 +689,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
 // Function to send a message
 async function sendMessage() {
-    const message = messageInput.value.trim();
-    if (!message) return;
-
-    // Add user message
-    const userMessage = createMessage(message, true);
-    messagesDiv.appendChild(userMessage);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    messageInput.value = '';
-
-    // Save user turn to history
-    conversationHistory.push({ role: 'user', content: message, time: Date.now() });
-    
-    // Show typing indicator
-    const typingIndicator = createTypingIndicator();
-    messagesDiv.appendChild(typingIndicator);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    
-    try {
-        // 使用 API 模塊發送訊息，並傳送會話歷史作為上下文
-        const aiResponse = await chatAPI.sendTextMessage(message, currentLanguage, conversationHistory);
-        
-        // Remove typing indicator
-        messagesDiv.removeChild(typingIndicator);
-        
-        // Add bot response
-        const botMessage = createMessage(aiResponse, false);
-        messagesDiv.appendChild(botMessage);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        
-        // Save assistant turn to history
-        conversationHistory.push({ role: 'bot', content: aiResponse, time: Date.now() });
-    } catch (error) {
-        console.error('Error:', error);
-        messagesDiv.removeChild(typingIndicator);
-        
-        const t = translations[currentLanguage];
-        const errorMsg = t.errorMsg || '抱歉，发生了错误。';
-        const botMessage = createMessage(errorMsg, false);
-        messagesDiv.appendChild(botMessage);
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    }
+    // Use the new function that handles files
+    await sendMessageWithFiles();
 }
 
 // Attach event listener to send button
@@ -743,3 +748,473 @@ chatListItems.forEach(item => {
         messagesDiv.appendChild(botMessage);
     });
 });
+
+// ============================================
+// FILE UPLOAD FUNCTIONALITY (Combined with Image)
+// ============================================
+
+fileUploadBtn.addEventListener('click', () => {
+    fileInput.click();
+});
+
+fileInput.addEventListener('change', (e) => {
+    const files = Array.from(e.target.files);
+    files.forEach(file => {
+        if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+            selectedFiles.push(file);
+        }
+    });
+    updateFilePreview();
+    fileInput.value = ''; // Reset input
+});
+
+function updateFilePreview() {
+    if (selectedFiles.length === 0) {
+        filePreviewContainer.style.display = 'none';
+        return;
+    }
+    
+    filePreviewContainer.style.display = 'flex';
+    filePreviewContainer.innerHTML = '';
+    
+    selectedFiles.forEach((file, index) => {
+        const previewItem = document.createElement('div');
+        previewItem.className = 'file-preview-item';
+        
+        if (file.type.startsWith('image/')) {
+            // Image preview
+            const img = document.createElement('img');
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+            previewItem.appendChild(img);
+        } else {
+            // File icon
+            const fileIcon = document.createElement('div');
+            fileIcon.className = 'file-icon';
+            const iconMap = {
+                'pdf': 'fa-file-pdf',
+                'doc': 'fa-file-word',
+                'docx': 'fa-file-word',
+                'txt': 'fa-file-alt'
+            };
+            const ext = file.name.split('.').pop().toLowerCase();
+            const iconClass = iconMap[ext] || 'fa-file';
+            fileIcon.innerHTML = `<i class="fas ${iconClass}"></i>`;
+            
+            const fileName = document.createElement('div');
+            fileName.className = 'file-name';
+            fileName.textContent = file.name;
+            fileName.title = file.name;
+            
+            previewItem.appendChild(fileIcon);
+            previewItem.appendChild(fileName);
+        }
+        
+        // Remove button
+        const removeBtn = document.createElement('button');
+        removeBtn.className = 'remove-file';
+        removeBtn.innerHTML = '&times;';
+        removeBtn.onclick = () => {
+            selectedFiles.splice(index, 1);
+            updateFilePreview();
+        };
+        
+        previewItem.appendChild(removeBtn);
+        filePreviewContainer.appendChild(previewItem);
+    });
+}
+
+// ============================================
+// EMOJI PICKER FUNCTIONALITY
+// ============================================
+
+// Toggle emoji picker
+emojiBtn.addEventListener('click', (e) => {
+    e.stopPropagation();
+    const isVisible = emojiPicker.style.display === 'block';
+    emojiPicker.style.display = isVisible ? 'none' : 'block';
+    
+    // Populate emojis if first time opening
+    if (!isVisible && emojiContent.children.length === 0) {
+        populateEmojis('smileys');
+    }
+});
+
+// Close emoji picker when clicking outside
+document.addEventListener('click', (e) => {
+    if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+        emojiPicker.style.display = 'none';
+    }
+});
+
+// Handle emoji category tabs
+const emojiTabs = document.querySelectorAll('.emoji-tab');
+emojiTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+        // Update active tab
+        emojiTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        // Populate emojis for selected category
+        const category = tab.getAttribute('data-category');
+        populateEmojis(category);
+    });
+});
+
+// Function to populate emojis based on category
+function populateEmojis(category) {
+    emojiContent.innerHTML = '';
+    const emojis = emojiCategories[category] || [];
+    
+    emojis.forEach(emoji => {
+        const emojiSpan = document.createElement('span');
+        emojiSpan.className = 'emoji-item';
+        emojiSpan.textContent = emoji;
+        emojiSpan.addEventListener('click', () => {
+            // Insert emoji at cursor position
+            const start = messageInput.selectionStart;
+            const end = messageInput.selectionEnd;
+            const text = messageInput.value;
+            messageInput.value = text.substring(0, start) + emoji + text.substring(end);
+            
+            // Set cursor position after emoji
+            messageInput.selectionStart = messageInput.selectionEnd = start + emoji.length;
+            messageInput.focus();
+            
+            // Don't close picker, allow multiple emoji selections
+        });
+        emojiContent.appendChild(emojiSpan);
+    });
+}
+
+// ============================================
+// VOICE INPUT FUNCTIONALITY
+// ============================================
+
+// Initialize Web Speech API
+if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    recognition = new SpeechRecognition();
+    recognition.continuous = false;
+    recognition.interimResults = false;
+    
+    // Set language based on current language
+    const langMap = {
+        'zh-CN': 'zh-CN',
+        'zh-TW': 'zh-TW',
+        'en': 'en-US',
+        'ja': 'ja-JP',
+        'ko': 'ko-KR',
+        'es': 'es-ES'
+    };
+    
+    recognition.lang = langMap[currentLanguage] || 'zh-CN';
+    
+    recognition.onstart = () => {
+        isRecording = true;
+        voiceInputBtn.classList.add('recording');
+        const t = translations[currentLanguage];
+        messageInput.placeholder = t.voiceRecording || '正在录音...';
+    };
+    
+    recognition.onresult = (event) => {
+        const transcript = event.results[0][0].transcript;
+        messageInput.value = transcript;
+        messageInput.focus();
+    };
+    
+    recognition.onerror = (event) => {
+        console.error('Speech recognition error:', event.error);
+        isRecording = false;
+        voiceInputBtn.classList.remove('recording');
+        const t = translations[currentLanguage];
+        messageInput.placeholder = t.placeholder;
+        
+        if (event.error === 'not-allowed') {
+            alert(t.micPermissionDenied || '麦克风权限被拒绝');
+        }
+    };
+    
+    recognition.onend = () => {
+        isRecording = false;
+        voiceInputBtn.classList.remove('recording');
+        const t = translations[currentLanguage];
+        messageInput.placeholder = t.placeholder;
+    };
+}
+
+voiceInputBtn.addEventListener('click', () => {
+    if (!recognition) {
+        const t = translations[currentLanguage];
+        alert(t.voiceNotSupported || '您的浏览器不支持语音识别');
+        return;
+    }
+    
+    if (isRecording) {
+        recognition.stop();
+    } else {
+        // Update language before starting
+        const langMap = {
+            'zh-CN': 'zh-CN',
+            'zh-TW': 'zh-TW',
+            'en': 'en-US',
+            'ja': 'ja-JP',
+            'ko': 'ko-KR',
+            'es': 'es-ES'
+        };
+        recognition.lang = langMap[currentLanguage] || 'zh-CN';
+        recognition.start();
+    }
+});
+
+// ============================================
+// WEBCAM FUNCTIONALITY
+// ============================================
+
+webcamBtn.addEventListener('click', async () => {
+    webcamModal.style.display = 'flex';
+    captureBtn.style.display = 'block';
+    retakeBtn.style.display = 'none';
+    usePhotoBtn.style.display = 'none';
+    webcamVideo.style.display = 'block';
+    webcamCanvas.style.display = 'none';
+    
+    try {
+        webcamStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user' },
+            audio: false
+        });
+        webcamVideo.srcObject = webcamStream;
+    } catch (error) {
+        console.error('Webcam error:', error);
+        const t = translations[currentLanguage];
+        alert(t.webcamPermissionDenied || '无法访问摄像头');
+        closeWebcamModal();
+    }
+});
+
+closeWebcam.addEventListener('click', closeWebcamModal);
+
+webcamModal.addEventListener('click', (e) => {
+    if (e.target === webcamModal) {
+        closeWebcamModal();
+    }
+});
+
+function closeWebcamModal() {
+    webcamModal.style.display = 'none';
+    if (webcamStream) {
+        webcamStream.getTracks().forEach(track => track.stop());
+        webcamStream = null;
+    }
+    webcamVideo.srcObject = null;
+    capturedPhoto = null;
+}
+
+captureBtn.addEventListener('click', () => {
+    const canvas = webcamCanvas;
+    const video = webcamVideo;
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(video, 0, 0);
+    
+    // Stop webcam stream
+    if (webcamStream) {
+        webcamStream.getTracks().forEach(track => track.stop());
+        webcamStream = null;
+    }
+    
+    // Show captured image
+    webcamVideo.style.display = 'none';
+    webcamCanvas.style.display = 'block';
+    captureBtn.style.display = 'none';
+    retakeBtn.style.display = 'block';
+    usePhotoBtn.style.display = 'block';
+    
+    // Store the captured photo as blob
+    canvas.toBlob((blob) => {
+        capturedPhoto = new File([blob], `webcam_${Date.now()}.jpg`, { type: 'image/jpeg' });
+    }, 'image/jpeg', 0.9);
+});
+
+retakeBtn.addEventListener('click', async () => {
+    capturedPhoto = null;
+    webcamVideo.style.display = 'block';
+    webcamCanvas.style.display = 'none';
+    captureBtn.style.display = 'block';
+    retakeBtn.style.display = 'none';
+    usePhotoBtn.style.display = 'none';
+    
+    try {
+        webcamStream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user' },
+            audio: false
+        });
+        webcamVideo.srcObject = webcamStream;
+    } catch (error) {
+        console.error('Webcam error:', error);
+        const t = translations[currentLanguage];
+        alert(t.webcamPermissionDenied || '无法访问摄像头');
+        closeWebcamModal();
+    }
+});
+
+usePhotoBtn.addEventListener('click', () => {
+    if (capturedPhoto) {
+        selectedFiles.push(capturedPhoto);
+        updateFilePreview();
+        closeWebcamModal();
+    }
+});
+
+// ============================================
+// UPDATE SEND MESSAGE TO HANDLE FILES
+// ============================================
+
+// Update the sendMessage function to handle files
+async function sendMessageWithFiles() {
+    const message = messageInput.value.trim();
+    
+    // Need either message or files
+    if (!message && selectedFiles.length === 0) return;
+
+    // Add user message with files
+    const userMessage = createMessageWithFiles(message, selectedFiles, true);
+    messagesDiv.appendChild(userMessage);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    messageInput.value = '';
+
+    // Save user turn to history
+    conversationHistory.push({ role: 'user', content: message || '[附件]', time: Date.now() });
+    
+    // Show typing indicator
+    const typingIndicator = createTypingIndicator();
+    messagesDiv.appendChild(typingIndicator);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    try {
+        // Use the first image file for API (backend currently supports one image)
+        const imageFile = selectedFiles.find(f => f.type.startsWith('image/'));
+        
+        let aiResponse;
+        if (imageFile) {
+            aiResponse = await chatAPI.sendImageMessage(
+                message || translations[currentLanguage].analyzeImage,
+                imageFile,
+                currentLanguage,
+                conversationHistory
+            );
+        } else {
+            aiResponse = await chatAPI.sendTextMessage(message, currentLanguage, conversationHistory);
+        }
+        
+        // Remove typing indicator
+        messagesDiv.removeChild(typingIndicator);
+        
+        // Add bot response
+        const botMessage = createMessage(aiResponse, false);
+        messagesDiv.appendChild(botMessage);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        
+        // Save assistant turn to history
+        conversationHistory.push({ role: 'bot', content: aiResponse, time: Date.now() });
+        
+        // Clear selected files
+        selectedFiles = [];
+        updateFilePreview();
+    } catch (error) {
+        console.error('Error:', error);
+        messagesDiv.removeChild(typingIndicator);
+        
+        const t = translations[currentLanguage];
+        const errorMsg = t.errorMsg || '抱歉，发生了错误。';
+        const botMessage = createMessage(errorMsg, false);
+        messagesDiv.appendChild(botMessage);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+}
+
+function createMessageWithFiles(text, files, isUser = true) {
+    const container = document.createElement('div');
+    container.className = isUser ? 'user-message-container' : 'bot-message-container';
+    
+    const avatar = document.createElement('div');
+    avatar.className = isUser ? 'avatar user-avatar' : 'avatar bot-avatar';
+    
+    if (isUser && userAvatar) {
+        avatar.style.backgroundImage = `url(${userAvatar})`;
+        avatar.style.backgroundSize = 'cover';
+        avatar.style.backgroundPosition = 'center';
+    } else if (!isUser && botAvatar) {
+        avatar.style.backgroundImage = `url(${botAvatar})`;
+        avatar.style.backgroundSize = 'cover';
+        avatar.style.backgroundPosition = 'center';
+    } else {
+        avatar.innerHTML = isUser ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+    }
+    
+    const messageContent = document.createElement('div');
+    messageContent.className = 'message-content';
+    
+    // Add files/images
+    if (files && files.length > 0) {
+        files.forEach(file => {
+            if (file.type.startsWith('image/')) {
+                const img = document.createElement('img');
+                img.className = 'message-image';
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+                
+                img.addEventListener('click', () => {
+                    const modal = document.createElement('div');
+                    modal.className = 'image-modal';
+                    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; align-items: center; justify-content: center; cursor: pointer;';
+                    
+                    const fullImg = document.createElement('img');
+                    const reader2 = new FileReader();
+                    reader2.onload = (e) => {
+                        fullImg.src = e.target.result;
+                    };
+                    reader2.readAsDataURL(file);
+                    fullImg.style.cssText = 'max-width: 90%; max-height: 90%; border-radius: 8px;';
+                    
+                    modal.appendChild(fullImg);
+                    document.body.appendChild(modal);
+                    
+                    modal.addEventListener('click', () => {
+                        document.body.removeChild(modal);
+                    });
+                });
+                
+                messageContent.appendChild(img);
+            } else {
+                // Show file name for non-image files
+                const fileInfo = document.createElement('div');
+                fileInfo.style.cssText = 'padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 8px;';
+                fileInfo.innerHTML = `<i class="fas fa-file"></i> ${file.name}`;
+                messageContent.appendChild(fileInfo);
+            }
+        });
+    }
+    
+    // Add text if provided
+    if (text) {
+        const paragraph = document.createElement('p');
+        paragraph.textContent = text;
+        messageContent.appendChild(paragraph);
+    }
+    
+    container.appendChild(avatar);
+    container.appendChild(messageContent);
+    
+    return container;
+}

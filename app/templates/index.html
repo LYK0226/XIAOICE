@@ -64,19 +64,19 @@
         
         <div id="input-container">
             <div class="input-toolbar">
-                <button class="toolbar-btn" title="附加文件"><i class="fas fa-paperclip"></i></button>
-                <button class="toolbar-btn" id="imageRecognitionBtn" title="图像识别"><i class="fas fa-image"></i></button>
-                <button class="toolbar-btn" id="emojiBtn" title="表情符号"><i class="fas fa-smile"></i></button>
-                <button class="toolbar-btn" id="voiceInputBtn" title="语音输入"><i class="fas fa-microphone"></i></button>
-                <button class="toolbar-btn" title="代码块"><i class="fas fa-code"></i></button>
-                <button class="toolbar-btn" title="插入表格"><i class="fas fa-table"></i></button>
-                <button class="toolbar-btn" id="webcamBtn" title="Webcam"><i class="fas fa-camera"></i></button>
+                <button class="toolbar-btn" id="fileUploadBtn" title="附加文件/圖像"><i class="fas fa-paperclip"></i></button>
+                <button class="toolbar-btn" id="emojiBtn" title="表情符號"><i class="fas fa-smile"></i></button>
+                <button class="toolbar-btn" id="voiceInputBtn" title="語音輸入"><i class="fas fa-microphone"></i></button>
+                <button class="toolbar-btn" id="webcamBtn" title="攝影機"><i class="fas fa-camera"></i></button>
             </div>
             <div class="input-wrapper">
-                <input type="text" id="messageInput" placeholder="在这里输入您的问题...">
-                <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                <input type="text" id="messageInput" placeholder="在這裡輸入您的問題...">
+                <input type="file" id="fileInput" accept="image/*,application/pdf,.doc,.docx,.txt" multiple style="display: none;">
                 <button id="sendButton"><i class="fas fa-paper-plane"></i></button>
             </div>
+            
+            <!-- File Preview Container -->
+            <div id="filePreviewContainer" class="file-preview-container" style="display: none;"></div>
             
             <!-- Emoji Picker -->
             <div id="emojiPicker" class="emoji-picker" style="display: none;">
@@ -91,6 +91,25 @@
                     <span class="emoji-tab" data-category="symbols">❤️</span>
                 </div>
                 <div class="emoji-content" id="emojiContent"></div>
+            </div>
+            
+            <!-- Webcam Modal -->
+            <div id="webcamModal" class="webcam-modal" style="display: none;">
+                <div class="webcam-content">
+                    <div class="webcam-header">
+                        <h3>拍照</h3>
+                        <button class="close-webcam" id="closeWebcam">&times;</button>
+                    </div>
+                    <div class="webcam-body">
+                        <video id="webcamVideo" autoplay playsinline></video>
+                        <canvas id="webcamCanvas" style="display: none;"></canvas>
+                    </div>
+                    <div class="webcam-footer">
+                        <button class="webcam-action-btn" id="captureBtn"><i class="fas fa-camera"></i> 拍照</button>
+                        <button class="webcam-action-btn" id="retakeBtn" style="display: none;"><i class="fas fa-redo"></i> 重拍</button>
+                        <button class="webcam-action-btn primary" id="usePhotoBtn" style="display: none;"><i class="fas fa-check"></i> 使用照片</button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
