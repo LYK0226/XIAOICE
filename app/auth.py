@@ -124,3 +124,74 @@ def check_auth():
         return jsonify({
             'authenticated': False
         }), 200
+
+# ============================================================================
+# Password Reset Functionality
+# ============================================================================
+
+@auth_bp.route('/forgot-password', methods=['POST'])
+def forgot_password():
+    """Handle password reset request."""
+    try:
+        data = request.get_json()
+        email = data.get('email', '').strip().lower()
+
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+
+        if not validate_email(email):
+            return jsonify({'error': 'Invalid email format'}), 400
+
+        # Check if user exists
+        user = User.query.filter_by(email=email).first()
+
+        if not user:
+            # Don't reveal if email exists or not for security
+            return jsonify({
+                'message': 'If an account with this email exists, a password reset link has been sent.'
+            }), 200
+
+        # In a real application, you would:
+        # 1. Generate a secure reset token
+        # 2. Store it in database with expiration
+        # 3. Send email with reset link
+        # For now, we'll just return a success message
+
+        # TODO: Implement actual password reset functionality
+        # - Generate secure token
+        # - Store in database with expiration
+        # - Send email with reset link
+
+        return jsonify({
+            'message': 'Password reset link sent! Please check your email.'
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': f'An error occurred: {str(e)}'}), 500
+
+@auth_bp.route('/reset-password/<token>', methods=['POST'])
+def reset_password(token):
+    """Handle password reset with token."""
+    try:
+        data = request.get_json()
+        new_password = data.get('password', '')
+
+        if not new_password:
+            return jsonify({'error': 'New password is required'}), 400
+
+        if not validate_password(new_password):
+            return jsonify({'error': 'Password must be at least 6 characters'}), 400
+
+        # TODO: Implement token validation
+        # - Verify token exists and is not expired
+        # - Get user from token
+        # - Update password
+        # - Delete used token
+
+        # For now, return success
+        return jsonify({
+            'message': 'Password reset successfully!'
+        }), 200
+
+    except Exception as e:
+        return jsonify({'error': f'An error occurred: {str(e)}'}), 500

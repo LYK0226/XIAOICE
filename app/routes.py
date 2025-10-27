@@ -17,6 +17,11 @@ def login_page():
     """Render the login/signup page."""
     return render_template('login_signup.html')
 
+@bp.route('/forgot_password')
+def forgot_password_page():
+    """Render the forgot password page."""
+    return render_template('forget_password.html')
+
 @bp.route('/demo')
 @login_required
 def demo():
