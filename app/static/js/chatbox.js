@@ -867,6 +867,14 @@ document.addEventListener('click', (e) => {
 
 // Load saved language preference and background on page load
 window.addEventListener('DOMContentLoaded', () => {
+    // Check authentication on page load
+    const accessToken = localStorage.getItem('access_token');
+    if (!accessToken) {
+        // No token, redirect to login
+        window.location.href = '/login';
+        return;
+    }
+    
     // Background Customization Functionality
     const settingsTabs = document.querySelectorAll('.settings-tab');
     const settingsContents = document.querySelectorAll('.settings-content');
@@ -1265,10 +1273,15 @@ document.getElementById('logout').addEventListener('click', async () => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
             }
         });
         
         if (response.ok) {
+            // Clear JWT tokens from localStorage
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            
             // Redirect to login page
             window.location.href = '/login';
         } else {

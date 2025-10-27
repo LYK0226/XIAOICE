@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify
-from flask_login import login_user, logout_user, login_required, current_user
+from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from .models import db, User, UserProfile
 import re
 
@@ -86,44 +86,53 @@ def login():
         if not user.is_active:
             return jsonify({'error': 'Account is disabled'}), 403
         
-        # Log in the user
-        login_user(user, remember=True)
+        # Log in the user and create JWT tokens
+        access_token = create_access_token(identity=str(user.id))
+        refresh_token = create_refresh_token(identity=str(user.id))
         
         return jsonify({
             'message': 'Login successful',
-            'user': user.to_dict()
+            'user': user.to_dict(),
+            'access_token': access_token,
+            'refresh_token': refresh_token
         }), 200
         
     except Exception as e:
         return jsonify({'error': f'Login failed: {str(e)}'}), 500
 
 @auth_bp.route('/logout', methods=['POST'])
-@login_required
 def logout():
     """Handle user logout."""
-    logout_user()
     return jsonify({'message': 'Logged out successfully'}), 200
 
 @auth_bp.route('/me', methods=['GET'])
-@login_required
+@jwt_required()
 def get_current_user():
     """Get current logged-in user information."""
+    user_id = int(get_jwt_identity())
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({'error': 'User not found'}), 404
     return jsonify({
-        'user': current_user.to_dict()
+        'user': user.to_dict()
     }), 200
 
 @auth_bp.route('/check', methods=['GET'])
 def check_auth():
     """Check if user is authenticated."""
-    if current_user.is_authenticated:
-        return jsonify({
-            'authenticated': True,
-            'user': current_user.to_dict()
-        }), 200
-    else:
-        return jsonify({
-            'authenticated': False
-        }), 200
+    try:
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        if user:
+            return jsonify({
+                'authenticated': True,
+                'user': user.to_dict()
+            }), 200
+    except:
+        pass
+    return jsonify({
+        'authenticated': False
+    }), 200
 
 # ============================================================================
 # Password Reset Functionality

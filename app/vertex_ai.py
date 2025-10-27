@@ -24,7 +24,7 @@ def generate_response(message, image_path=None, image_mime_type=None, history=No
     if history:
         try:
             # history can be a list of message objects
-            convo_lines = ["Conversation history:"]
+            convo_lines = ["Previous conversation:"]
             # Support two formats: list of {role, content} or list of {user, bot} pairs
             if isinstance(history, list):
                 for item in history:
@@ -32,12 +32,12 @@ def generate_response(message, image_path=None, image_mime_type=None, history=No
                         role = item.get('role')
                         content = item.get('content', '')
                         if role == 'user':
-                            convo_lines.append(f"User: {content}")
+                            convo_lines.append(f"Human: {content}")
                         else:
-                            convo_lines.append(f"Assistant: {content}")
+                            convo_lines.append(f"AI: {content}")
                     elif isinstance(item, dict) and 'user' in item and 'bot' in item:
-                        convo_lines.append(f"User: {item.get('user','')}")
-                        convo_lines.append(f"Assistant: {item.get('bot','')}")
+                        convo_lines.append(f"Human: {item.get('user','')}")
+                        convo_lines.append(f"AI: {item.get('bot','')}")
                     else:
                         # unknown item, stringify
                         convo_lines.append(str(item))
@@ -105,7 +105,18 @@ def generate_response(message, image_path=None, image_mime_type=None, history=No
         )
         
         if response.candidates and response.candidates[0].content.parts:
-            return response.candidates[0].content.parts[0].text
+            response_text = response.candidates[0].content.parts[0].text
+            
+            # Clean up common AI prefixes that might appear in responses
+            response_text = response_text.strip()
+            # Remove common prefixes that AI models might add
+            prefixes_to_remove = ['Assistant:', 'AI:', 'Bot:', 'System:', 'Human:']
+            for prefix in prefixes_to_remove:
+                if response_text.startswith(prefix):
+                    response_text = response_text[len(prefix):].strip()
+                    break
+            
+            return response_text
         else:
             # Handle cases where the response might be blocked or empty
             return "I'm sorry, I couldn't generate a response. This might be due to safety settings or other issues."

@@ -70,6 +70,10 @@ document.getElementById('signin-form').addEventListener('submit', async (e) => {
         const data = await response.json();
         
         if (response.ok) {
+            // Store JWT tokens in localStorage
+            localStorage.setItem('access_token', data.access_token);
+            localStorage.setItem('refresh_token', data.refresh_token);
+            
             // Redirect to index page on successful login
             window.location.href = '/';
         } else {

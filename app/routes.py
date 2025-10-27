@@ -1,5 +1,5 @@
 from flask import Blueprint, render_template, request, jsonify, current_app
-from flask_login import login_required, current_user
+from flask_jwt_extended import jwt_required
 import os
 import json
 from . import vertex_ai
@@ -7,7 +7,6 @@ from . import vertex_ai
 bp = Blueprint('main', __name__)
 
 @bp.route('/')
-@login_required
 def index():
     """Render the main chat page."""
     return render_template('index.html')
@@ -23,13 +22,13 @@ def forgot_password_page():
     return render_template('forget_password.html')
 
 @bp.route('/demo')
-@login_required
+@jwt_required()
 def demo():
     """Render the demo page."""
     return render_template('demo.html')
 
 @bp.route('/chat', methods=['POST'])
-@login_required
+@jwt_required()
 def chat():
     """Handle chat messages and image uploads."""
     if 'message' not in request.form and 'image' not in request.files:
@@ -83,7 +82,7 @@ def chat():
             os.remove(image_path)
 
 @bp.route('/test-api')
-@login_required
+@jwt_required()
 def test_api_page():
     """Render the API testing page."""
     return render_template('test-api.html')
