@@ -24,7 +24,7 @@ python run.py
 flask --debug run --host=0.0.0.0
 ```
 
-###Docker 伺服器
+### Docker 伺服器
 
 ```bash
 # 啟動 Docker 伺服器

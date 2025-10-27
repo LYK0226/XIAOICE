@@ -2,7 +2,7 @@ import os
 from flask import Flask
 from dotenv import load_dotenv
 from flask_migrate import Migrate
-from flask_login import LoginManager
+from flask_jwt_extended import JWTManager
 
 # Load environment variables from .env file
 load_dotenv()
@@ -10,7 +10,7 @@ load_dotenv()
 # Import the shared `db` instance from models and create a Migrate instance
 from .models import db, User
 migrate = Migrate()
-login_manager = LoginManager()
+jwt = JWTManager()
 
 def create_app():
     """Create and configure an instance of the Flask application."""
@@ -29,14 +29,8 @@ def create_app():
         # If flask-migrate is not available or fails, continue without CLI commands
         pass
     
-    # Initialize Flask-Login
-    login_manager.init_app(app)
-    login_manager.login_view = 'main.login_page'
-    login_manager.login_message = 'Please log in to access this page.'
-    
-    @login_manager.user_loader
-    def load_user(user_id):
-        return User.query.get(int(user_id))
+    # Initialize Flask-JWT-Extended
+    jwt.init_app(app)
 
     # Create an uploads folder if it doesn't exist
     if not os.path.exists(app.config['UPLOAD_FOLDER']):

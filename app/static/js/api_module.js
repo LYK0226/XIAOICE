@@ -34,6 +34,9 @@ class ChatAPI {
         try {
             const response = await fetch(this.endpoints.chat, {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                },
                 body: formData
             });
 
@@ -87,7 +90,10 @@ class ChatAPI {
     async checkConnection() {
         try {
             const response = await fetch('/', {
-                method: 'GET'
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                }
             });
             return response.ok;
         } catch (error) {

@@ -78,7 +78,6 @@ const translations = {
     'zh-CN': {
         chatbox: '聊天盒子',
         chat: '聊天',
-        greeting: '您好，GPT-4o',
         newChat: '新对话',
         newImages: '新图像',
         myCopilots: '我的副驾驶',
@@ -93,12 +92,12 @@ const translations = {
         settingsComingSoon: '设置面板即将推出！',
         imagesComingSoon: '图像生成功能即将推出！',
         copilotsComingSoon: '我的副驾驶功能即将推出！',
-        langSwitched: '语言已切换为简体中文'
+        langSwitched: '语言已切换为简体中文',
+        logout: '登出'
     },
     'zh-TW': {
         chatbox: '聊天盒子',
         chat: '聊天',
-        greeting: '您好，GPT-4o',
         newChat: '新對話',
         newImages: '新圖像',
         myCopilots: '我的副駕駛',
@@ -113,12 +112,12 @@ const translations = {
         settingsComingSoon: '設定面板即將推出！',
         imagesComingSoon: '圖像生成功能即將推出！',
         copilotsComingSoon: '我的副駕駛功能即將推出！',
-        langSwitched: '語言已切換為繁體中文'
+        langSwitched: '語言已切換為繁體中文',
+        logout: '登出'
     },
     'en': {
         chatbox: 'Chatbox',
         chat: 'Chat',
-        greeting: 'Hi, GPT-4o',
         newChat: 'New Chat',
         newImages: 'New Images',
         myCopilots: 'My Copilots',
@@ -133,24 +132,142 @@ const translations = {
         settingsComingSoon: 'Settings panel coming soon!',
         imagesComingSoon: 'Image generation feature coming soon!',
         copilotsComingSoon: 'My Copilots feature coming soon!',
-        langSwitched: 'Language switched to English'
+        langSwitched: 'Language switched to English',
+        logout: 'Logout'
+    },
+    'ja': {
+        chatbox: 'チャットボックス',
+        chat: 'チャット',
+        newChat: '新しい会話',
+        newImages: '新しい画像',
+        myCopilots: 'マイコパイロット',
+        settings: '設定',
+        about: 'バージョン 1.3.8i',
+        placeholder: 'ここに質問を入力してください...',
+        typing: '入力中...',
+        analyzing: '画像を分析中...',
+        analyzeImage: 'この画像を分析してください',
+        welcomeMsg: 'こんにちは！私はあなたのスマートアシスタントです。質問にお答えすることで、お手伝いできます。',
+        newChatConfirm: '新しいチャットを開始しますか？現在の会話は保存されます。',
+        settingsComingSoon: '設定パネルは近日公開！',
+        imagesComingSoon: '画像生成機能は近日公開！',
+        copilotsComingSoon: 'マイコパイロット機能は近日公開！',
+        langSwitched: '言語が日本語に切り替わりました',
+        logout: 'ログアウト'
+    },
+    'ko': {
+        chatbox: '채팅박스',
+        chat: '채팅',
+        newChat: '새 대화',
+        newImages: '새 이미지',
+        myCopilots: '내 코파일럿',
+        settings: '설정',
+        about: '버전 1.3.8i',
+        placeholder: '여기에 질문을 입력하세요...',
+        typing: '입력 중...',
+        analyzing: '이미지 분석 중...',
+        analyzeImage: '이 이미지를 분석해주세요',
+        welcomeMsg: '안녕하세요! 저는 당신의 스마트 어시스턴트입니다. 질문에 답변하여 도움을 드릴 수 있습니다.',
+        newChatConfirm: '새 채팅을 시작하시겠습니까? 현재 대화는 저장됩니다.',
+        settingsComingSoon: '설정 패널 곧 출시!',
+        imagesComingSoon: '이미지 생성 기능 곧 출시!',
+        copilotsComingSoon: '내 코파일럿 기능 곧 출시!',
+        langSwitched: '언어가 한국어로 전환되었습니다',
+        logout: '로그아웃'
+    },
+    'es': {
+        chatbox: 'Caja de chat',
+        chat: 'Chat',
+        newChat: 'Nueva conversación',
+        newImages: 'Nuevas imágenes',
+        myCopilots: 'Mis copilotos',
+        settings: 'Configuración',
+        about: 'Acerca de 1.3.8i',
+        placeholder: 'Escribe tu pregunta aquí...',
+        typing: 'Escribiendo...',
+        analyzing: 'Analizando imagen...',
+        analyzeImage: 'Por favor analiza esta imagen',
+        welcomeMsg: '¡Hola! Soy tu asistente inteligente. Puedo ayudarte respondiendo tus preguntas.',
+        newChatConfirm: '¿Iniciar un nuevo chat? La conversación actual será guardada.',
+        settingsComingSoon: '¡Panel de configuración próximamente!',
+        imagesComingSoon: '¡Función de generación de imágenes próximamente!',
+        copilotsComingSoon: '¡Función de mis copilotos próximamente!',
+        langSwitched: 'Idioma cambiado a español',
+        logout: 'Cerrar sesión'
     }
 };
 
 // Function to update UI language
 function updateUILanguage(lang) {
-    const t = translations[lang];
+    // Validate language
+    if (!translations[lang]) {
+        console.warn(`Language ${lang} not found, using zh-CN as fallback`);
+        lang = 'zh-CN';
+    }
     
-    document.querySelector('.sidebar-header h2').textContent = t.chatbox;
-    document.querySelector('.sidebar-section h3').textContent = t.chat;
-    document.querySelector('.chat-title span').textContent = t.chatbox;
-    document.querySelector('.chat-info span').textContent = t.greeting;
-    document.getElementById('messageInput').placeholder = t.placeholder;
-    document.getElementById('newChat').innerHTML = `<i class="fas fa-plus"></i> ${t.newChat}`;
-    document.getElementById('newImages').innerHTML = `<i class="fas fa-image"></i> ${t.newImages}`;
-    document.getElementById('myCopilots').innerHTML = `<i class="fas fa-robot"></i> ${t.myCopilots}`;
-    document.getElementById('settings').innerHTML = `<i class="fas fa-cog"></i> ${t.settings}`;
-    document.querySelector('.version').textContent = t.about;
+    const t = translations[lang];
+    currentLanguage = lang;
+    
+    // Update UI elements safely
+    const updateElement = (selector, content, isHTML = false) => {
+        const element = document.querySelector(selector);
+        if (element) {
+            if (isHTML) {
+                element.innerHTML = content;
+            } else {
+                element.textContent = content;
+            }
+        }
+    };
+    
+    const updateElementById = (id, content, isHTML = false) => {
+        const element = document.getElementById(id);
+        if (element) {
+            if (isHTML) {
+                element.innerHTML = content;
+            } else if (element.placeholder !== undefined) {
+                element.placeholder = content;
+            } else {
+                element.textContent = content;
+            }
+        }
+    };
+    
+    // Update sidebar elements
+    updateElement('.sidebar-header h2', t.chatbox);
+    updateElement('.sidebar-section h3', t.chat);
+    updateElement('.chat-title span', t.chatbox);
+    updateElement('.version', t.about);
+    
+    // Update input placeholder
+    updateElementById('messageInput', t.placeholder);
+    
+    // Update sidebar buttons
+    updateElementById('newChat', `<i class="fas fa-plus"></i> ${t.newChat}`, true);
+    updateElementById('newImages', `<i class="fas fa-image"></i> ${t.newImages}`, true);
+    updateElementById('myCopilots', `<i class="fas fa-robot"></i> ${t.myCopilots}`, true);
+    updateElementById('settings', `<i class="fas fa-cog"></i> ${t.settings}`, true);
+    updateElementById('logout', `<i class="fas fa-sign-out-alt"></i> ${t.logout}`, true);
+    
+    // Update welcome message if it exists
+    const botMessages = document.querySelectorAll('.bot-message-container .message-content p');
+    if (botMessages.length > 0) {
+        const firstBotMessage = botMessages[0];
+        // Only update if it looks like a welcome message (check if it contains typical welcome text)
+        if (firstBotMessage.textContent.includes('智能助手') || 
+            firstBotMessage.textContent.includes('smart assistant') ||
+            firstBotMessage.textContent.includes('スマートアシスタント') ||
+            firstBotMessage.textContent.includes('스마트 어시스턴트') ||
+            firstBotMessage.textContent.includes('asistente inteligente')) {
+            firstBotMessage.textContent = t.welcomeMsg;
+        }
+    }
+    
+    // Save language preference to localStorage
+    localStorage.setItem('preferredLanguage', lang);
+    
+    // Show notification
+    console.log(t.langSwitched);
 }
 
 // Function to create a message element
@@ -500,6 +617,31 @@ function processTestPaperQuestions(questions, imageData) {
 translations['zh-CN'].question = '问题';
 translations['zh-TW'].question = '問題';
 translations['en'].question = 'Question';
+translations['ja'].question = '質問';
+translations['ko'].question = '질문';
+translations['es'].question = 'Pregunta';
+
+// Load saved language preference on page load
+window.addEventListener('DOMContentLoaded', () => {
+    const savedLanguage = localStorage.getItem('preferredLanguage');
+    if (savedLanguage && translations[savedLanguage]) {
+        currentLanguage = savedLanguage;
+        updateUILanguage(savedLanguage);
+        
+        // Update active language option in settings
+        const langOptions = document.querySelectorAll('.lang-option');
+        langOptions.forEach(option => {
+            const lang = option.getAttribute('data-lang');
+            if (lang === savedLanguage) {
+                option.classList.add('active');
+                option.querySelector('i').className = 'fas fa-check-circle';
+            } else {
+                option.classList.remove('active');
+                option.querySelector('i').className = 'fas fa-circle';
+            }
+        });
+    }
+});
 
 // Function to send a message
 async function sendMessage() {
@@ -602,681 +744,5 @@ chatListItems.forEach(item => {
     });
 });
 
-// Avatar Modal Functionality
-const avatarModal = document.getElementById('avatarModal');
-const closeModal = document.querySelector('.close');
-const userAvatarInput = document.getElementById('userAvatarInput');
-const botAvatarInput = document.getElementById('botAvatarInput');
-const userAvatarPreview = document.getElementById('userAvatarPreview');
-const botAvatarPreview = document.getElementById('botAvatarPreview');
-
-// Open modal when settings is clicked
-document.getElementById('settings').addEventListener('click', () => {
-    avatarModal.style.display = 'block';
-});
-
-// Close modal
-closeModal.onclick = function() {
-    avatarModal.style.display = 'none';
-};
-
-window.onclick = function(event) {
-    if (event.target == avatarModal) {
-        avatarModal.style.display = 'none';
-    }
-};
-
-// Handle user avatar upload
-userAvatarInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            userAvatar = event.target.result;
-            userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
-            userAvatarPreview.style.backgroundSize = 'cover';
-            userAvatarPreview.style.backgroundPosition = 'center';
-            userAvatarPreview.innerHTML = '';
-            
-            // Save to localStorage
-            localStorage.setItem('userAvatar', userAvatar);
-        };
-        reader.readAsDataURL(file);
-    }
-});
-
-// Handle bot avatar upload
-botAvatarInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            botAvatar = event.target.result;
-            botAvatarPreview.style.backgroundImage = `url(${botAvatar})`;
-            botAvatarPreview.style.backgroundSize = 'cover';
-            botAvatarPreview.style.backgroundPosition = 'center';
-            botAvatarPreview.innerHTML = '';
-            
-            // Save to localStorage
-            localStorage.setItem('botAvatar', botAvatar);
-            
-            // Update initial bot message avatar
-            updateInitialBotAvatar();
-        };
-        reader.readAsDataURL(file);
-    }
-});
-
-// Clear user avatar
-document.getElementById('clearUserAvatar').addEventListener('click', () => {
-    userAvatar = null;
-    userAvatarPreview.style.backgroundImage = 'none';
-    userAvatarPreview.innerHTML = '<i class="fas fa-user"></i>';
-    localStorage.removeItem('userAvatar');
-});
-
-// Clear bot avatar
-document.getElementById('clearBotAvatar').addEventListener('click', () => {
-    botAvatar = null;
-    botAvatarPreview.style.backgroundImage = 'none';
-    botAvatarPreview.innerHTML = '<i class="fas fa-robot"></i>';
-    localStorage.removeItem('botAvatar');
-    updateInitialBotAvatar();
-});
-
-// Update initial bot message avatar
-function updateInitialBotAvatar() {
-    const initialBotAvatar = document.querySelector('.bot-message-container .avatar');
-    if (initialBotAvatar) {
-        if (botAvatar) {
-            initialBotAvatar.style.backgroundImage = `url(${botAvatar})`;
-            initialBotAvatar.style.backgroundSize = 'cover';
-            initialBotAvatar.style.backgroundPosition = 'center';
-            initialBotAvatar.innerHTML = '';
-        } else {
-            initialBotAvatar.style.backgroundImage = 'none';
-            initialBotAvatar.innerHTML = '<i class="fas fa-robot"></i>';
-        }
-    }
-}
-
-// Load saved avatars from localStorage on page load
-window.addEventListener('load', () => {
-    const savedUserAvatar = localStorage.getItem('userAvatar');
-    const savedBotAvatar = localStorage.getItem('botAvatar');
-    
-    if (savedUserAvatar) {
-        userAvatar = savedUserAvatar;
-        userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
-        userAvatarPreview.style.backgroundSize = 'cover';
-        userAvatarPreview.style.backgroundPosition = 'center';
-        userAvatarPreview.innerHTML = '';
-    }
-    
-    if (savedBotAvatar) {
-        botAvatar = savedBotAvatar;
-        botAvatarPreview.style.backgroundImage = `url(${botAvatar})`;
-        botAvatarPreview.style.backgroundSize = 'cover';
-        botAvatarPreview.style.backgroundPosition = 'center';
-        botAvatarPreview.innerHTML = '';
-        updateInitialBotAvatar();
-    }
-});
-
-// Image Recognition Functionality
-imageRecognitionBtn.addEventListener('click', () => {
-    imageInput.click();
-});
-
-imageInput.addEventListener('change', async function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = async function(event) {
-            const imageData = event.target.result;
-            const t = translations[currentLanguage];
-            const userMessageText = messageInput.value.trim() || t.analyzeImage;
-            
-            // Create user message with image
-            const imageMessage = createImageMessage(imageData, userMessageText, true);
-            messagesDiv.appendChild(imageMessage);
-            messageInput.value = ''; // Clear input after sending
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            
-            // Show analyzing indicator
-            const analyzingIndicator = createTypingIndicator(t.analyzing);
-            messagesDiv.appendChild(analyzingIndicator);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            
-            try {
-                // 使用 API 模塊發送帶圖片的訊息
-                const analysis = await chatAPI.sendImageMessage(userMessageText, file, currentLanguage, conversationHistory);
-                
-                // Remove analyzing indicator
-                messagesDiv.removeChild(analyzingIndicator);
-                
-                // Display analysis result
-                const botMessage = createMessage(analysis, false);
-                messagesDiv.appendChild(botMessage);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-                // Save assistant turn to history
-                conversationHistory.push({ role: 'bot', content: analysis, time: Date.now() });
-                
-            } catch (error) {
-                console.error('Image analysis error:', error);
-                messagesDiv.removeChild(analyzingIndicator);
-                
-                const errorMsg = t.errorMsg || '抱歉，图像分析失败。';
-                const botMessage = createMessage(errorMsg, false);
-                messagesDiv.appendChild(botMessage);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            }
-        };
-        reader.readAsDataURL(file);
-    }
-    
-    // Reset the input so the same file can be selected again
-    imageInput.value = '';
-});
-
-// Language Switcher Functionality
-const langButtons = document.querySelectorAll('.lang-btn');
-
-langButtons.forEach(button => {
-    button.addEventListener('click', () => {
-        const selectedLang = button.getAttribute('data-lang');
-        
-        // Update active state
-        langButtons.forEach(btn => btn.classList.remove('active'));
-        button.classList.add('active');
-        
-        // Update current language
-        currentLanguage = selectedLang;
-        
-        // Update UI
-        updateUILanguage(selectedLang);
-        
-        // Save to localStorage
-        localStorage.setItem('preferredLanguage', selectedLang);
-        
-        // Show confirmation
-        const t = translations[selectedLang];
-        alert(t.langSwitched);
-    });
-});
-
-// Emoji picker functionality
-let currentEmojiCategory = 'smileys';
-
-// Populate emoji content
-function populateEmojis(category) {
-    const emojis = emojiCategories[category];
-    emojiContent.innerHTML = '';
-    
-    emojis.forEach(emoji => {
-        const emojiItem = document.createElement('span');
-        emojiItem.className = 'emoji-item';
-        emojiItem.textContent = emoji;
-        emojiItem.addEventListener('click', () => {
-            // Insert emoji at cursor position
-            const start = messageInput.selectionStart;
-            const end = messageInput.selectionEnd;
-            const text = messageInput.value;
-            messageInput.value = text.substring(0, start) + emoji + text.substring(end);
-            messageInput.selectionStart = messageInput.selectionEnd = start + emoji.length;
-            messageInput.focus();
-        });
-        emojiContent.appendChild(emojiItem);
-    });
-}
-
-// Toggle emoji picker
-emojiBtn.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const isVisible = emojiPicker.style.display === 'block';
-    emojiPicker.style.display = isVisible ? 'none' : 'block';
-    
-    if (!isVisible) {
-        populateEmojis(currentEmojiCategory);
-    }
-});
-
-// Handle emoji category tabs
-const emojiTabs = document.querySelectorAll('.emoji-tab');
-emojiTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-        const category = tab.getAttribute('data-category');
-        
-        // Update active state
-        emojiTabs.forEach(t => t.classList.remove('active'));
-        tab.classList.add('active');
-        
-        // Update current category and populate
-        currentEmojiCategory = category;
-        populateEmojis(category);
-    });
-});
-
-// Close emoji picker when clicking outside
-document.addEventListener('click', (e) => {
-    if (!emojiPicker.contains(e.target) && e.target !== emojiBtn) {
-        emojiPicker.style.display = 'none';
-    }
-});
-
-// Load saved language preference and background on page load
-window.addEventListener('DOMContentLoaded', () => {
-    // Background Customization Functionality
-    const settingsTabs = document.querySelectorAll('.settings-tab');
-    const settingsContents = document.querySelectorAll('.settings-content');
-    const bgTypeBtns = document.querySelectorAll('.bg-type-btn');
-    const bgOptions = document.querySelectorAll('.bg-option');
-    const gradientItems = document.querySelectorAll('.gradient-item');
-    const colorItems = document.querySelectorAll('.color-item');
-    const bgImageInput = document.getElementById('bgImageInput');
-    const bgImagePreview = document.getElementById('bgImagePreview');
-    const applyCustomGradient = document.getElementById('applyCustomGradient');
-    const applyCustomColor = document.getElementById('applyCustomColor');
-    const clearBgImage = document.getElementById('clearBgImage');
-    const resetBackground = document.getElementById('resetBackground');
-
-    // Switch between settings tabs
-    settingsTabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-            const targetTab = tab.getAttribute('data-tab');
-            
-            // Update active tab
-            settingsTabs.forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            
-            // Update active content
-            settingsContents.forEach(content => {
-                content.classList.remove('active');
-                if (content.id === targetTab + 'Tab') {
-                    content.classList.add('active');
-                }
-            });
-        });
-    });
-
-    // Switch between background types
-    bgTypeBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const bgType = btn.getAttribute('data-type');
-            
-            // Update active button
-            bgTypeBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            // Show corresponding options
-            bgOptions.forEach(option => {
-                option.classList.remove('active');
-                if (option.id === bgType + 'Options') {
-                    option.classList.add('active');
-                }
-            });
-        });
-    });
-
-    // Apply gradient presets
-    gradientItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const gradient = item.getAttribute('data-gradient');
-            
-            // Update active state
-            gradientItems.forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-            
-            // Apply gradient
-            document.body.style.background = gradient;
-            
-            // Save to localStorage
-            localStorage.setItem('bgType', 'gradient');
-            localStorage.setItem('bgValue', gradient);
-        });
-    });
-
-    // Apply custom gradient
-    applyCustomGradient.addEventListener('click', () => {
-        const color1 = document.getElementById('gradientColor1').value;
-        const color2 = document.getElementById('gradientColor2').value;
-        const gradient = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
-        
-        document.body.style.background = gradient;
-        
-        // Save to localStorage
-        localStorage.setItem('bgType', 'gradient');
-        localStorage.setItem('bgValue', gradient);
-        
-        // Show confirmation
-        alert('自定义渐变已应用！/ Custom gradient applied!');
-    });
-
-    // Apply solid color presets
-    colorItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const color = item.getAttribute('data-color');
-            
-            // Update active state
-            colorItems.forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-            
-            // Apply color
-            document.body.style.background = color;
-            
-            // Save to localStorage
-            localStorage.setItem('bgType', 'solid');
-            localStorage.setItem('bgValue', color);
-        });
-    });
-
-    // Apply custom solid color
-    applyCustomColor.addEventListener('click', () => {
-        const color = document.getElementById('customSolidColor').value;
-        
-        document.body.style.background = color;
-        
-        // Save to localStorage
-        localStorage.setItem('bgType', 'solid');
-        localStorage.setItem('bgValue', color);
-        
-        alert('自定义颜色已应用！/ Custom color applied!');
-    });
-
-    // Upload background image
-    bgImageInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const imageData = event.target.result;
-                
-                // Update preview
-                bgImagePreview.style.backgroundImage = `url(${imageData})`;
-                bgImagePreview.classList.add('has-image');
-                bgImagePreview.innerHTML = '';
-                
-                // Apply to body
-                document.body.style.background = `url(${imageData}) center/cover no-repeat`;
-                
-                // Save to localStorage
-                localStorage.setItem('bgType', 'image');
-                localStorage.setItem('bgValue', imageData);
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
-    // Click preview to upload
-    bgImagePreview.addEventListener('click', () => {
-        bgImageInput.click();
-    });
-
-    // Clear background image
-    clearBgImage.addEventListener('click', () => {
-        bgImagePreview.style.backgroundImage = '';
-        bgImagePreview.classList.remove('has-image');
-        bgImagePreview.innerHTML = '<i class="fas fa-image"></i><p>点击上传图片 / Click to Upload</p>';
-        
-        // Reset to default gradient
-        const defaultGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-        document.body.style.background = defaultGradient;
-        
-        // Save to localStorage
-        localStorage.setItem('bgType', 'gradient');
-        localStorage.setItem('bgValue', defaultGradient);
-    });
-
-    // Reset to default background
-    resetBackground.addEventListener('click', () => {
-        const defaultGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-        document.body.style.background = defaultGradient;
-        
-        // Clear localStorage
-        localStorage.removeItem('bgType');
-        localStorage.removeItem('bgValue');
-        
-        // Reset all active states
-        gradientItems.forEach((item, index) => {
-            item.classList.remove('active');
-            if (index === 0) item.classList.add('active');
-        });
-        colorItems.forEach(item => item.classList.remove('active'));
-        
-        // Reset preview
-        bgImagePreview.style.backgroundImage = '';
-        bgImagePreview.classList.remove('has-image');
-        bgImagePreview.innerHTML = '<i class="fas fa-image"></i><p>点击上传图片 / Click to Upload</p>';
-        
-        alert('已恢复默认背景！/ Default background restored!');
-    });
-
-    // Load saved language preference
-    const savedLanguage = localStorage.getItem('preferredLanguage');
-    if (savedLanguage) {
-        currentLanguage = savedLanguage;
-        
-        // Update active button
-        langButtons.forEach(btn => {
-            btn.classList.remove('active');
-            if (btn.getAttribute('data-lang') === savedLanguage) {
-                btn.classList.add('active');
-            }
-        });
-        
-        // Update UI
-        updateUILanguage(savedLanguage);
-    }
-    
-    // Load saved background
-    const savedBgType = localStorage.getItem('bgType');
-    const savedBgValue = localStorage.getItem('bgValue');
-    
-    if (savedBgType && savedBgValue) {
-        if (savedBgType === 'image') {
-            document.body.style.background = `url(${savedBgValue}) center/cover no-repeat`;
-            bgImagePreview.style.backgroundImage = `url(${savedBgValue})`;
-            bgImagePreview.classList.add('has-image');
-            bgImagePreview.innerHTML = '';
-        } else {
-            document.body.style.background = savedBgValue;
-        }
-    }
-    
-    // 滚动进度指示器
-    const backgroundTab = document.getElementById('backgroundTab');
-    const scrollProgress = document.getElementById('scrollProgress');
-    
-    if (backgroundTab && scrollProgress) {
-        backgroundTab.addEventListener('scroll', () => {
-            const scrollTop = backgroundTab.scrollTop;
-            const scrollHeight = backgroundTab.scrollHeight - backgroundTab.clientHeight;
-            const scrollPercentage = (scrollTop / scrollHeight) * 100;
-            scrollProgress.style.width = scrollPercentage + '%';
-        });
-    }
-});
-// Update initial bot message avatar
-function updateInitialBotAvatar() {
-    const initialBotAvatar = document.querySelector('.bot-message-container .avatar');
-    if (initialBotAvatar) {
-        if (botAvatar) {
-            initialBotAvatar.style.backgroundImage = `url(${botAvatar})`;
-            initialBotAvatar.style.backgroundSize = 'cover';
-            initialBotAvatar.style.backgroundPosition = 'center';
-            initialBotAvatar.innerHTML = '';
-        } else {
-            initialBotAvatar.style.backgroundImage = 'none';
-            initialBotAvatar.innerHTML = '<i class="fas fa-robot"></i>';
-        }
-    }
-}
-
-// Load saved avatars from localStorage on page load
-window.addEventListener('load', () => {
-    const savedUserAvatar = localStorage.getItem('userAvatar');
-    const savedBotAvatar = localStorage.getItem('botAvatar');
-    
-    if (savedUserAvatar) {
-        userAvatar = savedUserAvatar;
-        userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
-        userAvatarPreview.style.backgroundSize = 'cover';
-        userAvatarPreview.style.backgroundPosition = 'center';
-        userAvatarPreview.innerHTML = '';
-    }
-    
-    if (savedBotAvatar) {
-        botAvatar = savedBotAvatar;
-        botAvatarPreview.style.backgroundImage = `url(${botAvatar})`;
-        botAvatarPreview.style.backgroundSize = 'cover';
-        botAvatarPreview.style.backgroundPosition = 'center';
-        botAvatarPreview.innerHTML = '';
-        updateInitialBotAvatar();
-    }
-});
-
-// Voice Input Functionality
-const voiceInputBtn = document.getElementById('voiceInputBtn');
-const recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
-recognition.lang = 'zh-CN'; // Default language
-recognition.interimResults = false;
-
-voiceInputBtn.addEventListener('click', () => {
-    recognition.lang = currentLanguage;
-    try {
-        recognition.start();
-        voiceInputBtn.classList.add('active');
-        voiceInputBtn.title = '正在聆聽...';
-    } catch (error) {
-        console.error("Speech recognition could not be started: ", error);
-        alert('語音辨識無法啟動。您的瀏覽器可能不支援，或未授予麥克風權限。');
-    }
-});
-
-recognition.onresult = (event) => {
-    const transcript = event.results[0][0].transcript;
-    messageInput.value = transcript;
-    sendMessage(); // Automatically send after recognition
-};
-
-recognition.onend = () => {
-    voiceInputBtn.classList.remove('active');
-    voiceInputBtn.title = '語音輸入';
-};
-
-recognition.onerror = (event) => {
-    console.error('Speech recognition error:', event.error);
-    if (event.error === 'not-allowed') {
-        alert('語音辨識失敗：您需要允許麥克風存取。\n\n請檢查您瀏覽器網址列左側的網站設定，並確保麥克風權限已設為「允許」。');
-    } else {
-        alert(`語音辨識錯誤: ${event.error}`);
-    }
-};
-
-// Webcam Functionality
-const webcamBtn = document.getElementById('webcamBtn');
-const webcamModal = document.getElementById('webcamModal');
-const closeWebcamBtn = document.querySelector('.close-webcam');
-const webcamFeed = document.getElementById('webcamFeed');
-const captureBtn = document.getElementById('captureBtn');
-let stream;
-
-webcamBtn.addEventListener('click', async () => {
-    webcamModal.style.display = 'block';
-    try {
-        stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        webcamFeed.srcObject = stream;
-    } catch (err) {
-        console.error("Error accessing webcam:", err);
-        alert('無法存取網路攝影機。請檢查權限。');
-        webcamModal.style.display = 'none';
-    }
-});
-
-function closeWebcam() {
-    if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-    }
-    webcamModal.style.display = 'none';
-}
-
-closeWebcamBtn.addEventListener('click', closeWebcam);
-
-captureBtn.addEventListener('click', () => {
-    const canvas = document.createElement('canvas');
-    canvas.width = webcamFeed.videoWidth;
-    canvas.height = webcamFeed.videoHeight;
-    const context = canvas.getContext('2d');
-    context.drawImage(webcamFeed, 0, 0, canvas.width, canvas.height);
-    
-    const imageData = canvas.toDataURL('image/jpeg');
-    closeWebcam();
-
-    const t = translations[currentLanguage];
-    const userMessageText = messageInput.value.trim() || t.analyzeImage;
-
-    // Create user message with image
-    const imageMessage = createImageMessage(imageData, userMessageText, true);
-    messagesDiv.appendChild(imageMessage);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    messageInput.value = ''; // Clear input after sending
-
-    // Save user turn to history
-    conversationHistory.push({ role: 'user', content: userMessageText, time: Date.now() });
-
-    // Show analyzing indicator
-    const analyzingIndicator = createTypingIndicator(t.analyzing);
-    messagesDiv.appendChild(analyzingIndicator);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-    // Convert data URL to blob for sending to API
-    fetch(imageData)
-        .then(res => res.blob())
-        .then(async (blob) => {
-            try {
-                const analysis = await chatAPI.sendImageMessage(userMessageText, blob, currentLanguage, conversationHistory);
-                
-                messagesDiv.removeChild(analyzingIndicator);
-                
-                const botMessage = createMessage(analysis, false);
-                messagesDiv.appendChild(botMessage);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-                // Save assistant turn to history
-                conversationHistory.push({ role: 'bot', content: analysis, time: Date.now() });
-                
-            } catch (error) {
-                console.error('Image analysis error:', error);
-                messagesDiv.removeChild(analyzingIndicator);
-                
-                const errorMsg = t.errorMsg || '抱歉，图像分析失败。';
-                const botMessage = createMessage(errorMsg, false);
-                messagesDiv.appendChild(botMessage);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            }
-        });
-});
-
-// Logout functionality
-document.getElementById('logout').addEventListener('click', async () => {
-    try {
-        const response = await fetch('/auth/logout', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-        
-        if (response.ok) {
-            // Redirect to login page
-            window.location.href = '/login';
-        } else {
-            console.error('Logout failed');
-            alert('退出登录失败，请重试。');
-        }
-    } catch (error) {
-        console.error('Logout error:', error);
-        alert('退出登录失败，请重试。');
-    }
-});
+// Settings functionality moved to settings.js
+// This includes: Avatar Modal, Background Customization, Theme Settings, Font Settings, Language Options, etc.

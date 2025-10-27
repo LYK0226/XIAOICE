@@ -77,6 +77,8 @@ document.getElementById('signin-form').addEventListener('submit', async (e) => {
         const data = await response.json();
         
         if (response.ok) {
+            // Store the access token
+            localStorage.setItem('access_token', data.access_token);
             // Redirect to index page on successful login
             window.location.href = '/';
         } else {
