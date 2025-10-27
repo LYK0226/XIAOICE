@@ -26,3 +26,6 @@ class Config:
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # When True, create DB tables automatically on app startup (useful for dev)
     CREATE_DB_ON_STARTUP = os.environ.get('CREATE_DB_ON_STARTUP', 'true').lower() == 'true'
+
+    # JWT Configuration
+    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'jwt_default_secret_key')

@@ -208,3 +208,20 @@ body{
 .container.active .toggle-right{
     transform: translateX(200%);
 }
+
+.remember-me-container {
+    display: flex;
+    align-items: center;
+    width: 100%;
+    margin: 8px 0;
+}
+
+.remember-me-container input[type="checkbox"] {
+    margin-right: 5px;
+    width: auto;
+}
+
+.remember-me-container label {
+    font-size: 13px;
+    color: #333;
+}

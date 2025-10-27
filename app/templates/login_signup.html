@@ -26,6 +26,7 @@
                 <input type="text" id="signup-username" name="username" placeholder="Username" required>
                 <input type="email" id="signup-email" name="email" placeholder="Email" required>
                 <input type="password" id="signup-password" name="password" placeholder="Password" required>
+                <input type="password" id="signup-confirm-password" name="confirm-password" placeholder="Confirm Password" required>
                 <div id="signup-error" style="color: red; font-size: 12px; margin-top: 5px;"></div>
                 <button type="submit">Sign Up</button>
             </form>
@@ -43,6 +44,10 @@
                 <span>or use your email and password</span>
                 <input type="email" id="signin-email" name="email" placeholder="Email" required>
                 <input type="password" id="signin-password" name="password" placeholder="Password" required>
+                <div class="remember-me-container">
+                    <input type="checkbox" id="remember-me" name="remember-me">
+                    <label for="remember-me">Remember Me</label>
+                </div>
                 <a href="/forgot_password">Forget Your Password?</a>
                 <div id="signin-error" style="color: red; font-size: 12px; margin-top: 5px;"></div>
                 <button type="submit">Sign In</button>

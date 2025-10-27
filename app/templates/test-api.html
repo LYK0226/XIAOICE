@@ -203,6 +203,13 @@
         </div>
     </div>
     
+    <!-- Auth check script -->
+    <script>
+        if (!localStorage.getItem('access_token')) {
+            window.location.href = '/login';
+        }
+    </script>
+    
     <script>
         // 从 app/static/js/chatbox.js 读取的 API 密钥（如果有）
         const DEFAULT_API_KEY = 'YOUR_API_KEY_HERE';
