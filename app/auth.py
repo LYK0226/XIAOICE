@@ -73,6 +73,7 @@ def login():
         
         email = data.get('email', '').strip().lower()
         password = data.get('password', '')
+        remember = data.get('remember', False)
         
         if not email or not password:
             return jsonify({'error': 'Email and password are required'}), 400
@@ -87,7 +88,7 @@ def login():
             return jsonify({'error': 'Account is disabled'}), 403
         
         # Log in the user
-        login_user(user, remember=True)
+        login_user(user, remember=remember)
         
         return jsonify({
             'message': 'Login successful',

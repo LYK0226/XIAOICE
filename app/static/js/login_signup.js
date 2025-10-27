@@ -18,9 +18,15 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
     const username = document.getElementById('signup-username').value;
     const email = document.getElementById('signup-email').value;
     const password = document.getElementById('signup-password').value;
+    const confirmPassword = document.getElementById('signup-confirm-password').value;
     const errorDiv = document.getElementById('signup-error');
     
     errorDiv.textContent = '';
+
+    if (password !== confirmPassword) {
+        errorDiv.textContent = 'Passwords do not match';
+        return;
+    }
     
     try {
         const response = await fetch('/auth/signup', {
@@ -54,6 +60,7 @@ document.getElementById('signin-form').addEventListener('submit', async (e) => {
     
     const email = document.getElementById('signin-email').value;
     const password = document.getElementById('signin-password').value;
+    const rememberMe = document.getElementById('remember-me').checked;
     const errorDiv = document.getElementById('signin-error');
     
     errorDiv.textContent = '';
@@ -64,7 +71,7 @@ document.getElementById('signin-form').addEventListener('submit', async (e) => {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({ email, password, remember: rememberMe })
         });
         
         const data = await response.json();
