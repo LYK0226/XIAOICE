@@ -6,8 +6,9 @@ from . import vertex_ai
 
 bp = Blueprint('main', __name__)
 
-@bp.route("/")
-@bp.route("/index")
+@bp.route("/", methods=['GET', 'POST'])
+@bp.route("/index", methods=['GET', 'POST'])
+@jwt_required
 def index():
     """Render the main chat page."""
     return render_template('index.html')
