@@ -2,19 +2,22 @@ from google import genai
 from flask import current_app
 import os
 
-def init_gemini():
+def init_gemini(api_key=None):
     """Initializes the Google Generative AI client."""
-    api_key = current_app.config['GOOGLE_API_KEY']
+    if api_key is None:
+        # Fallback to config for backward compatibility
+        api_key = current_app.config.get('GOOGLE_API_KEY')
+
     if not api_key:
-        raise ValueError("GOOGLE_API_KEY is not set in environment variables")
+        raise ValueError("API key is required but not provided")
     return genai.Client(api_key=api_key)
 
-def generate_response(message, image_path=None, image_mime_type=None, history=None):
+def generate_response(message, image_path=None, image_mime_type=None, history=None, api_key=None):
     """
     Generates a response from the Gemini model.
     Can handle both text and image inputs.
     """
-    client = init_gemini()
+    client = init_gemini(api_key)
     
     model_name = current_app.config['GEMINI_MODEL']
 
@@ -122,5 +125,20 @@ def generate_response(message, image_path=None, image_mime_type=None, history=No
             return "I'm sorry, I couldn't generate a response. This might be due to safety settings or other issues."
     except Exception as e:
         current_app.logger.error(f"Error generating response: {e}")
-        return f"Error: Failed to generate response. {str(e)}"
+
+        # Handle specific Google API errors with user-friendly messages
+        error_str = str(e).lower()
+        if "user location is not supported" in error_str or "failed_precondition" in error_str:
+            return ("I'm sorry, but the Google AI service is currently not available in your location. "
+                   "This is a regional restriction imposed by Google. "
+                   "Please try using a VPN service to connect from a supported region (like the US), "
+                   "or consider using a different AI service.")
+        elif "api key" in error_str and ("invalid" in error_str or "unauthorized" in error_str):
+            return ("API key error: Please check that your Google AI API key is valid and has the necessary permissions. "
+                   "You can verify your API key in the settings page.")
+        elif "quota" in error_str or "rate limit" in error_str:
+            return ("API quota exceeded: You've reached the usage limit for your Google AI API key. "
+                   "Please wait a few minutes before trying again, or check your API usage limits.")
+        else:
+            return f"Error: Failed to generate response. {str(e)}"
 

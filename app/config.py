@@ -10,7 +10,7 @@ class Config:
     FLASK_ENV = os.environ.get('FLASK_ENV', 'development')
 
     # Google AI Studio
-    GOOGLE_API_KEY = os.environ.get('GOOGLE_API_KEY')
+    # API keys are now stored per user in the database
     
     # Gemini Model
     GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')

@@ -459,3 +459,211 @@ if (clearAllDataBtn) {
         }
     });
 }
+
+// ===== API Key Management =====
+
+// API Key Modal Elements
+const apiKeyModal = document.getElementById('apiKeyModal');
+const closeApiKeyModal = document.querySelector('.close-api-key');
+const addApiKeyBtn = document.getElementById('addApiKeyBtn');
+const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
+const cancelApiKeyBtn = document.getElementById('cancelApiKeyBtn');
+const apiKeyNameInput = document.getElementById('apiKeyName');
+const apiKeyValueInput = document.getElementById('apiKeyValue');
+const apiKeyList = document.getElementById('apiKeyList');
+
+// Load API keys when settings modal opens
+document.getElementById('settings').addEventListener('click', () => {
+    // Load API keys when opening settings
+    setTimeout(() => {
+        loadApiKeys();
+    }, 100);
+});
+
+// Modal event listeners
+closeApiKeyModal.onclick = function() {
+    apiKeyModal.style.display = 'none';
+    resetApiKeyForm();
+};
+
+cancelApiKeyBtn.addEventListener('click', () => {
+    apiKeyModal.style.display = 'none';
+    resetApiKeyForm();
+});
+
+window.onclick = function(event) {
+    if (event.target == apiKeyModal) {
+        apiKeyModal.style.display = 'none';
+        resetApiKeyForm();
+    }
+};
+
+// Add API key button
+addApiKeyBtn.addEventListener('click', () => {
+    document.getElementById('apiKeyModalTitle').innerHTML = '<i class="fas fa-key"></i> 添加 API 金鑰 / Add API Key';
+    apiKeyModal.style.display = 'block';
+    apiKeyNameInput.focus();
+});
+
+// Save API key
+saveApiKeyBtn.addEventListener('click', async () => {
+    const name = apiKeyNameInput.value.trim();
+    const apiKey = apiKeyValueInput.value.trim();
+    
+    if (!name || !apiKey) {
+        alert('請填寫所有欄位 / Please fill in all fields');
+        return;
+    }
+    
+    try {
+        // Create new key
+        const response = await fetch('/api/keys', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({ name, api_key: apiKey })
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            apiKeyModal.style.display = 'none';
+            resetApiKeyForm();
+            loadApiKeys();
+            // No alert needed since it auto-selects
+        } else {
+            const error = await response.json();
+            alert(error.error || '保存失敗 / Save failed');
+        }
+    } catch (error) {
+        console.error('Error saving API key:', error);
+        alert('保存失敗 / Save failed');
+    }
+});
+
+// Load API keys
+async function loadApiKeys() {
+    try {
+        const response = await fetch('/api/keys', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            renderApiKeys(data.api_keys || [], data.selected_api_key_id);
+        } else {
+            console.error('Failed to load API keys');
+        }
+    } catch (error) {
+        console.error('Error loading API keys:', error);
+    }
+}
+
+// Render API keys
+function renderApiKeys(apiKeys, selectedId) {
+    apiKeyList.innerHTML = '';
+    
+    if (apiKeys.length === 0) {
+        apiKeyList.innerHTML = `
+            <div style="text-align: center; color: #666; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
+                <i class="fas fa-key" style="font-size: 24px; color: #ccc; margin-bottom: 10px;"></i>
+                <p style="margin: 0 0 10px 0; font-weight: 500;">尚未添加任何 API 金鑰 / No API keys added yet</p>
+                <p style="margin: 0; font-size: 14px;">請添加您的 Google AI API 金鑰以使用聊天功能<br>Please add your Google AI API key to use chat features</p>
+            </div>
+        `;
+        return;
+    }
+    
+    apiKeys.forEach(key => {
+        const isSelected = key.id === selectedId;
+        const keyItem = document.createElement('div');
+        keyItem.className = `api-key-item ${isSelected ? 'selected' : ''}`;
+        
+        keyItem.innerHTML = `
+            <div class="api-key-info">
+                <div class="api-key-name">${key.name}</div>
+                <div class="api-key-value">${key.masked_key}</div>
+                <span class="api-key-status ${key.is_active ? 'active' : 'inactive'}">
+                    ${key.is_active ? '活躍 / Active' : '非活躍 / Inactive'}
+                </span>
+            </div>
+            <div class="api-key-actions">
+                <button class="api-key-btn toggle ${isSelected ? 'selected' : ''}" onclick="toggleApiKey(${key.id})">
+                    <i class="fas ${isSelected ? 'fa-check-circle' : 'fa-circle'}"></i> 
+                    ${isSelected ? '使用中 / In Use' : '使用 / Use'}
+                </button>
+                <button class="api-key-btn delete" onclick="deleteApiKey(${key.id}, '${key.name.replace(/'/g, "\\'")}')">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        `;
+        
+        apiKeyList.appendChild(keyItem);
+    });
+}
+
+// Toggle API key selection
+async function toggleApiKey(keyId) {
+    try {
+        const response = await fetch(`/api/keys/${keyId}/toggle`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const result = await response.json();
+            loadApiKeys();
+            // Optional: show brief feedback
+            // alert(result.message || 'API key toggled successfully');
+        } else {
+            const error = await response.json();
+            alert(error.error || '切換失敗 / Toggle failed');
+        }
+    } catch (error) {
+        console.error('Error toggling API key:', error);
+        alert('切換失敗 / Toggle failed');
+    }
+}
+
+// Delete API key
+async function deleteApiKey(keyId, name) {
+    if (!confirm(`確定要刪除 API 金鑰 "${name}" 嗎？\n\nAre you sure you want to delete the API key "${name}"?`)) {
+        return;
+    }
+    
+    try {
+        const response = await fetch(`/api/keys/${keyId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            loadApiKeys();
+            alert('API 金鑰已刪除 / API key deleted successfully');
+        } else {
+            const error = await response.json();
+            alert(error.error || '刪除失敗 / Delete failed');
+        }
+    } catch (error) {
+        console.error('Error deleting API key:', error);
+        alert('刪除失敗 / Delete failed');
+    }
+}
+
+// Reset API key form
+function resetApiKeyForm() {
+    apiKeyNameInput.value = '';
+    apiKeyValueInput.value = '';
+    apiKeyValueInput.placeholder = '輸入您的 Google AI API 金鑰 / Enter your Google AI API key';
+}
+
+// Make functions global for onclick handlers
+window.toggleApiKey = toggleApiKey;
+window.deleteApiKey = deleteApiKey;

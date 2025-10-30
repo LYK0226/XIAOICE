@@ -703,3 +703,199 @@
     color: #667eea;
     background: #f0f4ff;
 }
+
+/* API Key Management Styles */
+.api-key-section {
+    margin-top: 15px;
+}
+
+.api-key-list {
+    margin-bottom: 15px;
+}
+
+.api-key-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 15px;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    background: #f8f9fa;
+    transition: all 0.2s;
+}
+
+.api-key-item:hover {
+    border-color: #667eea;
+    background: #f0f4ff;
+}
+
+.api-key-item.selected {
+    border-color: #667eea;
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8f2ff 100%);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2);
+}
+
+.api-key-info {
+    flex: 1;
+}
+
+.api-key-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 4px;
+}
+
+.api-key-value {
+    font-family: 'Courier New', monospace;
+    font-size: 14px;
+    color: #666;
+    letter-spacing: 1px;
+}
+
+.api-key-status {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.api-key-status.active {
+    background: #d4edda;
+    color: #155724;
+}
+
+.api-key-status.inactive {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.api-key-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.api-key-btn {
+    padding: 6px 10px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+    min-width: 80px;
+}
+
+.api-key-btn.toggle {
+    background: #6c757d;
+    color: white;
+}
+
+.api-key-btn.toggle:hover {
+    background: #5a6268;
+    transform: translateY(-1px);
+}
+
+.api-key-btn.toggle.selected {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.api-key-btn.toggle.selected:hover {
+    background: linear-gradient(135deg, #218838 0%, #1ba085 100%);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(40, 167, 69, 0.3);
+}
+
+.api-key-btn.delete {
+    background: #dc3545;
+    color: white;
+}
+
+.api-key-btn.delete:hover {
+    background: #c82333;
+    transform: translateY(-1px);
+}
+
+.add-api-key-btn {
+    width: 100%;
+    padding: 12px;
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+}
+
+.add-api-key-btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+/* API Key Modal */
+#apiKeyModal .modal-content {
+    max-width: 500px;
+}
+
+.api-key-form {
+    padding: 20px 0;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.form-hint {
+    display: block;
+    margin-top: 4px;
+    font-size: 12px;
+    color: #666;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    margin-top: 30px;
+}
+
+.form-actions button {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.2s;
+}
+
+.form-actions button:hover {
+    transform: translateY(-1px);
+}

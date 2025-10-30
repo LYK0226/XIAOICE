@@ -271,6 +271,23 @@
                         <h3><i class="fas fa-sliders-h"></i> 高級設定 / Advanced Settings</h3>
                         <p class="settings-description">進階功能和選項 / Advanced features and options</p>
                     </div>
+                    
+                    <!-- API Key Management -->
+                    <div class="setting-item">
+                        <label>API 金鑰管理 / API Key Management</label>
+                        <p class="setting-description">管理您的 Google AI API 金鑰 / Manage your Google AI API keys</p>
+                        
+                        <div class="api-key-section">
+                            <div class="api-key-list" id="apiKeyList">
+                                <!-- API keys will be loaded here -->
+                            </div>
+                            
+                            <button class="add-api-key-btn" id="addApiKeyBtn">
+                                <i class="fas fa-plus"></i> 添加 API 金鑰 / Add API Key
+                            </button>
+                        </div>
+                    </div>
+                    
                     <div class="setting-item">
                         <label>消息歷史記錄 / Message History</label>
                         <select class="setting-select" id="messageHistory">
@@ -307,5 +324,37 @@
         <h2>Webcam Input</h2>
         <video id="webcamFeed" autoplay style="width: 100%; border-radius: 8px;"></video>
         <button id="captureBtn" class="sidebar-btn" style="width: 100%; margin-top: 10px;"><i class="fas fa-camera"></i> Capture & Send</button>
+    </div>
+</div>
+
+<!-- API Key Modal -->
+<div id="apiKeyModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="settings-modal-header">
+            <h3 id="apiKeyModalTitle"><i class="fas fa-key"></i> 添加 API 金鑰 / Add API Key</h3>
+            <span class="close-api-key">&times;</span>
+        </div>
+        
+        <div class="api-key-form">
+            <div class="form-group">
+                <label for="apiKeyName">金鑰名稱 / Key Name</label>
+                <input type="text" id="apiKeyName" placeholder="例如：我的 Google API / e.g., My Google API" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="apiKeyValue">API 金鑰 / API Key</label>
+                <input type="password" id="apiKeyValue" placeholder="輸入您的 Google AI API 金鑰 / Enter your Google AI API key" required>
+                <small class="form-hint">您的 API 金鑰將被加密存儲 / Your API key will be encrypted and stored securely</small>
+            </div>
+            
+            <div class="form-actions">
+                <button id="saveApiKeyBtn" class="sidebar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <i class="fas fa-save"></i> 保存 / Save
+                </button>
+                <button id="cancelApiKeyBtn" class="sidebar-btn" style="background: #6c757d;">
+                    <i class="fas fa-times"></i> 取消 / Cancel
+                </button>
+            </div>
+        </div>
     </div>
 </div>
