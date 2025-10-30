@@ -65,10 +65,9 @@ XIAOICE/
 ├── app/
 │ ├── templates/
 │ │ ├── index.html                  # 主聊天頁面
-│ │ ├── demo.html                   # 功能展示頁面
-│ │ ├── test-api.html               # API 測試頁面
-│ │ └── scrollbar-test.html         # 捲軸式測試頁面
-    └── login_signup.html           # 登入註冊
+│ │ ├── login_signup.html           # 登入註冊頁面
+│ │ ├── setting.html                # 設定頁面
+│ │ └── forget_password.html        # 忘記密碼頁面
 │ └── static/                       # 靜態資源目錄
 │ ├── css/
 │ │ ├── chatbox.css                 # 主聊天頁面專用樣式
@@ -80,7 +79,6 @@ XIAOICE/
 ├── docs/
 │ ├── BACKGROUND-GUIDE.md           # 背景自訂指南
 │ ├── COMPLETE-SUMMARY.md           # 完整總結
-│ ├── DEMO-WALKTHROUGH.md           # 功能示範說明
 │ ├── DEVELOPMENT-SUMMARY.md        # 開發摘要文檔
 │ ├── NAVIGATION-GUIDE.md           # 頁面導航指南
 │ ├── PRESETS-SHOWCASE.md           # 預設背景展示

@@ -22,12 +22,6 @@ def forgot_password_page():
     """Render the forgot password page."""
     return render_template('forget_password.html')
 
-@bp.route('/demo')
-@jwt_required()
-def demo():
-    """Render the demo page."""
-    return render_template('demo.html')
-
 @bp.route('/chat', methods=['POST'])
 @jwt_required()
 def chat():
@@ -99,12 +93,6 @@ def chat():
         # Clean up the saved image file
         if image_path and os.path.exists(image_path):
             os.remove(image_path)
-
-@bp.route('/test-api')
-@jwt_required()
-def test_api_page():
-    """Render the API testing page."""
-    return render_template('test-api.html')
 
 # ===== API Key Management Routes =====
 
