@@ -477,6 +477,7 @@ document.getElementById('settings').addEventListener('click', () => {
     // Load API keys when opening settings
     setTimeout(() => {
         loadApiKeys();
+        loadUserModel();
     }, 100);
 });
 
@@ -586,9 +587,6 @@ function renderApiKeys(apiKeys, selectedId) {
             <div class="api-key-info">
                 <div class="api-key-name">${key.name}</div>
                 <div class="api-key-value">${key.masked_key}</div>
-                <span class="api-key-status ${key.is_active ? 'active' : 'inactive'}">
-                    ${key.is_active ? '活躍 / Active' : '非活躍 / Inactive'}
-                </span>
             </div>
             <div class="api-key-actions">
                 <button class="api-key-btn toggle ${isSelected ? 'selected' : ''}" onclick="toggleApiKey(${key.id})">
@@ -667,3 +665,65 @@ function resetApiKeyForm() {
 // Make functions global for onclick handlers
 window.toggleApiKey = toggleApiKey;
 window.deleteApiKey = deleteApiKey;
+
+// ===== AI Model Management =====
+
+// Load user's selected AI model
+async function loadUserModel() {
+    try {
+        const response = await fetch('/api/user/model', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const modelSelect = document.getElementById('aiModelSelect');
+            if (modelSelect && data.ai_model) {
+                modelSelect.value = data.ai_model;
+            }
+        } else {
+            console.error('Failed to load user model');
+        }
+    } catch (error) {
+        console.error('Error loading user model:', error);
+    }
+}
+
+// Save user's selected AI model
+document.getElementById('aiModelSelect').addEventListener('change', async (event) => {
+    const selectedModel = event.target.value;
+    
+    try {
+        const response = await fetch('/api/user/model', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({ ai_model: selectedModel })
+        });
+        
+        if (response.ok) {
+            // Show brief success feedback
+            const selectElement = event.target;
+            const originalBackground = selectElement.style.backgroundColor;
+            selectElement.style.backgroundColor = '#d4edda';
+            selectElement.style.borderColor = '#c3e6cb';
+            
+            setTimeout(() => {
+                selectElement.style.backgroundColor = originalBackground;
+                selectElement.style.borderColor = '';
+            }, 1000);
+            
+            console.log('AI model updated successfully');
+        } else {
+            const error = await response.json();
+            alert(error.error || '保存失敗 / Save failed');
+        }
+    } catch (error) {
+        console.error('Error saving AI model:', error);
+        alert('保存失敗 / Save failed');
+    }
+});

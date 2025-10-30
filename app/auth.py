@@ -19,8 +19,7 @@ def signup():
     """Handle user registration."""
     try:
         data = request.get_json()
-        
-        username = data.get('username', '').strip()
+        username = data.get('username', '').strip() 
         email = data.get('email', '').strip().lower()
         password = data.get('password', '')
         

@@ -26,7 +26,7 @@
                     <span>語言<br>Language</span>
                 </div>
                 <div class="settings-group" data-group="advanced">
-                    <i class="fas fa-sliders-h"></i>
+                    <i class="fa-solid fa-key"></i>
                     <span>高級<br>Advanced</span>
                 </div>
             </div>
@@ -268,15 +268,23 @@
                 <!-- Advanced Settings -->
                 <div class="settings-content" id="advancedTab">
                     <div class="settings-header">
-                        <h3><i class="fas fa-sliders-h"></i> 高級設定 / Advanced Settings</h3>
-                        <p class="settings-description">進階功能和選項 / Advanced features and options</p>
+                        <h3><i class="fa-solid fa-key"></i> API 金鑰管理 / API Key Management</h3>
+                        <p class="settings-description">管理您的 Google AI API 金鑰 / Manage your Google AI API keys</p>
                     </div>
-                    
+                    <!-- AI Model Selection -->
+                    <div class="setting-item">
+                        <label>AI 模型選擇 / AI Model Selection</label>
+                        <div class="model-selection">
+                            <select id="aiModelSelect" class="setting-select">
+                                <option value="gemini-2.5-flash">Gemini 2.5 Flash (推薦 / Recommended)</option>
+                                <option value="gemini-2.5-pro">Gemini 2.5 Pro (高品質 / High Quality)</option>
+                            </select>
+                        </div>
+                    </div>
                     <!-- API Key Management -->
                     <div class="setting-item">
-                        <label>API 金鑰管理 / API Key Management</label>
-                        <p class="setting-description">管理您的 Google AI API 金鑰 / Manage your Google AI API keys</p>
-                        
+                        <label>API 金鑰 / API Key</label>
+                        <p class="setting-description" style="font-size: 15px;">您可以添加多個 API 金鑰以分散使用量 / You can add multiple API keys to distribute usage</p>
                         <div class="api-key-section">
                             <div class="api-key-list" id="apiKeyList">
                                 <!-- API keys will be loaded here -->
@@ -287,7 +295,6 @@
                             </button>
                         </div>
                     </div>
-                    
                     <div class="setting-item">
                         <label>消息歷史記錄 / Message History</label>
                         <select class="setting-select" id="messageHistory">

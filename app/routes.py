@@ -75,13 +75,19 @@ def chat():
         if user_profile and user_profile.selected_api_key:
             api_key = user_profile.selected_api_key.get_decrypted_key()
 
+        # Get user's selected AI model
+        ai_model = 'gemini-2.5-flash'  # default
+        if user_profile and user_profile.ai_model:
+            ai_model = user_profile.ai_model
+
         # Get response from Vertex AI (pass history for memory/context)
         response_text = vertex_ai.generate_response(
             message,
             image_path=image_path,
             image_mime_type=image_mime_type,
             history=history,
-            api_key=api_key
+            api_key=api_key,
+            model_name=ai_model
         )
         
         return jsonify({'response': response_text})
@@ -194,39 +200,56 @@ def delete_api_key(key_id):
         current_app.logger.error(f"Error deleting API key: {e}")
         return jsonify({'error': 'Failed to delete API key'}), 500
 
-@bp.route('/api/keys/<int:key_id>/toggle', methods=['POST'])
+@bp.route('/api/user/model', methods=['GET'])
 @jwt_required()
-def toggle_api_key(key_id):
-    """Toggle an API key selection (select if not selected, deselect if selected)."""
+def get_user_model():
+    """Get the current user's selected AI model."""
     from flask_jwt_extended import get_jwt_identity
-    from .models import UserApiKey, UserProfile, db
+    from .models import UserProfile
     
     user_id = get_jwt_identity()
     
     try:
-        api_key = UserApiKey.query.filter_by(id=key_id, user_id=user_id, is_active=True).first()
-        if not api_key:
-            return jsonify({'error': 'API key not found or inactive'}), 404
+        user_profile = UserProfile.query.filter_by(user_id=user_id).first()
+        if not user_profile:
+            # Return default model if no profile exists
+            return jsonify({'ai_model': 'gemini-2.5-flash'})
         
+        return jsonify({'ai_model': user_profile.ai_model or 'gemini-2.5-flash'})
+    except Exception as e:
+        current_app.logger.error(f"Error getting user model: {e}")
+        return jsonify({'error': 'Failed to get user model'}), 500
+
+@bp.route('/api/user/model', methods=['POST'])
+@jwt_required()
+def set_user_model():
+    """Set the current user's selected AI model."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import UserProfile, db
+    
+    user_id = get_jwt_identity()
+    data = request.get_json()
+    
+    if not data or 'ai_model' not in data:
+        return jsonify({'error': 'ai_model is required'}), 400
+    
+    ai_model = data['ai_model']
+    allowed_models = ['gemini-2.5-flash', 'gemini-2.5-pro']
+    
+    if ai_model not in allowed_models:
+        return jsonify({'error': f'Invalid model. Allowed: {", ".join(allowed_models)}'}), 400
+    
+    try:
         user_profile = UserProfile.query.filter_by(user_id=user_id).first()
         if not user_profile:
             user_profile = UserProfile(user_id=user_id)
             db.session.add(user_profile)
         
-        # Toggle selection
-        if user_profile.selected_api_key_id == key_id:
-            # Currently selected, so deselect it
-            user_profile.selected_api_key_id = None
-            message = 'API key deselected'
-        else:
-            # Not selected, so select it
-            user_profile.selected_api_key_id = key_id
-            message = 'API key selected'
-        
+        user_profile.ai_model = ai_model
         db.session.commit()
         
-        return jsonify({'message': message, 'selected': user_profile.selected_api_key_id == key_id})
+        return jsonify({'message': 'AI model updated successfully', 'ai_model': ai_model})
     except Exception as e:
         db.session.rollback()
-        current_app.logger.error(f"Error toggling API key: {e}")
-        return jsonify({'error': 'Failed to toggle API key'}), 500
+        current_app.logger.error(f"Error setting user model: {e}")
+        return jsonify({'error': 'Failed to update AI model'}), 500

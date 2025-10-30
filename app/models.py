@@ -44,6 +44,7 @@ class UserProfile(db.Model):
     background_value = db.Column(db.Text, default='linear-gradient(135deg, #667eea 0%, #764ba2 100%)')
     bot_avatar = db.Column(db.Text)
     selected_api_key_id = db.Column(db.Integer, db.ForeignKey('user_api_keys.id'), nullable=True)
+    ai_model = db.Column(db.String(50), default='gemini-2.5-flash')  # Add AI model selection
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user = db.relationship('User', backref='profile')
@@ -61,7 +62,8 @@ class UserProfile(db.Model):
             'background_type': self.background_type,
             'background_value': self.background_value,
             'bot_avatar': self.bot_avatar,
-            'selected_api_key_id': self.selected_api_key_id
+            'selected_api_key_id': self.selected_api_key_id,
+            'ai_model': self.ai_model
         }
 
 class UserApiKey(db.Model):

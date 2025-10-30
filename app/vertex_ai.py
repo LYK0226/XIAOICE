@@ -12,14 +12,16 @@ def init_gemini(api_key=None):
         raise ValueError("API key is required but not provided")
     return genai.Client(api_key=api_key)
 
-def generate_response(message, image_path=None, image_mime_type=None, history=None, api_key=None):
+def generate_response(message, image_path=None, image_mime_type=None, history=None, api_key=None, model_name=None):
     """
     Generates a response from the Gemini model.
     Can handle both text and image inputs.
     """
     client = init_gemini(api_key)
     
-    model_name = current_app.config['GEMINI_MODEL']
+    # Use provided model_name or fall back to config default
+    if model_name is None:
+        model_name = current_app.config['GEMINI_MODEL']
 
     contents = []
 
