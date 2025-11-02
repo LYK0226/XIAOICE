@@ -7,8 +7,22 @@ class ChatAPI {
     constructor() {
         this.baseURL = '';  // 使用相對路徑
         this.endpoints = {
-            chat: '/chat'
+            chat: '/chat',
+            conversations: '/conversations',
+            messages: '/messages'
         };
+    }
+
+    _getAuthHeaders(contentType = null) {
+        const headers = {};
+        const accessToken = localStorage.getItem('access_token');
+        if (accessToken) {
+            headers['Authorization'] = `Bearer ${accessToken}`;
+        }
+        if (contentType) {
+            headers['Content-Type'] = contentType;
+        }
+        return headers;
     }
 
     /**
@@ -32,11 +46,7 @@ class ChatAPI {
         }
 
         // Get access token from localStorage
-        const accessToken = localStorage.getItem('access_token');
-        const headers = {};
-        if (accessToken) {
-            headers['Authorization'] = `Bearer ${accessToken}`;
-        }
+        const headers = this._getAuthHeaders();
 
         try {
             const response = await fetch(this.endpoints.chat, {
@@ -65,6 +75,108 @@ class ChatAPI {
             
             throw new Error(errorMessages[currentLanguage] || errorMessages['zh-CN']);
         }
+    }
+
+    async fetchConversations() {
+        const response = await fetch(this.endpoints.conversations, {
+            method: 'GET',
+            headers: this._getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `API Error: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    async createConversation(title = null) {
+        const payload = {};
+        if (title && title.trim()) {
+            payload.title = title.trim();
+        }
+
+        const response = await fetch(this.endpoints.conversations, {
+            method: 'POST',
+            headers: this._getAuthHeaders('application/json'),
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `API Error: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    async addMessage(conversationId, content, sender, metadata = null) {
+        const payload = {
+            conversation_id: conversationId,
+            content,
+            sender
+        };
+
+        if (metadata) {
+            payload.metadata = metadata;
+        }
+
+        const response = await fetch(this.endpoints.messages, {
+            method: 'POST',
+            headers: this._getAuthHeaders('application/json'),
+            body: JSON.stringify(payload)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `API Error: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    async fetchConversationMessages(conversationId) {
+        const response = await fetch(`${this.endpoints.conversations}/${conversationId}/messages`, {
+            method: 'GET',
+            headers: this._getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `API Error: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    async updateConversation(conversationId, updates) {
+        const response = await fetch(`${this.endpoints.conversations}/${conversationId}`, {
+            method: 'PATCH',
+            headers: this._getAuthHeaders('application/json'),
+            body: JSON.stringify(updates)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `API Error: ${response.status}`);
+        }
+
+        return response.json();
+    }
+
+    async deleteConversation(conversationId) {
+        const response = await fetch(`${this.endpoints.conversations}/${conversationId}`, {
+            method: 'DELETE',
+            headers: this._getAuthHeaders()
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(errorData.error || `API Error: ${response.status}`);
+        }
+
+        return response.json();
     }
 
     /**

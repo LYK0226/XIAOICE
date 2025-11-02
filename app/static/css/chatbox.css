@@ -70,15 +70,124 @@ body {
     transition: background 0.2s;
     font-size: 14px;
     color: #333;
+    position: relative;
 }
 
 .chat-list li:hover {
     background: #e8f0fe;
 }
 
+.chat-list li.active {
+    background: #dce7ff;
+}
+
+.chat-list li.pinned i.fa-thumbtack {
+    transform: rotate(-15deg);
+    color: #d93025;
+}
+
+.chat-list li.empty-state {
+    justify-content: center;
+    color: #777;
+    cursor: default;
+    pointer-events: none;
+}
+
+.chat-list li.empty-state:hover {
+    background: transparent;
+}
+
 .chat-list li i {
     color: #666;
     font-size: 16px;
+}
+
+.conversation-text {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+.conversation-title {
+    font-weight: 600;
+    color: #222;
+}
+
+.conversation-menu-toggle {
+    margin-left: auto;
+    border: none;
+    background: transparent;
+    color: #666;
+    cursor: pointer;
+    padding: 6px;
+    border-radius: 6px;
+    display: none;
+    align-items: center;
+    justify-content: center;
+}
+
+.conversation-menu-toggle:hover {
+    background: rgba(26, 115, 232, 0.1);
+    color: #1a73e8;
+}
+
+.chat-list li:hover .conversation-menu-toggle,
+.chat-list li.menu-open .conversation-menu-toggle,
+.chat-list li.active .conversation-menu-toggle {
+    display: inline-flex;
+}
+
+.conversation-dropdown {
+    position: absolute;
+    top: 50%;
+    right: 12px;
+    transform: translateY(-50%);
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+    display: none;
+    flex-direction: column;
+    gap: 4px;
+    padding: 6px;
+    min-width: 160px;
+    z-index: 20;
+}
+
+.chat-list li.menu-open .conversation-dropdown {
+    display: flex;
+}
+
+.conversation-action {
+    border: none;
+    background: transparent;
+    color: #444;
+    cursor: pointer;
+    padding: 6px 10px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background 0.2s, color 0.2s;
+    width: 100%;
+    text-align: left;
+}
+
+.conversation-action i {
+    font-size: 14px;
+}
+
+.conversation-action span {
+    font-size: 13px;
+}
+
+.conversation-action:hover {
+    background: rgba(26, 115, 232, 0.12);
+    color: #1a73e8;
+}
+
+.conversation-action.active {
+    color: #d93025;
 }
 
 .sidebar-footer {

@@ -1,4 +1,4 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from .models import db, User, UserProfile
 import re
@@ -91,21 +91,37 @@ def login():
         access_token = create_access_token(identity=str(user.id))
         refresh_token = create_refresh_token(identity=str(user.id))
         
-        return jsonify({
+        response = jsonify({
             'message': 'Login successful',
             'user': user.to_dict(),
             'access_token': access_token,
             'refresh_token': refresh_token
-        }), 200
+        })
+
+        cookie_max_age = 30 * 24 * 60 * 60 if remember else 24 * 60 * 60
+        secure_cookie = current_app.config.get('SESSION_COOKIE_SECURE', False)
+
+        response.set_cookie(
+            'access_token',
+            access_token,
+            max_age=cookie_max_age,
+            httponly=True,
+            secure=secure_cookie,
+            samesite='Lax'
+        )
+
+        return response, 200
         
     except Exception as e:
         return jsonify({'error': f'Login failed: {str(e)}'}), 500
 
 @auth_bp.route('/logout', methods=['POST'])
-@jwt_required()
+@jwt_required(optional=True)
 def logout():
     """Handle user logout."""
-    return jsonify({'message': 'Logged out successfully'}), 200
+    response = jsonify({'message': 'Logged out successfully'})
+    response.delete_cookie('access_token')
+    return response, 200
 
 @auth_bp.route('/me', methods=['GET'])
 @jwt_required()

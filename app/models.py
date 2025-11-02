@@ -138,3 +138,61 @@ class UserApiKey(db.Model):
             return cipher.decrypt(self.encrypted_key.encode()).decode()
         except Exception:
             return None
+
+
+class Conversation(db.Model):
+    __tablename__ = 'conversations'
+
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    title = db.Column(db.String(255), nullable=False, default='New Conversation')
+    is_pinned = db.Column(db.Boolean, nullable=False, default=False)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+
+    user = db.relationship('User', backref=db.backref('conversations', lazy='dynamic', cascade='all, delete-orphan'))
+    messages = db.relationship('Message', backref='conversation', lazy='dynamic', cascade='all, delete-orphan', order_by='Message.created_at')
+
+    def __repr__(self):
+        return f'<Conversation {self.id}>'
+
+    def to_dict(self, include_messages=False):
+        data = {
+            'id': self.id,
+            'user_id': self.user_id,
+            'title': self.title,
+            'is_pinned': self.is_pinned,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
+        if include_messages:
+            data['messages'] = [message.to_dict() for message in self.messages.order_by(Message.created_at.asc())]
+        return data
+
+
+class Message(db.Model):
+    __tablename__ = 'messages'
+
+    id = db.Column(db.Integer, primary_key=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id', ondelete='CASCADE'), nullable=False, index=True)
+    sender = db.Column(db.String(20), nullable=False)
+    content = db.Column(db.Text, nullable=False)
+    meta = db.Column('metadata', db.JSON, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+
+    __table_args__ = (
+        db.CheckConstraint("sender IN ('user', 'assistant')", name='ck_messages_sender'),
+    )
+
+    def __repr__(self):
+        return f'<Message {self.id}>'
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'conversation_id': self.conversation_id,
+            'sender': self.sender,
+            'content': self.content,
+            'metadata': self.meta,
+            'created_at': self.created_at.isoformat() if self.created_at else None
+        }

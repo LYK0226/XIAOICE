@@ -17,6 +17,7 @@ const captureBtn = document.getElementById('captureBtn');
 const retakeBtn = document.getElementById('retakeBtn');
 const usePhotoBtn = document.getElementById('usePhotoBtn');
 const filePreviewContainer = document.getElementById('filePreviewContainer');
+const conversationList = document.querySelector('.chat-list');
 
 // Language support
 let currentLanguage = 'zh-CN'; // Default to Simplified Chinese
@@ -37,6 +38,9 @@ let isRecording = false;
 
 // Conversation history for context (array of {role: 'user'|'bot', content: string, time?: number})
 let conversationHistory = [];
+let activeConversationId = null;
+let conversationsCache = [];
+let isLoadingConversation = false;
 
 // Emoji categories
 const emojiCategories = {
@@ -93,151 +97,175 @@ const translations = {
         chatbox: '聊天盒子',
         chat: '聊天',
         newChat: '新对话',
-        newImages: '新图像',
-        myCopilots: '我的副驾驶',
         settings: '设置',
-        about: '关于 1.3.8i',
         placeholder: '在这里输入您的问题...',
         typing: '正在输入...',
         analyzing: '正在分析图片...',
         analyzeImage: '请分析这张图片',
         welcomeMsg: '您好！我是您的智能助手。我可以通过回答您的问题来帮助您。您也可以问我任何问题。',
-        newChatConfirm: '开始新的对话？当前对话将被保存。',
         settingsComingSoon: '设置面板即将推出！',
-        imagesComingSoon: '图像生成功能即将推出！',
-        copilotsComingSoon: '我的副驾驶功能即将推出！',
         langSwitched: '语言已切换为简体中文',
         logout: '登出',
         voiceRecording: '正在录音...',
         voiceNotSupported: '您的浏览器不支持语音识别',
         micPermissionDenied: '麦克风权限被拒绝，请在浏览器设置中允许访问麦克风',
         webcamPermissionDenied: '无法访问摄像头，请在浏览器设置中允许访问摄像头',
-        errorMsg: '抱歉，发生了错误。请稍后再试。'
+        errorMsg: '抱歉，发生了错误。请稍后再试。',
+        renameAction: '重命名',
+        deleteAction: '删除',
+        pinAction: '置顶',
+        unpinAction: '取消置顶',
+        openAction: '打开',
+        renamePrompt: '输入新的对话标题',
+        renameError: '重命名失败，请稍后再试。',
+        deleteConfirm: '确定要删除此对话吗？删除后无法恢复。',
+        deleteError: '删除对话失败，请稍后再试。',
+        pinError: '更新置顶状态失败，请稍后再试。'
     },
     'zh-TW': {
         chatbox: '聊天盒子',
         chat: '聊天',
         newChat: '新對話',
-        newImages: '新圖像',
-        myCopilots: '我的副駕駛',
         settings: '設定',
-        about: '關於 1.3.8i',
         placeholder: '在這裡輸入您的問題...',
         typing: '正在輸入...',
         analyzing: '正在分析圖片...',
         analyzeImage: '請分析這張圖片',
         welcomeMsg: '您好！我是您的智能助手。我可以通過回答您的問題來幫助您。您也可以問我任何問題。',
-        newChatConfirm: '開始新的對話？當前對話將被保存。',
         settingsComingSoon: '設定面板即將推出！',
-        imagesComingSoon: '圖像生成功能即將推出！',
-        copilotsComingSoon: '我的副駕駛功能即將推出！',
         langSwitched: '語言已切換為繁體中文',
         logout: '登出',
         voiceRecording: '正在錄音...',
         voiceNotSupported: '您的瀏覽器不支持語音識別',
         micPermissionDenied: '麥克風權限被拒絕，請在瀏覽器設定中允許訪問麥克風',
         webcamPermissionDenied: '無法訪問攝像頭，請在瀏覽器設定中允許訪問攝像頭',
-        errorMsg: '抱歉，發生了錯誤。請稍後再試。'
+        errorMsg: '抱歉，發生了錯誤。請稍後再試。',
+        renameAction: '重新命名',
+        deleteAction: '刪除',
+        pinAction: '置頂',
+        unpinAction: '取消置頂',
+        openAction: '打開',
+        renamePrompt: '輸入新的對話標題',
+        renameError: '重新命名失敗，請稍後再試。',
+        deleteConfirm: '確定要刪除此對話嗎？刪除後無法恢復。',
+        deleteError: '刪除對話失敗，請稍後再試。',
+        pinError: '更新置頂狀態失敗，請稍後再試。'
     },
     'en': {
         chatbox: 'Chatbox',
         chat: 'Chat',
         newChat: 'New Chat',
-        newImages: 'New Images',
-        myCopilots: 'My Copilots',
         settings: 'Settings',
-        about: 'About 1.3.8i',
         placeholder: 'Type your question here...',
         typing: 'Typing...',
         analyzing: 'Analyzing image...',
         analyzeImage: 'Please analyze this image',
         welcomeMsg: 'Hello! I am your smart assistant. I can help you by answering your questions. You can also ask me anything.',
-        newChatConfirm: 'Start a new chat? Current conversation will be saved.',
         settingsComingSoon: 'Settings panel coming soon!',
-        imagesComingSoon: 'Image generation feature coming soon!',
-        copilotsComingSoon: 'My Copilots feature coming soon!',
         langSwitched: 'Language switched to English',
         logout: 'Logout',
         voiceRecording: 'Recording...',
         voiceNotSupported: 'Your browser does not support speech recognition',
         micPermissionDenied: 'Microphone permission denied. Please allow microphone access in browser settings.',
         webcamPermissionDenied: 'Cannot access webcam. Please allow camera access in browser settings.',
-        errorMsg: 'Sorry, an error occurred. Please try again later.'
+        errorMsg: 'Sorry, an error occurred. Please try again later.',
+        renameAction: 'Rename',
+        deleteAction: 'Delete',
+        pinAction: 'Pin',
+        unpinAction: 'Unpin',
+        openAction: 'Open',
+        renamePrompt: 'Enter a new conversation title',
+        renameError: 'Unable to rename the conversation. Please try again.',
+        deleteConfirm: 'Delete this conversation? This action cannot be undone.',
+        deleteError: 'Unable to delete the conversation. Please try again.',
+        pinError: 'Unable to update pin status. Please try again.'
     },
     'ja': {
         chatbox: 'チャットボックス',
         chat: 'チャット',
         newChat: '新しい会話',
-        newImages: '新しい画像',
-        myCopilots: 'マイコパイロット',
         settings: '設定',
-        about: 'バージョン 1.3.8i',
         placeholder: 'ここに質問を入力してください...',
         typing: '入力中...',
         analyzing: '画像を分析中...',
         analyzeImage: 'この画像を分析してください',
         welcomeMsg: 'こんにちは！私はあなたのスマートアシスタントです。質問にお答えすることで、お手伝いできます。',
-        newChatConfirm: '新しいチャットを開始しますか？現在の会話は保存されます。',
         settingsComingSoon: '設定パネルは近日公開！',
-        imagesComingSoon: '画像生成機能は近日公開！',
-        copilotsComingSoon: 'マイコパイロット機能は近日公開！',
         langSwitched: '言語が日本語に切り替わりました',
         logout: 'ログアウト',
         voiceRecording: '録音中...',
         voiceNotSupported: 'お使いのブラウザは音声認識をサポートしていません',
         micPermissionDenied: 'マイクの許可が拒否されました。ブラウザの設定でマイクへのアクセスを許可してください。',
         webcamPermissionDenied: 'カメラにアクセスできません。ブラウザの設定でカメラへのアクセスを許可してください。',
-        errorMsg: '申し訳ありませんが、エラーが発生しました。後でもう一度お試しください。'
+        errorMsg: '申し訳ありませんが、エラーが発生しました。後でもう一度お試しください。',
+        renameAction: '名前を変更',
+        deleteAction: '削除',
+        pinAction: 'ピン留め',
+        unpinAction: 'ピン留めを解除',
+        openAction: '開く',
+        renamePrompt: '新しい会話名を入力してください',
+        renameError: '会話名を変更できませんでした。後でもう一度お試しください。',
+        deleteConfirm: 'この会話を削除しますか？削除すると元に戻せません。',
+        deleteError: '会話を削除できませんでした。後でもう一度お試しください。',
+        pinError: 'ピン留め状態を更新できませんでした。後でもう一度お試しください。'
     },
     'ko': {
         chatbox: '채팅박스',
         chat: '채팅',
         newChat: '새 대화',
-        newImages: '새 이미지',
-        myCopilots: '내 코파일럿',
         settings: '설정',
-        about: '버전 1.3.8i',
         placeholder: '여기에 질문을 입력하세요...',
         typing: '입력 중...',
         analyzing: '이미지 분석 중...',
         analyzeImage: '이 이미지를 분석해주세요',
         welcomeMsg: '안녕하세요! 저는 당신의 스마트 어시스턴트입니다. 질문에 답변하여 도움을 드릴 수 있습니다.',
-        newChatConfirm: '새 채팅을 시작하시겠습니까? 현재 대화는 저장됩니다.',
         settingsComingSoon: '설정 패널 곧 출시!',
-        imagesComingSoon: '이미지 생성 기능 곧 출시!',
-        copilotsComingSoon: '내 코파일럿 기능 곧 출시!',
         langSwitched: '언어가 한국어로 전환되었습니다',
         logout: '로그아웃',
         voiceRecording: '녹음 중...',
         voiceNotSupported: '브라우저가 음성 인식을 지원하지 않습니다',
         micPermissionDenied: '마이크 권한이 거부되었습니다. 브라우저 설정에서 마이크 액세스를 허용하세요.',
         webcamPermissionDenied: '카메라에 액세스할 수 없습니다. 브라우저 설정에서 카메라 액세스를 허용하세요.',
-        errorMsg: '죄송합니다. 오류가 발생했습니다. 나중에 다시 시도하세요.'
+        errorMsg: '죄송합니다. 오류가 발생했습니다. 나중에 다시 시도하세요.',
+        renameAction: '이름 변경',
+        deleteAction: '삭제',
+        pinAction: '상단 고정',
+        unpinAction: '고정 해제',
+        openAction: '열기',
+        renamePrompt: '새 대화 제목을 입력하세요',
+        renameError: '이름을 변경하지 못했습니다. 잠시 후 다시 시도하세요.',
+        deleteConfirm: '이 대화를 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다.',
+        deleteError: '대화를 삭제하지 못했습니다. 잠시 후 다시 시도하세요.',
+        pinError: '상단 고정 상태를 업데이트하지 못했습니다. 잠시 후 다시 시도하세요.'
     },
     'es': {
         chatbox: 'Caja de chat',
         chat: 'Chat',
         newChat: 'Nueva conversación',
-        newImages: 'Nuevas imágenes',
-        myCopilots: 'Mis copilotos',
         settings: 'Configuración',
-        about: 'Acerca de 1.3.8i',
         placeholder: 'Escribe tu pregunta aquí...',
         typing: 'Escribiendo...',
         analyzing: 'Analizando imagen...',
         analyzeImage: 'Por favor analiza esta imagen',
         welcomeMsg: '¡Hola! Soy tu asistente inteligente. Puedo ayudarte respondiendo tus preguntas.',
-        newChatConfirm: '¿Iniciar un nuevo chat? La conversación actual será guardada.',
         settingsComingSoon: '¡Panel de configuración próximamente!',
-        imagesComingSoon: '¡Función de generación de imágenes próximamente!',
-        copilotsComingSoon: '¡Función de mis copilotos próximamente!',
         langSwitched: 'Idioma cambiado a español',
         logout: 'Cerrar sesión',
         voiceRecording: 'Grabando...',
         voiceNotSupported: 'Su navegador no admite reconocimiento de voz',
         micPermissionDenied: 'Permiso de micrófono denegado. Permita el acceso al micrófono en la configuración del navegador.',
         webcamPermissionDenied: 'No se puede acceder a la cámara. Permita el acceso a la cámara en la configuración del navegador.',
-        errorMsg: 'Lo siento, ocurrió un error. Por favor, inténtelo de nuevo más tarde.'
+        errorMsg: 'Lo siento, ocurrió un error. Por favor, inténtelo de nuevo más tarde.',
+        renameAction: 'Renombrar',
+        deleteAction: 'Eliminar',
+        pinAction: 'Fijar',
+        unpinAction: 'Desfijar',
+        openAction: 'Abrir',
+        renamePrompt: 'Introduce un nuevo título para la conversación',
+        renameError: 'No se pudo renombrar la conversación. Inténtalo de nuevo.',
+        deleteConfirm: '¿Eliminar esta conversación? Esta acción no se puede deshacer.',
+        deleteError: 'No se pudo eliminar la conversación. Inténtalo de nuevo.',
+        pinError: 'No se pudo actualizar el estado de fijación. Inténtalo de nuevo.'
     }
 };
 
@@ -281,15 +309,10 @@ function updateUILanguage(lang) {
     updateElement('.sidebar-header h2', t.chatbox);
     updateElement('.sidebar-section h3', t.chat);
     updateElement('.chat-title span', t.chatbox);
-    updateElement('.version', t.about);
-    
     // Update input placeholder
     updateElementById('messageInput', t.placeholder);
-    
     // Update sidebar buttons
     updateElementById('newChat', `<i class="fas fa-plus"></i> ${t.newChat}`, true);
-    updateElementById('newImages', `<i class="fas fa-image"></i> ${t.newImages}`, true);
-    updateElementById('myCopilots', `<i class="fas fa-robot"></i> ${t.myCopilots}`, true);
     updateElementById('settings', `<i class="fas fa-cog"></i> ${t.settings}`, true);
     updateElementById('logout', `<i class="fas fa-sign-out-alt"></i> ${t.logout}`, true);
     
@@ -312,7 +335,314 @@ function updateUILanguage(lang) {
     
     // Show notification
     console.log(t.langSwitched);
+
+    // Refresh conversation list text to match language selection
+    renderConversationList(conversationsCache);
 }
+
+function sortConversations(conversations = []) {
+    const clone = Array.isArray(conversations) ? [...conversations] : [];
+    return clone.sort((a, b) => {
+        const aPinned = a?.is_pinned ? 1 : 0;
+        const bPinned = b?.is_pinned ? 1 : 0;
+        if (aPinned !== bPinned) {
+            return bPinned - aPinned;
+        }
+
+        const aTime = new Date(a?.updated_at || a?.created_at || 0).getTime() || 0;
+        const bTime = new Date(b?.updated_at || b?.created_at || 0).getTime() || 0;
+        return bTime - aTime;
+    });
+}
+
+function renderWelcomeMessage() {
+    const t = translations[currentLanguage];
+    messagesDiv.innerHTML = `
+        <div class="bot-message-container">
+            <div class="avatar bot-avatar">
+                <i class="fas fa-robot"></i>
+            </div>
+            <div class="message-content">
+                <p>${t.welcomeMsg}</p>
+            </div>
+        </div>
+    `;
+}
+
+function closeAllConversationMenus() {
+    const openItems = document.querySelectorAll('.conversation-item.menu-open');
+    openItems.forEach((item) => item.classList.remove('menu-open'));
+}
+
+function renderConversationList(conversations = []) {
+    if (!conversationList) {
+        return;
+    }
+
+    const t = translations[currentLanguage];
+    const sorted = sortConversations(conversations);
+    conversationList.innerHTML = '';
+
+    if (!sorted.length) {
+        const emptyState = document.createElement('li');
+        emptyState.className = 'empty-state';
+        emptyState.textContent = t.noConversations;
+        conversationList.appendChild(emptyState);
+        return;
+    }
+
+    const createConversationActionButton = (iconClass, label, handler) => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'conversation-action';
+        button.title = label;
+        button.innerHTML = `<i class="${iconClass}"></i><span>${label}</span>`;
+        button.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            closeAllConversationMenus();
+            try {
+                await handler(event);
+            } catch (error) {
+                console.error('Conversation action failed', error);
+            }
+        });
+        return button;
+    };
+
+    sorted.forEach((conversation) => {
+        const item = document.createElement('li');
+        item.classList.add('conversation-item');
+        item.dataset.conversationId = conversation.id;
+
+        if (conversation.is_pinned) {
+            item.classList.add('pinned');
+        }
+
+        if (Number(conversation.id) === Number(activeConversationId)) {
+            item.classList.add('active');
+        }
+
+        const icon = document.createElement('i');
+        icon.className = conversation.is_pinned ? 'fas fa-thumbtack' : 'fas fa-comments';
+        item.appendChild(icon);
+
+        const textWrapper = document.createElement('div');
+        textWrapper.className = 'conversation-text';
+
+        const title = document.createElement('span');
+        title.className = 'conversation-title';
+        const titleText = (conversation.title || '').trim() || t.untitledConversation;
+        title.textContent = titleText;
+        textWrapper.appendChild(title);
+
+        item.appendChild(textWrapper);
+
+        const menuToggle = document.createElement('button');
+        menuToggle.type = 'button';
+        menuToggle.className = 'conversation-menu-toggle';
+        menuToggle.innerHTML = '<i class="fas fa-ellipsis-h"></i>';
+        menuToggle.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const isOpen = item.classList.contains('menu-open');
+            closeAllConversationMenus();
+            if (!isOpen) {
+                item.classList.add('menu-open');
+            }
+        });
+
+        const dropdown = document.createElement('div');
+        dropdown.className = 'conversation-dropdown';
+        dropdown.addEventListener('click', (event) => event.stopPropagation());
+
+        const renameButton = createConversationActionButton('fas fa-pen', t.renameAction, () => renameConversation(conversation.id));
+        const pinButton = createConversationActionButton(
+            'fas fa-thumbtack',
+            conversation.is_pinned ? t.unpinAction : t.pinAction,
+            () => togglePinConversation(conversation.id)
+        );
+        pinButton.classList.toggle('active', Boolean(conversation.is_pinned));
+
+        const deleteButton = createConversationActionButton('fas fa-trash', t.deleteAction, () => deleteConversationById(conversation.id));
+
+        dropdown.appendChild(renameButton);
+        dropdown.appendChild(pinButton);
+        dropdown.appendChild(deleteButton);
+
+        item.appendChild(menuToggle);
+        item.appendChild(dropdown);
+
+        item.addEventListener('click', () => {
+            closeAllConversationMenus();
+            openConversation(conversation.id);
+        });
+
+        conversationList.appendChild(item);
+    });
+}
+
+function upsertConversation(conversation) {
+    if (!conversation) {
+        return;
+    }
+
+    const existingIndex = conversationsCache.findIndex((item) => Number(item.id) === Number(conversation.id));
+    if (existingIndex >= 0) {
+        conversationsCache[existingIndex] = conversation;
+    } else {
+        conversationsCache.push(conversation);
+    }
+
+    conversationsCache = sortConversations(conversationsCache);
+    renderConversationList(conversationsCache);
+}
+
+async function loadConversations() {
+    try {
+        const data = await chatAPI.fetchConversations();
+        conversationsCache = sortConversations(data.conversations || []);
+        renderConversationList(conversationsCache);
+
+        if (conversationsCache.length && !activeConversationId) {
+            await openConversation(conversationsCache[0].id, { force: true });
+        }
+    } catch (error) {
+        console.error('Failed to load conversations', error);
+    }
+}
+
+async function openConversation(conversationId, options = {}) {
+    const force = options.force || false;
+
+    if (!conversationId || isLoadingConversation) {
+        return;
+    }
+
+    if (!force && Number(activeConversationId) === Number(conversationId)) {
+        return;
+    }
+
+    isLoadingConversation = true;
+    activeConversationId = conversationId;
+    renderConversationList(conversationsCache);
+
+    try {
+        const data = await chatAPI.fetchConversationMessages(conversationId);
+        const messages = data.messages || [];
+
+        messagesDiv.innerHTML = '';
+        conversationHistory = [];
+
+        if (!messages.length) {
+            renderWelcomeMessage();
+            return;
+        }
+
+        messages.forEach((message) => {
+            const isUser = message.sender === 'user';
+            const element = createMessage(message.content, isUser);
+            messagesDiv.appendChild(element);
+            conversationHistory.push({
+                role: isUser ? 'user' : 'bot',
+                content: message.content,
+                time: message.created_at ? new Date(message.created_at).getTime() : Date.now()
+            });
+        });
+
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    } catch (error) {
+        console.error('Failed to load conversation messages', error);
+        alert(translations[currentLanguage].conversationLoadError);
+    } finally {
+        isLoadingConversation = false;
+    }
+}
+
+async function renameConversation(conversationId) {
+    const t = translations[currentLanguage];
+    const conversation = conversationsCache.find((item) => Number(item.id) === Number(conversationId));
+    const currentTitle = conversation?.title || '';
+
+    const result = prompt(t.renamePrompt, currentTitle);
+    if (result === null) {
+        return;
+    }
+
+    const newTitle = result.trim();
+    if (!newTitle || newTitle === currentTitle) {
+        return;
+    }
+
+    try {
+        const response = await chatAPI.updateConversation(conversationId, { title: newTitle });
+        if (response?.conversation) {
+            upsertConversation(response.conversation);
+        }
+    } catch (error) {
+        console.error('Failed to rename conversation', error);
+        alert(t.renameError);
+    }
+}
+
+async function togglePinConversation(conversationId) {
+    const t = translations[currentLanguage];
+    const conversation = conversationsCache.find((item) => Number(item.id) === Number(conversationId));
+    if (!conversation) {
+        return;
+    }
+
+    const desiredState = !conversation.is_pinned;
+
+    try {
+        const response = await chatAPI.updateConversation(conversationId, { is_pinned: desiredState });
+        if (response?.conversation) {
+            upsertConversation(response.conversation);
+        }
+    } catch (error) {
+        console.error('Failed to toggle pin', error);
+        alert(t.pinError);
+    }
+}
+
+async function deleteConversationById(conversationId) {
+    const t = translations[currentLanguage];
+
+    if (!confirm(t.deleteConfirm)) {
+        return;
+    }
+
+    try {
+        await chatAPI.deleteConversation(conversationId);
+        const wasActive = Number(activeConversationId) === Number(conversationId);
+
+        conversationsCache = conversationsCache.filter((item) => Number(item.id) !== Number(conversationId));
+        conversationsCache = sortConversations(conversationsCache);
+        renderConversationList(conversationsCache);
+
+        if (!conversationsCache.length) {
+            activeConversationId = null;
+            conversationHistory = [];
+            renderWelcomeMessage();
+            return;
+        }
+
+        if (wasActive) {
+            activeConversationId = null;
+            const nextConversation = conversationsCache[0];
+            if (nextConversation) {
+                await openConversation(nextConversation.id, { force: true });
+            }
+        }
+    } catch (error) {
+        console.error('Failed to delete conversation', error);
+        alert(t.deleteError);
+    }
+}
+
+document.addEventListener('click', (event) => {
+    if (!event.target.closest('.conversation-item')) {
+        closeAllConversationMenus();
+    }
+});
 
 // Function to create a message element
 function createMessage(text, isUser = false) {
@@ -665,6 +995,49 @@ translations['ja'].question = '質問';
 translations['ko'].question = '질문';
 translations['es'].question = 'Pregunta';
 
+// Conversation management translations
+translations['zh-CN'].noConversations = '暂无对话';
+translations['zh-CN'].untitledConversation = '未命名对话';
+translations['zh-CN'].conversationLoadError = '加载对话失败，请稍后再试。';
+translations['zh-CN'].conversationCreateError = '创建对话失败，请稍后再试。';
+translations['zh-CN'].messageSaveError = '保存消息失败。';
+translations['zh-CN'].attachmentPlaceholder = '[附件]';
+
+translations['zh-TW'].noConversations = '暫無對話';
+translations['zh-TW'].untitledConversation = '未命名對話';
+translations['zh-TW'].conversationLoadError = '載入對話失敗，請稍後再試。';
+translations['zh-TW'].conversationCreateError = '建立對話失敗，請稍後再試。';
+translations['zh-TW'].messageSaveError = '儲存訊息失敗。';
+translations['zh-TW'].attachmentPlaceholder = '[附件]';
+
+translations['en'].noConversations = 'No conversations yet';
+translations['en'].untitledConversation = 'Untitled conversation';
+translations['en'].conversationLoadError = 'Unable to load the conversation. Please try again.';
+translations['en'].conversationCreateError = 'Unable to start a new conversation right now.';
+translations['en'].messageSaveError = 'Unable to save the message.';
+translations['en'].attachmentPlaceholder = '[attachment]';
+
+translations['ja'].noConversations = '会話はまだありません';
+translations['ja'].untitledConversation = '名称未設定の会話';
+translations['ja'].conversationLoadError = '会話を読み込めませんでした。後でもう一度お試しください。';
+translations['ja'].conversationCreateError = '新しい会話を開始できませんでした。';
+translations['ja'].messageSaveError = 'メッセージを保存できませんでした。';
+translations['ja'].attachmentPlaceholder = '[添付]';
+
+translations['ko'].noConversations = '대화가 아직 없습니다';
+translations['ko'].untitledConversation = '제목 없는 대화';
+translations['ko'].conversationLoadError = '대화를 불러오지 못했습니다. 나중에 다시 시도하세요.';
+translations['ko'].conversationCreateError = '새 대화를 지금 시작할 수 없습니다.';
+translations['ko'].messageSaveError = '메시지를 저장하지 못했습니다.';
+translations['ko'].attachmentPlaceholder = '[첨부]';
+
+translations['es'].noConversations = 'Aún no hay conversaciones';
+translations['es'].untitledConversation = 'Conversación sin título';
+translations['es'].conversationLoadError = 'No se pudo cargar la conversación. Inténtalo de nuevo.';
+translations['es'].conversationCreateError = 'No se puede iniciar una nueva conversación ahora mismo.';
+translations['es'].messageSaveError = 'No se pudo guardar el mensaje.';
+translations['es'].attachmentPlaceholder = '[archivo adjunto]';
+
 // Load saved language preference on page load
 window.addEventListener('DOMContentLoaded', () => {
     const savedLanguage = localStorage.getItem('preferredLanguage');
@@ -704,50 +1077,23 @@ messageInput.addEventListener('keypress', (event) => {
 });
 
 // Sidebar button functionality
-document.getElementById('newChat').addEventListener('click', () => {
-    const t = translations[currentLanguage];
-    
-    if (confirm(t.newChatConfirm)) {
-        messagesDiv.innerHTML = `
-            <div class="bot-message-container">
-                <div class="avatar bot-avatar">
-                    <i class="fas fa-robot"></i>
-                </div>
-                <div class="message-content">
-                    <p>${t.welcomeMsg}</p>
-                </div>
-            </div>
-        `;
-    }
-});
-
-document.getElementById('settings').addEventListener('click', () => {
-    avatarModal.style.display = 'block';
-});
-
-document.getElementById('newImages').addEventListener('click', () => {
-    const t = translations[currentLanguage];
-    alert(t.imagesComingSoon);
-});
-
-document.getElementById('myCopilots').addEventListener('click', () => {
-    const t = translations[currentLanguage];
-    alert(t.copilotsComingSoon);
-});
-
-// Add click functionality to chat list items
-const chatListItems = document.querySelectorAll('.chat-list li');
-chatListItems.forEach(item => {
-    item.addEventListener('click', () => {
-        const characterName = item.textContent.trim();
-        const welcomeMessage = currentLanguage === 'zh' 
-            ? `您好！我是您的${characterName}。今天我能为您做些什么？`
-            : `Hello! I'm your ${characterName}. How can I assist you today?`;
-        messagesDiv.innerHTML = '';
-        const botMessage = createMessage(welcomeMessage, false);
-        messagesDiv.appendChild(botMessage);
+const newChatBtn = document.getElementById('newChat');
+if (newChatBtn) {
+    newChatBtn.addEventListener('click', () => {
+        closeAllConversationMenus();
+        activeConversationId = null;
+        conversationHistory = [];
+        renderWelcomeMessage();
+        renderConversationList(conversationsCache);
     });
-});
+}
+
+const settingsBtn = document.getElementById('settings');
+if (settingsBtn) {
+    settingsBtn.addEventListener('click', () => {
+        avatarModal.style.display = 'block';
+    });
+}
 
 // ============================================
 // FILE UPLOAD FUNCTIONALITY (Combined with Image)
@@ -1079,64 +1425,120 @@ usePhotoBtn.addEventListener('click', () => {
 
 // Update the sendMessage function to handle files
 async function sendMessageWithFiles() {
-    const message = messageInput.value.trim();
-    
-    // Need either message or files
-    if (!message && selectedFiles.length === 0) return;
+    const t = translations[currentLanguage];
+    const messageText = messageInput.value.trim();
+    const hasFiles = selectedFiles.length > 0;
 
-    // Add user message with files
-    const userMessage = createMessageWithFiles(message, selectedFiles, true);
-    messagesDiv.appendChild(userMessage);
+    if (!messageText && !hasFiles) {
+        return;
+    }
+
+    const attachmentsSnapshot = [...selectedFiles];
+    const placeholderText = messageText || (hasFiles ? t.attachmentPlaceholder : '');
+
+    const userMessageElement = createMessageWithFiles(messageText, attachmentsSnapshot, true);
+
+    messagesDiv.appendChild(userMessageElement);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
     messageInput.value = '';
 
-    // Save user turn to history
-    conversationHistory.push({ role: 'user', content: message || '[附件]', time: Date.now() });
-    
-    // Show typing indicator
+    conversationHistory.push({
+        role: 'user',
+        content: placeholderText || t.attachmentPlaceholder,
+        time: Date.now()
+    });
+
     const typingIndicator = createTypingIndicator();
     messagesDiv.appendChild(typingIndicator);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    
+
+    let conversationId = activeConversationId;
+
     try {
-        // Use the first image file for API (backend currently supports one image)
-        const imageFile = selectedFiles.find(f => f.type.startsWith('image/'));
-        
+        if (!conversationId) {
+            const createResponse = await chatAPI.createConversation();
+            conversationId = createResponse.conversation_id;
+            activeConversationId = conversationId;
+            if (createResponse.conversation) {
+                upsertConversation(createResponse.conversation);
+            } else {
+                await loadConversations();
+            }
+        }
+
+        const attachmentsMetadata = attachmentsSnapshot.length
+            ? attachmentsSnapshot.map((file) => ({
+                name: file.name,
+                type: file.type,
+                size: file.size
+            }))
+            : null;
+
+        try {
+            const userMessageResponse = await chatAPI.addMessage(
+                conversationId,
+                placeholderText || t.attachmentPlaceholder,
+                'user',
+                attachmentsMetadata ? { attachments: attachmentsMetadata } : null
+            );
+
+            if (userMessageResponse.conversation) {
+                upsertConversation(userMessageResponse.conversation);
+            }
+        } catch (messageError) {
+            console.error('Failed to persist user message', messageError);
+            alert(t.messageSaveError);
+        }
+
+        const imageFile = attachmentsSnapshot.find((file) => file.type.startsWith('image/'));
         let aiResponse;
+
         if (imageFile) {
             aiResponse = await chatAPI.sendImageMessage(
-                message || translations[currentLanguage].analyzeImage,
+                messageText || t.analyzeImage,
                 imageFile,
                 currentLanguage,
                 conversationHistory
             );
         } else {
-            aiResponse = await chatAPI.sendTextMessage(message, currentLanguage, conversationHistory);
+            aiResponse = await chatAPI.sendTextMessage(
+                messageText || placeholderText,
+                currentLanguage,
+                conversationHistory
+            );
         }
-        
-        // Remove typing indicator
-        messagesDiv.removeChild(typingIndicator);
-        
-        // Add bot response
-        const botMessage = createMessage(aiResponse, false);
-        messagesDiv.appendChild(botMessage);
+
+        if (typingIndicator.parentNode) {
+            typingIndicator.parentNode.removeChild(typingIndicator);
+        }
+
+        const botMessageElement = createMessage(aiResponse, false);
+        messagesDiv.appendChild(botMessageElement);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        
-        // Save assistant turn to history
+
         conversationHistory.push({ role: 'bot', content: aiResponse, time: Date.now() });
-        
-        // Clear selected files
-        selectedFiles = [];
-        updateFilePreview();
+
+        try {
+            const assistantMessageResponse = await chatAPI.addMessage(conversationId, aiResponse, 'assistant');
+            if (assistantMessageResponse.conversation) {
+                upsertConversation(assistantMessageResponse.conversation);
+            }
+        } catch (assistantError) {
+            console.error('Failed to persist assistant message', assistantError);
+        }
     } catch (error) {
         console.error('Error:', error);
-        messagesDiv.removeChild(typingIndicator);
-        
-        const t = translations[currentLanguage];
+        if (typingIndicator.parentNode) {
+            typingIndicator.parentNode.removeChild(typingIndicator);
+        }
+
         const errorMsg = t.errorMsg || '抱歉，发生了错误。';
         const botMessage = createMessage(errorMsg, false);
         messagesDiv.appendChild(botMessage);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    } finally {
+        selectedFiles = [];
+        updateFilePreview();
     }
 }
 

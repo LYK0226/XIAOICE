@@ -1,5 +1,6 @@
-from flask import Blueprint, render_template, request, jsonify, current_app
-from flask_jwt_extended import jwt_required
+from datetime import datetime
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for
+from flask_jwt_extended import jwt_required, decode_token
 import os
 import json
 from . import vertex_ai
@@ -10,6 +11,18 @@ bp = Blueprint('main', __name__)
 @bp.route("/index")
 def index():
     """Render the main chat page."""
+    token = request.cookies.get('access_token')
+
+    if not token:
+        return redirect(url_for('main.login_page'))
+
+    try:
+        decode_token(token)
+    except Exception:
+        response = redirect(url_for('main.login_page'))
+        response.delete_cookie('access_token')
+        return response
+
     return render_template('index.html')
 
 @bp.route('/login')
@@ -241,3 +254,186 @@ def set_user_model():
         db.session.rollback()
         current_app.logger.error(f"Error setting user model: {e}")
         return jsonify({'error': 'Failed to update AI model'}), 500
+
+
+# ===== Conversation & Message Routes =====
+
+@bp.route('/conversations', methods=['GET'])
+@jwt_required()
+def list_conversations():
+    """List conversations for the current user."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import Conversation
+
+    user_id = get_jwt_identity()
+
+    try:
+        conversations = (
+            Conversation.query
+            .filter_by(user_id=user_id)
+            .order_by(Conversation.is_pinned.desc(), Conversation.updated_at.desc())
+            .all()
+        )
+        return jsonify({'conversations': [conversation.to_dict() for conversation in conversations]})
+    except Exception as e:
+        current_app.logger.error(f"Error listing conversations: {e}")
+        return jsonify({'error': 'Failed to list conversations'}), 500
+
+
+@bp.route('/conversations', methods=['POST'])
+@jwt_required()
+def create_conversation():
+    """Create a new conversation and return its identifier."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import Conversation, db
+
+    user_id = get_jwt_identity()
+    data = request.get_json(silent=True) or {}
+
+    title = (data.get('title') or '').strip()
+    if not title:
+        title = 'New Conversation'
+
+    try:
+        conversation = Conversation(user_id=user_id, title=title)
+        db.session.add(conversation)
+        db.session.commit()
+        return jsonify({'conversation_id': conversation.id, 'conversation': conversation.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating conversation: {e}")
+        return jsonify({'error': 'Failed to create conversation'}), 500
+
+
+@bp.route('/conversations/<int:conversation_id>', methods=['PATCH'])
+@jwt_required()
+def update_conversation(conversation_id):
+    """Update conversation metadata (title, pin)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import Conversation, db
+
+    user_id = get_jwt_identity()
+    data = request.get_json(silent=True) or {}
+
+    allowed_fields = {'title', 'is_pinned'}
+    if not any(field in data for field in allowed_fields):
+        return jsonify({'error': 'No updatable fields provided'}), 400
+
+    try:
+        conversation = Conversation.query.filter_by(id=conversation_id, user_id=user_id).first()
+        if not conversation:
+            return jsonify({'error': 'Conversation not found'}), 404
+
+        updated = False
+
+        if 'title' in data:
+            new_title = (data.get('title') or '').strip()
+            if not new_title:
+                return jsonify({'error': 'title cannot be empty'}), 400
+            conversation.title = new_title
+            updated = True
+
+        if 'is_pinned' in data:
+            is_pinned_value = data.get('is_pinned')
+            if not isinstance(is_pinned_value, bool):
+                return jsonify({'error': 'is_pinned must be a boolean'}), 400
+            conversation.is_pinned = is_pinned_value
+            updated = True
+
+        if updated:
+            conversation.updated_at = datetime.utcnow()
+            db.session.commit()
+
+        return jsonify({'conversation': conversation.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating conversation: {e}")
+        return jsonify({'error': 'Failed to update conversation'}), 500
+
+
+@bp.route('/conversations/<int:conversation_id>', methods=['DELETE'])
+@jwt_required()
+def delete_conversation(conversation_id):
+    """Delete a conversation and its messages."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import Conversation, db
+
+    user_id = get_jwt_identity()
+
+    try:
+        conversation = Conversation.query.filter_by(id=conversation_id, user_id=user_id).first()
+        if not conversation:
+            return jsonify({'error': 'Conversation not found'}), 404
+
+        db.session.delete(conversation)
+        db.session.commit()
+        return jsonify({'message': 'Conversation deleted'})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting conversation: {e}")
+        return jsonify({'error': 'Failed to delete conversation'}), 500
+
+
+@bp.route('/messages', methods=['POST'])
+@jwt_required()
+def create_message():
+    """Create a new message inside an existing conversation."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import Conversation, Message, db
+
+    user_id = get_jwt_identity()
+    data = request.get_json(silent=True) or {}
+
+    conversation_id = data.get('conversation_id')
+    sender = (data.get('sender') or '').strip().lower()
+    content = (data.get('content') or '').strip()
+    metadata = data.get('metadata')
+
+    if not conversation_id:
+        return jsonify({'error': 'conversation_id is required'}), 400
+    if sender not in {'user', 'assistant'}:
+        return jsonify({'error': "sender must be 'user' or 'assistant'"}), 400
+    if not content:
+        return jsonify({'error': 'content is required'}), 400
+
+    try:
+        conversation = Conversation.query.filter_by(id=conversation_id, user_id=user_id).first()
+        if not conversation:
+            return jsonify({'error': 'Conversation not found'}), 404
+
+        message = Message(conversation_id=conversation.id, sender=sender, content=content, meta=metadata)
+        conversation.updated_at = datetime.utcnow()
+
+        if sender == 'user' and (not conversation.title or conversation.title == 'New Conversation'):
+            snippet = content[:60]
+            conversation.title = snippet if len(content) <= 60 else f"{snippet}..."
+
+        db.session.add(message)
+        db.session.commit()
+
+        return jsonify({'message': message.to_dict(), 'conversation': conversation.to_dict()}), 201
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating message: {e}")
+        return jsonify({'error': 'Failed to create message'}), 500
+
+
+@bp.route('/conversations/<int:conversation_id>/messages', methods=['GET'])
+@jwt_required()
+def get_conversation_messages(conversation_id):
+    """Retrieve ordered messages for a conversation."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import Conversation, Message
+
+    user_id = get_jwt_identity()
+
+    try:
+        conversation = Conversation.query.filter_by(id=conversation_id, user_id=user_id).first()
+        if not conversation:
+            return jsonify({'error': 'Conversation not found'}), 404
+
+        messages = conversation.messages.order_by(Message.created_at.asc()).all()
+        return jsonify({'conversation': conversation.to_dict(), 'messages': [message.to_dict() for message in messages]})
+    except Exception as e:
+        current_app.logger.error(f"Error fetching messages: {e}")
+        return jsonify({'error': 'Failed to fetch messages'}), 500
