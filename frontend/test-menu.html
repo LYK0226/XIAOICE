@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>菜單測試</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .test-container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        
+        h1 {
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .test-section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #667eea;
+            border-radius: 4px;
+        }
+        
+        .test-result {
+            margin: 10px 0;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+        }
+        
+        .test-result.pass {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .test-result.fail {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .menu-demo {
+            position: relative;
+            display: inline-block;
+            margin: 20px;
+        }
+        
+        .menu-btn {
+            padding: 10px 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .menu-btn:hover {
+            background: #5568d3;
+        }
+        
+        .menu {
+            position: absolute;
+            top: 100%;
+            right: 0;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 6px;
+            min-width: 150px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            display: none;
+            margin-top: 8px;
+            z-index: 1000;
+        }
+        
+        .menu.show {
+            display: block;
+        }
+        
+        .menu-item {
+            padding: 10px 15px;
+            border: none;
+            background: none;
+            width: 100%;
+            text-align: left;
+            cursor: pointer;
+            font-size: 14px;
+            transition: background 0.2s;
+        }
+        
+        .menu-item:hover {
+            background: #f0f0f0;
+        }
+        
+        button.logout {
+            color: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>🔧 菜單系統測試</h1>
+        
+        <div class="test-section">
+            <h3>1. DOM 元素檢查</h3>
+            <div id="domTest"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>2. 菜單功能測試</h3>
+            <div class="menu-demo">
+                <button class="menu-btn" id="testMenuBtn">
+                    <i class="fas fa-user-circle"></i> 用戶菜單
+                </button>
+                <div class="menu" id="testMenu">
+                    <button class="menu-item" onclick="alert('設置被點擊')">
+                        <i class="fas fa-cog"></i> 設置
+                    </button>
+                    <button class="menu-item logout" onclick="alert('登出被點擊')">
+                        <i class="fas fa-sign-out-alt"></i> 登出
+                    </button>
+                </div>
+            </div>
+            <div id="menuTest"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>3. 完整的應用菜單檢查</h3>
+            <div id="appMenuTest"></div>
+        </div>
+        
+        <div class="test-section">
+            <h3>4. 日誌</h3>
+            <div id="logs" style="background: white; padding: 10px; border-radius: 4px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto;"></div>
+        </div>
+    </div>
+    
+    <script>
+        const logs = [];
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            logs.push(`[${timestamp}] ${message}`);
+            document.getElementById('logs').innerHTML = logs.join('<br>');
+            console.log(message);
+        }
+        
+        // 測試 1: DOM 元素
+        window.addEventListener('load', () => {
+            log('頁面已加載');
+            
+            // 檢查主應用中的菜單元素
+            const userMenuBtn = document.getElementById('userMenuBtn');
+            const userDropdown = document.getElementById('userDropdown');
+            
+            if (userMenuBtn) {
+                log('✅ 主應用中找到 userMenuBtn', 'pass');
+            } else {
+                log('❌ 主應用中找不到 userMenuBtn', 'fail');
+            }
+            
+            if (userDropdown) {
+                log('✅ 主應用中找到 userDropdown', 'pass');
+            } else {
+                log('❌ 主應用中找不到 userDropdown', 'fail');
+            }
+            
+            // 更新 DOM 測試結果
+            const domTestDiv = document.getElementById('domTest');
+            domTestDiv.innerHTML = `
+                <div class="test-result ${userMenuBtn ? 'pass' : 'fail'}">
+                    userMenuBtn: ${userMenuBtn ? '✅ 找到' : '❌ 找不到'}
+                </div>
+                <div class="test-result ${userDropdown ? 'pass' : 'fail'}">
+                    userDropdown: ${userDropdown ? '✅ 找到' : '❌ 找不到'}
+                </div>
+            `;
+            
+            // 測試 2: 菜單功能
+            const testMenuBtn = document.getElementById('testMenuBtn');
+            const testMenu = document.getElementById('testMenu');
+            
+            if (testMenuBtn && testMenu) {
+                testMenuBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    testMenu.classList.toggle('show');
+                    log('測試菜單切換: ' + (testMenu.classList.contains('show') ? '顯示' : '隱藏'));
+                });
+                
+                document.addEventListener('click', (e) => {
+                    if (!testMenuBtn.contains(e.target) && !testMenu.contains(e.target)) {
+                        testMenu.classList.remove('show');
+                    }
+                });
+                
+                log('✅ 測試菜單事件監聽已設置', 'pass');
+                document.getElementById('menuTest').innerHTML = `
+                    <div class="test-result pass">
+                        ✅ 菜單功能已啟用，點擊上面的"用戶菜單"按鈕測試
+                    </div>
+                `;
+            }
+            
+            // 測試 3: 檢查主應用菜單函數
+            if (typeof setupUserMenu !== 'undefined') {
+                log('✅ setupUserMenu 函數存在', 'pass');
+                document.getElementById('appMenuTest').innerHTML = `
+                    <div class="test-result pass">
+                        ✅ setupUserMenu 函數已定義
+                    </div>
+                `;
+            } else {
+                log('❌ setupUserMenu 函數未定義', 'fail');
+                document.getElementById('appMenuTest').innerHTML = `
+                    <div class="test-result fail">
+                        ❌ setupUserMenu 函數未定義
+                    </div>
+                `;
+            }
+        });
+    </script>
+</body>
+</html>

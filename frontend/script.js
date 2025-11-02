@@ -459,34 +459,29 @@ function checkLoginStatus() {
 
 // User Menu
 function setupUserMenu() {
-    const menuBtn = document.getElementById('userMenuBtn');
+    console.log('setupUserMenu 初始化開始');
+    
     const dropdown = document.getElementById('userDropdown');
     
-    if (menuBtn && dropdown) {
-        // 点击按钮打开/关闭菜单
-        menuBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            e.preventDefault();
-            dropdown.classList.toggle('show');
-            console.log('菜单切换:', dropdown.classList.contains('show'));
-        });
+    if (dropdown) {
+        console.log('✅ 找到下拉菜單元素');
         
-        // 点击菜单项时关闭菜单
-        const menuItems = dropdown.querySelectorAll('.dropdown-item');
-        menuItems.forEach(item => {
-            item.addEventListener('click', () => {
-                dropdown.classList.remove('show');
-            });
-        });
-        
-        // 点击页面其他地方关闭菜单
+        // 點擊頁面其他地方關閉菜單
         document.addEventListener('click', (e) => {
-            if (!menuBtn.contains(e.target) && !dropdown.contains(e.target)) {
-                dropdown.classList.remove('show');
+            const menuBtn = document.getElementById('userMenuBtn');
+            if (menuBtn && dropdown && 
+                !menuBtn.contains(e.target) && 
+                !dropdown.contains(e.target)) {
+                if (dropdown.classList.contains('show')) {
+                    dropdown.classList.remove('show');
+                    console.log('菜單已自動關閉');
+                }
             }
         });
+        
+        console.log('✅ setupUserMenu 初始化完成');
     } else {
-        console.warn('用户菜单元素未找到');
+        console.warn('❌ 找不到下拉菜單元素 #userDropdown');
     }
 }
 
@@ -505,3 +500,13 @@ function logout() {
 function openSettings() {
     if (avatarModal) avatarModal.style.display = 'block';
 }
+
+// 菜單切換函數
+function toggleUserMenu() {
+    const dropdown = document.getElementById('userDropdown');
+    if (dropdown) {
+        dropdown.classList.toggle('show');
+        console.log('菜單切換:', dropdown.classList.contains('show') ? '打開' : '關閉');
+    }
+}
+

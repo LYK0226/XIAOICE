@@ -6,7 +6,7 @@ from models import db
 from routes import api_bp
 import os
 
-def create_app():
+def create_app(env='development'):
     app = Flask(__name__)
     app.config.from_object(config['default'])
     
@@ -29,4 +29,4 @@ def create_app():
     return app
 
 if __name__ == '__main__':
-    create_app().run(host='0.0.0.0', port=5000)
+    create_app().run(host='0.0.0.0', port=5000, debug=True)

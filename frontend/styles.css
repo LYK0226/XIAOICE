@@ -216,6 +216,9 @@ body {
     padding: 15px 20px;
     border-bottom: 1px solid #e0e0e0;
     background: white;
+    overflow: visible;
+    position: relative;
+    z-index: 10;
 }
 
 .chat-title {
@@ -251,6 +254,7 @@ body {
 
 .dropdown-menu-trigger {
     position: relative;
+    overflow: visible;
 }
 
 .icon-btn {
@@ -276,11 +280,12 @@ body {
     border: 1px solid #e0e0e0;
     border-radius: 8px;
     min-width: 200px;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
-    z-index: 1000;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
     display: none;
-    overflow: hidden;
+    overflow: visible;
     margin-top: 8px;
+    padding: 8px 0;
 }
 
 .dropdown-menu.show {

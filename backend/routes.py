@@ -74,3 +74,28 @@ def get_profile():
 @api_bp.route('/health', methods=['GET'])
 def health():
     return ok(None, 'Running')
+
+@api_bp.route('/reset-password', methods=['POST'])
+def reset_password():
+    try:
+        d = request.get_json() or {}
+        e, p = d.get('email', '').strip().lower(), d.get('new_password', '')
+        
+        if not e or not p:
+            return err('Missing email or password')
+        
+        if len(p) < 6:
+            return err('Password too short')
+        
+        user = User.query.filter_by(email=e).first()
+        if not user:
+            return err('User not found', 404)
+        
+        user.set_password(p)
+        db.session.commit()
+        
+        return ok(None, 'Password reset successfully')
+    except Exception as e:
+        db.session.rollback()
+        return err(str(e), 500)
+
