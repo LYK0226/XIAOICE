@@ -178,6 +178,7 @@ class Message(db.Model):
     sender = db.Column(db.String(20), nullable=False)
     content = db.Column(db.Text, nullable=False)
     meta = db.Column('metadata', db.JSON, nullable=True)
+    uploaded_files = db.Column(db.JSON, nullable=True)  # List of relative paths to uploaded files
     created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
 
     __table_args__ = (
@@ -194,5 +195,6 @@ class Message(db.Model):
             'sender': self.sender,
             'content': self.content,
             'metadata': self.meta,
+            'uploaded_files': self.uploaded_files,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }

@@ -25,6 +25,16 @@ class ChatAPI {
         return headers;
     }
 
+    _handleAuthFailure(response) {
+        if (response && (response.status === 401 || response.status === 422)) {
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            if (typeof window !== 'undefined' && window.location && window.location.pathname !== '/login') {
+                window.location.href = '/login';
+            }
+        }
+    }
+
     /**
      * 調用後端聊天 API
      * @param {string} userMessage - 用戶輸入的文字訊息
@@ -55,6 +65,8 @@ class ChatAPI {
                 body: formData
             });
 
+            this._handleAuthFailure(response);
+
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
                 throw new Error(errorData.error || `API Error: ${response.status}`);
@@ -83,6 +95,8 @@ class ChatAPI {
             headers: this._getAuthHeaders()
         });
 
+        this._handleAuthFailure(response);
+
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.error || `API Error: ${response.status}`);
@@ -103,6 +117,8 @@ class ChatAPI {
             body: JSON.stringify(payload)
         });
 
+        this._handleAuthFailure(response);
+
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.error || `API Error: ${response.status}`);
@@ -111,29 +127,65 @@ class ChatAPI {
         return response.json();
     }
 
-    async addMessage(conversationId, content, sender, metadata = null) {
-        const payload = {
-            conversation_id: conversationId,
-            content,
-            sender
-        };
-
-        if (metadata) {
-            payload.metadata = metadata;
+    async addMessage(conversationId, content, sender, metadata = null, files = null) {
+        if (files && files.length > 0) {
+            // Use FormData for file uploads
+            const formData = new FormData();
+            formData.append('conversation_id', conversationId);
+            formData.append('content', content);
+            formData.append('sender', sender);
+            
+            if (metadata) {
+                formData.append('metadata', JSON.stringify(metadata));
+            }
+            
+            files.forEach((file) => {
+                formData.append('files', file);
+            });
+            
+            const headers = this._getAuthHeaders(); // Don't set Content-Type for FormData
+            
+            const response = await fetch(this.endpoints.messages, {
+                method: 'POST',
+                headers: headers,
+                body: formData
+            });
+            
+            this._handleAuthFailure(response);
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `API Error: ${response.status}`);
+            }
+            
+            return response.json();
+        } else {
+            // Use JSON for text-only messages
+            const payload = {
+                conversation_id: conversationId,
+                content,
+                sender
+            };
+            
+            if (metadata) {
+                payload.metadata = metadata;
+            }
+            
+            const response = await fetch(this.endpoints.messages, {
+                method: 'POST',
+                headers: this._getAuthHeaders('application/json'),
+                body: JSON.stringify(payload)
+            });
+            
+            this._handleAuthFailure(response);
+            
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({}));
+                throw new Error(errorData.error || `API Error: ${response.status}`);
+            }
+            
+            return response.json();
         }
-
-        const response = await fetch(this.endpoints.messages, {
-            method: 'POST',
-            headers: this._getAuthHeaders('application/json'),
-            body: JSON.stringify(payload)
-        });
-
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
-            throw new Error(errorData.error || `API Error: ${response.status}`);
-        }
-
-        return response.json();
     }
 
     async fetchConversationMessages(conversationId) {
@@ -141,6 +193,8 @@ class ChatAPI {
             method: 'GET',
             headers: this._getAuthHeaders()
         });
+
+        this._handleAuthFailure(response);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -157,6 +211,8 @@ class ChatAPI {
             body: JSON.stringify(updates)
         });
 
+        this._handleAuthFailure(response);
+
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
             throw new Error(errorData.error || `API Error: ${response.status}`);
@@ -170,6 +226,8 @@ class ChatAPI {
             method: 'DELETE',
             headers: this._getAuthHeaders()
         });
+
+        this._handleAuthFailure(response);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));

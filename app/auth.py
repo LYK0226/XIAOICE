@@ -110,6 +110,15 @@ def login():
             samesite='Lax'
         )
 
+        response.set_cookie(
+            'refresh_token',
+            refresh_token,
+            max_age=cookie_max_age,
+            httponly=True,
+            secure=secure_cookie,
+            samesite='Lax'
+        )
+
         return response, 200
         
     except Exception as e:
@@ -121,6 +130,7 @@ def logout():
     """Handle user logout."""
     response = jsonify({'message': 'Logged out successfully'})
     response.delete_cookie('access_token')
+    response.delete_cookie('refresh_token')
     return response, 200
 
 @auth_bp.route('/me', methods=['GET'])

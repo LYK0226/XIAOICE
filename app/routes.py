@@ -4,6 +4,7 @@ from flask_jwt_extended import jwt_required, decode_token
 import os
 import json
 from . import vertex_ai
+from werkzeug.utils import secure_filename
 
 bp = Blueprint('main', __name__)
 
@@ -57,13 +58,20 @@ def chat():
         if image_file:
             if not image_file.filename:
                  return jsonify({'error': 'No selected file'}), 400
-            
-            # Save the uploaded image
+
+            filename = secure_filename(image_file.filename)
+            if not filename:
+                return jsonify({'error': 'Invalid file name'}), 400
+
+            # Save the uploaded image to the configured static folder
             upload_folder = current_app.config['UPLOAD_FOLDER']
-            if not os.path.exists(upload_folder):
-                os.makedirs(upload_folder)
-            
-            image_path = os.path.join(upload_folder, image_file.filename)
+            os.makedirs(upload_folder, exist_ok=True)
+
+            name, ext = os.path.splitext(filename)
+            timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+            unique_filename = f"{name}_{timestamp}{ext}" if name else f"upload_{timestamp}{ext}"
+
+            image_path = os.path.join(upload_folder, unique_filename)
             image_file.save(image_path)
             image_mime_type = image_file.mimetype
 
@@ -102,10 +110,6 @@ def chat():
     except Exception as e:
         current_app.logger.error(f"Error in chat endpoint: {e}")
         return jsonify({'error': 'An error occurred while processing your request.'}), 500
-    finally:
-        # Clean up the saved image file
-        if image_path and os.path.exists(image_path):
-            os.remove(image_path)
 
 # ===== API Key Management Routes =====
 
@@ -200,6 +204,42 @@ def delete_api_key(key_id):
         db.session.rollback()
         current_app.logger.error(f"Error deleting API key: {e}")
         return jsonify({'error': 'Failed to delete API key'}), 500
+
+@bp.route('/api/keys/<int:key_id>/toggle', methods=['POST'])
+@jwt_required()
+def toggle_api_key(key_id):
+    """Toggle the selection of an API key."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import UserApiKey, UserProfile, db
+    
+    user_id = get_jwt_identity()
+    
+    try:
+        api_key = UserApiKey.query.filter_by(id=key_id, user_id=user_id).first()
+        if not api_key:
+            return jsonify({'error': 'API key not found'}), 404
+        
+        user_profile = UserProfile.query.filter_by(user_id=user_id).first()
+        if not user_profile:
+            user_profile = UserProfile(user_id=user_id)
+            db.session.add(user_profile)
+        
+        if user_profile.selected_api_key_id == key_id:
+            # Deselect
+            user_profile.selected_api_key_id = None
+            message = 'API key deselected'
+        else:
+            # Select
+            user_profile.selected_api_key_id = key_id
+            message = 'API key selected'
+        
+        db.session.commit()
+        
+        return jsonify({'message': message, 'selected_api_key_id': user_profile.selected_api_key_id})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error toggling API key: {e}")
+        return jsonify({'error': 'Failed to toggle API key'}), 500
 
 @bp.route('/api/user/model', methods=['GET'])
 @jwt_required()
@@ -382,8 +422,33 @@ def create_message():
     from .models import Conversation, Message, db
 
     user_id = get_jwt_identity()
-    data = request.get_json(silent=True) or {}
-
+    
+    # Handle file uploads if present
+    uploaded_files = []
+    if request.files:
+        files = request.files.getlist('files')
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        for file in files:
+            if file.filename:
+                filename = secure_filename(file.filename)
+                if not filename:
+                    continue
+                name, ext = os.path.splitext(filename)
+                timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+                unique_filename = f"{name}_{timestamp}{ext}" if name else f"upload_{timestamp}{ext}"
+                file_path = os.path.join(upload_folder, unique_filename)
+                file.save(file_path)
+                relative_path = f"upload/{unique_filename}"
+                uploaded_files.append(relative_path)
+    
+    # Get data from JSON or form
+    if request.is_json:
+        data = request.get_json(silent=True) or {}
+    else:
+        data = request.form.to_dict()
+    
     conversation_id = data.get('conversation_id')
     sender = (data.get('sender') or '').strip().lower()
     content = (data.get('content') or '').strip()
@@ -393,15 +458,15 @@ def create_message():
         return jsonify({'error': 'conversation_id is required'}), 400
     if sender not in {'user', 'assistant'}:
         return jsonify({'error': "sender must be 'user' or 'assistant'"}), 400
-    if not content:
-        return jsonify({'error': 'content is required'}), 400
+    if not content and not uploaded_files:
+        return jsonify({'error': 'content or files are required'}), 400
 
     try:
         conversation = Conversation.query.filter_by(id=conversation_id, user_id=user_id).first()
         if not conversation:
             return jsonify({'error': 'Conversation not found'}), 404
 
-        message = Message(conversation_id=conversation.id, sender=sender, content=content, meta=metadata)
+        message = Message(conversation_id=conversation.id, sender=sender, content=content, meta=metadata, uploaded_files=uploaded_files or None)
         conversation.updated_at = datetime.utcnow()
 
         if sender == 'user' and (not conversation.title or conversation.title == 'New Conversation'):

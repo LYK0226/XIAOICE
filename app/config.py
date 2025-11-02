@@ -16,7 +16,7 @@ class Config:
     GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
 
     # Uploads
-    UPLOAD_FOLDER = 'app/static/uploads'
+    UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'upload')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
 
     # Database
@@ -29,3 +29,14 @@ class Config:
 
     # JWT Configuration
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'jwt_default_secret_key')
+
+    # JWT token handling (support both Authorization header and secure cookies)
+    JWT_TOKEN_LOCATION = ['headers', 'cookies']
+    JWT_HEADER_NAME = os.environ.get('JWT_HEADER_NAME', 'Authorization')
+    JWT_HEADER_TYPE = os.environ.get('JWT_HEADER_TYPE', 'Bearer')
+    JWT_ACCESS_COOKIE_NAME = os.environ.get('JWT_ACCESS_COOKIE_NAME', 'access_token')
+    JWT_REFRESH_COOKIE_NAME = os.environ.get('JWT_REFRESH_COOKIE_NAME', 'refresh_token')
+    JWT_COOKIE_SECURE = os.environ.get('JWT_COOKIE_SECURE', 'false').lower() == 'true'
+    JWT_COOKIE_SAMESITE = os.environ.get('JWT_COOKIE_SAMESITE', 'Lax')
+    # Disable CSRF protection for cookie-based JWTs since we pair them with Authorization headers
+    JWT_COOKIE_CSRF_PROTECT = os.environ.get('JWT_COOKIE_CSRF_PROTECT', 'false').lower() == 'true'

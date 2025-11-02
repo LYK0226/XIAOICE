@@ -62,3 +62,4 @@ app.db
 
 # Flask instance folder
 instance/
+upload/

@@ -539,7 +539,12 @@ async function openConversation(conversationId, options = {}) {
 
         messages.forEach((message) => {
             const isUser = message.sender === 'user';
-            const element = createMessage(message.content, isUser);
+            let element;
+            if (message.uploaded_files && message.uploaded_files.length > 0) {
+                element = createMessageWithUploadedFiles(message.content, message.uploaded_files, isUser);
+            } else {
+                element = createMessage(message.content, isUser);
+            }
             messagesDiv.appendChild(element);
             conversationHistory.push({
                 role: isUser ? 'user' : 'bot',
@@ -1058,6 +1063,9 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
+    
+    // Load conversations on page load
+    loadConversations();
 });
 
 // Function to send a message
@@ -1434,6 +1442,11 @@ async function sendMessageWithFiles() {
     }
 
     const attachmentsSnapshot = [...selectedFiles];
+    
+    // Clear the file preview immediately after sending
+    selectedFiles = [];
+    updateFilePreview();
+
     const placeholderText = messageText || (hasFiles ? t.attachmentPlaceholder : '');
 
     const userMessageElement = createMessageWithFiles(messageText, attachmentsSnapshot, true);
@@ -1479,7 +1492,8 @@ async function sendMessageWithFiles() {
                 conversationId,
                 placeholderText || t.attachmentPlaceholder,
                 'user',
-                attachmentsMetadata ? { attachments: attachmentsMetadata } : null
+                attachmentsMetadata ? { attachments: attachmentsMetadata } : null,
+                attachmentsSnapshot
             );
 
             if (userMessageResponse.conversation) {
@@ -1536,9 +1550,6 @@ async function sendMessageWithFiles() {
         const botMessage = createMessage(errorMsg, false);
         messagesDiv.appendChild(botMessage);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    } finally {
-        selectedFiles = [];
-        updateFilePreview();
     }
 }
 
@@ -1603,6 +1614,87 @@ function createMessageWithFiles(text, files, isUser = true) {
                 const fileInfo = document.createElement('div');
                 fileInfo.style.cssText = 'padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 8px;';
                 fileInfo.innerHTML = `<i class="fas fa-file"></i> ${file.name}`;
+                messageContent.appendChild(fileInfo);
+            }
+        });
+    }
+    
+    // Add text if provided
+    if (text) {
+        const paragraph = document.createElement('p');
+        paragraph.textContent = text;
+        messageContent.appendChild(paragraph);
+    }
+    
+    container.appendChild(avatar);
+    container.appendChild(messageContent);
+    
+    return container;
+}
+
+function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
+    const container = document.createElement('div');
+    container.className = isUser ? 'user-message-container' : 'bot-message-container';
+    
+    const avatar = document.createElement('div');
+    avatar.className = isUser ? 'avatar user-avatar' : 'avatar bot-avatar';
+    
+    if (isUser && userAvatar) {
+        avatar.style.backgroundImage = `url(${userAvatar})`;
+        avatar.style.backgroundSize = 'cover';
+        avatar.style.backgroundPosition = 'center';
+    } else if (!isUser && botAvatar) {
+        avatar.style.backgroundImage = `url(${botAvatar})`;
+        avatar.style.backgroundSize = 'cover';
+        avatar.style.backgroundPosition = 'center';
+    } else {
+        avatar.innerHTML = isUser ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+    }
+    
+    const messageContent = document.createElement('div');
+    messageContent.className = 'message-content';
+    
+    // Add uploaded files
+    if (uploadedFiles && uploadedFiles.length > 0) {
+        uploadedFiles.forEach(filePath => {
+            // Assuming filePath is like "upload/filename.jpg"
+            const fullPath = `/static/${filePath}`;
+            const fileName = filePath.split('/').pop();
+            
+            // Check if it's an image
+            const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileName);
+            
+            if (isImage) {
+                const img = document.createElement('img');
+                img.className = 'message-image';
+                img.src = fullPath;
+                img.style.maxWidth = '100%';
+                img.style.borderRadius = '8px';
+                img.style.marginBottom = '10px';
+                
+                img.addEventListener('click', () => {
+                    const modal = document.createElement('div');
+                    modal.className = 'image-modal';
+                    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; align-items: center; justify-content: center; cursor: pointer;';
+                    
+                    const fullImg = document.createElement('img');
+                    fullImg.src = fullPath;
+                    fullImg.style.cssText = 'max-width: 90%; max-height: 90%; border-radius: 8px;';
+                    
+                    modal.appendChild(fullImg);
+                    document.body.appendChild(modal);
+                    
+                    modal.addEventListener('click', () => {
+                        document.body.removeChild(modal);
+                    });
+                });
+                
+                messageContent.appendChild(img);
+            } else {
+                // Show file name for non-image files
+                const fileInfo = document.createElement('div');
+                fileInfo.style.cssText = 'padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 8px;';
+                fileInfo.innerHTML = `<i class="fas fa-file"></i> <a href="${fullPath}" target="_blank">${fileName}</a>`;
                 messageContent.appendChild(fileInfo);
             }
         });
