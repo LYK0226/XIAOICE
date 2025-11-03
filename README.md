@@ -2,9 +2,9 @@
 
 ### ⚠️ **重要**：請勿將 ENCRYPTION_KEY 提交到 Git 倉庫！
 
-### API 設定
+# API 設定
 
-# 取得您的加密金鑰 (填入 .env -> ENCRYPTION_KEY="your_32_byte_encryption_key_here")
+### 取得您的加密金鑰 (填入 .env -> ENCRYPTION_KEY="your_32_byte_encryption_key_here")
 python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 
 設定 -> 高級 ->填入你的 API Key
