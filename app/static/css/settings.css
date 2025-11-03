@@ -318,29 +318,6 @@
     font-weight: 600;
 }
 
-/* Danger Button */
-.danger-btn {
-    width: 100%;
-    padding: 12px;
-    border: 2px solid #ff6b6b;
-    background: white;
-    color: #ff6b6b;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 600;
-    transition: all 0.3s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-}
-
-.danger-btn:hover {
-    background: #ff6b6b;
-    color: white;
-}
-
 /* Avatar Settings */
 .avatar-settings {
     display: flex;

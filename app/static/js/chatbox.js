@@ -17,7 +17,6 @@ const captureBtn = document.getElementById('captureBtn');
 const retakeBtn = document.getElementById('retakeBtn');
 const usePhotoBtn = document.getElementById('usePhotoBtn');
 const filePreviewContainer = document.getElementById('filePreviewContainer');
-const conversationList = document.querySelector('.chat-list');
 
 // Language support
 let currentLanguage = 'zh-CN'; // Default to Simplified Chinese
@@ -39,8 +38,6 @@ let isRecording = false;
 // Conversation history for context (array of {role: 'user'|'bot', content: string, time?: number})
 let conversationHistory = [];
 let activeConversationId = null;
-let conversationsCache = [];
-let isLoadingConversation = false;
 
 // Emoji categories
 const emojiCategories = {
@@ -337,22 +334,9 @@ function updateUILanguage(lang) {
     console.log(t.langSwitched);
 
     // Refresh conversation list text to match language selection
-    renderConversationList(conversationsCache);
-}
-
-function sortConversations(conversations = []) {
-    const clone = Array.isArray(conversations) ? [...conversations] : [];
-    return clone.sort((a, b) => {
-        const aPinned = a?.is_pinned ? 1 : 0;
-        const bPinned = b?.is_pinned ? 1 : 0;
-        if (aPinned !== bPinned) {
-            return bPinned - aPinned;
-        }
-
-        const aTime = new Date(a?.updated_at || a?.created_at || 0).getTime() || 0;
-        const bTime = new Date(b?.updated_at || b?.created_at || 0).getTime() || 0;
-        return bTime - aTime;
-    });
+    if (typeof renderConversationList !== 'undefined' && typeof conversationsCache !== 'undefined') {
+        renderConversationList(conversationsCache);
+    }
 }
 
 function renderWelcomeMessage() {
@@ -368,286 +352,6 @@ function renderWelcomeMessage() {
         </div>
     `;
 }
-
-function closeAllConversationMenus() {
-    const openItems = document.querySelectorAll('.conversation-item.menu-open');
-    openItems.forEach((item) => item.classList.remove('menu-open'));
-}
-
-function renderConversationList(conversations = []) {
-    if (!conversationList) {
-        return;
-    }
-
-    const t = translations[currentLanguage];
-    const sorted = sortConversations(conversations);
-    conversationList.innerHTML = '';
-
-    if (!sorted.length) {
-        const emptyState = document.createElement('li');
-        emptyState.className = 'empty-state';
-        emptyState.textContent = t.noConversations;
-        conversationList.appendChild(emptyState);
-        return;
-    }
-
-    const createConversationActionButton = (iconClass, label, handler) => {
-        const button = document.createElement('button');
-        button.type = 'button';
-        button.className = 'conversation-action';
-        button.title = label;
-        button.innerHTML = `<i class="${iconClass}"></i><span>${label}</span>`;
-        button.addEventListener('click', async (event) => {
-            event.stopPropagation();
-            closeAllConversationMenus();
-            try {
-                await handler(event);
-            } catch (error) {
-                console.error('Conversation action failed', error);
-            }
-        });
-        return button;
-    };
-
-    sorted.forEach((conversation) => {
-        const item = document.createElement('li');
-        item.classList.add('conversation-item');
-        item.dataset.conversationId = conversation.id;
-
-        if (conversation.is_pinned) {
-            item.classList.add('pinned');
-        }
-
-        if (Number(conversation.id) === Number(activeConversationId)) {
-            item.classList.add('active');
-        }
-
-        const icon = document.createElement('i');
-        icon.className = conversation.is_pinned ? 'fas fa-thumbtack' : 'fas fa-comments';
-        item.appendChild(icon);
-
-        const textWrapper = document.createElement('div');
-        textWrapper.className = 'conversation-text';
-
-        const title = document.createElement('span');
-        title.className = 'conversation-title';
-        const titleText = (conversation.title || '').trim() || t.untitledConversation;
-        title.textContent = titleText;
-        textWrapper.appendChild(title);
-
-        item.appendChild(textWrapper);
-
-        const menuToggle = document.createElement('button');
-        menuToggle.type = 'button';
-        menuToggle.className = 'conversation-menu-toggle';
-        menuToggle.innerHTML = '<i class="fas fa-ellipsis-h"></i>';
-        menuToggle.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const isOpen = item.classList.contains('menu-open');
-            closeAllConversationMenus();
-            if (!isOpen) {
-                item.classList.add('menu-open');
-            }
-        });
-
-        const dropdown = document.createElement('div');
-        dropdown.className = 'conversation-dropdown';
-        dropdown.addEventListener('click', (event) => event.stopPropagation());
-
-        const renameButton = createConversationActionButton('fas fa-pen', t.renameAction, () => renameConversation(conversation.id));
-        const pinButton = createConversationActionButton(
-            'fas fa-thumbtack',
-            conversation.is_pinned ? t.unpinAction : t.pinAction,
-            () => togglePinConversation(conversation.id)
-        );
-        pinButton.classList.toggle('active', Boolean(conversation.is_pinned));
-
-        const deleteButton = createConversationActionButton('fas fa-trash', t.deleteAction, () => deleteConversationById(conversation.id));
-
-        dropdown.appendChild(renameButton);
-        dropdown.appendChild(pinButton);
-        dropdown.appendChild(deleteButton);
-
-        item.appendChild(menuToggle);
-        item.appendChild(dropdown);
-
-        item.addEventListener('click', () => {
-            closeAllConversationMenus();
-            openConversation(conversation.id);
-        });
-
-        conversationList.appendChild(item);
-    });
-}
-
-function upsertConversation(conversation) {
-    if (!conversation) {
-        return;
-    }
-
-    const existingIndex = conversationsCache.findIndex((item) => Number(item.id) === Number(conversation.id));
-    if (existingIndex >= 0) {
-        conversationsCache[existingIndex] = conversation;
-    } else {
-        conversationsCache.push(conversation);
-    }
-
-    conversationsCache = sortConversations(conversationsCache);
-    renderConversationList(conversationsCache);
-}
-
-async function loadConversations() {
-    try {
-        const data = await chatAPI.fetchConversations();
-        conversationsCache = sortConversations(data.conversations || []);
-        renderConversationList(conversationsCache);
-
-        if (conversationsCache.length && !activeConversationId) {
-            await openConversation(conversationsCache[0].id, { force: true });
-        }
-    } catch (error) {
-        console.error('Failed to load conversations', error);
-    }
-}
-
-async function openConversation(conversationId, options = {}) {
-    const force = options.force || false;
-
-    if (!conversationId || isLoadingConversation) {
-        return;
-    }
-
-    if (!force && Number(activeConversationId) === Number(conversationId)) {
-        return;
-    }
-
-    isLoadingConversation = true;
-    activeConversationId = conversationId;
-    renderConversationList(conversationsCache);
-
-    try {
-        const data = await chatAPI.fetchConversationMessages(conversationId);
-        const messages = data.messages || [];
-
-        messagesDiv.innerHTML = '';
-        conversationHistory = [];
-
-        if (!messages.length) {
-            renderWelcomeMessage();
-            return;
-        }
-
-        messages.forEach((message) => {
-            const isUser = message.sender === 'user';
-            let element;
-            if (message.uploaded_files && message.uploaded_files.length > 0) {
-                element = createMessageWithUploadedFiles(message.content, message.uploaded_files, isUser);
-            } else {
-                element = createMessage(message.content, isUser);
-            }
-            messagesDiv.appendChild(element);
-            conversationHistory.push({
-                role: isUser ? 'user' : 'bot',
-                content: message.content,
-                time: message.created_at ? new Date(message.created_at).getTime() : Date.now()
-            });
-        });
-
-        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    } catch (error) {
-        console.error('Failed to load conversation messages', error);
-        alert(translations[currentLanguage].conversationLoadError);
-    } finally {
-        isLoadingConversation = false;
-    }
-}
-
-async function renameConversation(conversationId) {
-    const t = translations[currentLanguage];
-    const conversation = conversationsCache.find((item) => Number(item.id) === Number(conversationId));
-    const currentTitle = conversation?.title || '';
-
-    const result = prompt(t.renamePrompt, currentTitle);
-    if (result === null) {
-        return;
-    }
-
-    const newTitle = result.trim();
-    if (!newTitle || newTitle === currentTitle) {
-        return;
-    }
-
-    try {
-        const response = await chatAPI.updateConversation(conversationId, { title: newTitle });
-        if (response?.conversation) {
-            upsertConversation(response.conversation);
-        }
-    } catch (error) {
-        console.error('Failed to rename conversation', error);
-        alert(t.renameError);
-    }
-}
-
-async function togglePinConversation(conversationId) {
-    const t = translations[currentLanguage];
-    const conversation = conversationsCache.find((item) => Number(item.id) === Number(conversationId));
-    if (!conversation) {
-        return;
-    }
-
-    const desiredState = !conversation.is_pinned;
-
-    try {
-        const response = await chatAPI.updateConversation(conversationId, { is_pinned: desiredState });
-        if (response?.conversation) {
-            upsertConversation(response.conversation);
-        }
-    } catch (error) {
-        console.error('Failed to toggle pin', error);
-        alert(t.pinError);
-    }
-}
-
-async function deleteConversationById(conversationId) {
-    const t = translations[currentLanguage];
-
-    if (!confirm(t.deleteConfirm)) {
-        return;
-    }
-
-    try {
-        await chatAPI.deleteConversation(conversationId);
-        const wasActive = Number(activeConversationId) === Number(conversationId);
-
-        conversationsCache = conversationsCache.filter((item) => Number(item.id) !== Number(conversationId));
-        conversationsCache = sortConversations(conversationsCache);
-        renderConversationList(conversationsCache);
-
-        if (!conversationsCache.length) {
-            activeConversationId = null;
-            conversationHistory = [];
-            renderWelcomeMessage();
-            return;
-        }
-
-        if (wasActive) {
-            activeConversationId = null;
-            const nextConversation = conversationsCache[0];
-            if (nextConversation) {
-                await openConversation(nextConversation.id, { force: true });
-            }
-        }
-    } catch (error) {
-        console.error('Failed to delete conversation', error);
-        alert(t.deleteError);
-    }
-}
-
-document.addEventListener('click', (event) => {
-    if (!event.target.closest('.conversation-item')) {
-        closeAllConversationMenus();
-    }
-});
 
 // Function to create a message element
 function createMessage(text, isUser = false) {
@@ -1063,9 +767,6 @@ window.addEventListener('DOMContentLoaded', () => {
             }
         });
     }
-    
-    // Load conversations on page load
-    loadConversations();
 });
 
 // Function to send a message
@@ -1084,18 +785,7 @@ messageInput.addEventListener('keypress', (event) => {
     }
 });
 
-// Sidebar button functionality
-const newChatBtn = document.getElementById('newChat');
-if (newChatBtn) {
-    newChatBtn.addEventListener('click', () => {
-        closeAllConversationMenus();
-        activeConversationId = null;
-        conversationHistory = [];
-        renderWelcomeMessage();
-        renderConversationList(conversationsCache);
-    });
-}
-
+// Settings button functionality
 const settingsBtn = document.getElementById('settings');
 if (settingsBtn) {
     settingsBtn.addEventListener('click', () => {
@@ -1499,6 +1189,12 @@ async function sendMessageWithFiles() {
             if (userMessageResponse.conversation) {
                 upsertConversation(userMessageResponse.conversation);
             }
+
+            // Update the user message element to use server URLs for uploaded files
+            if (userMessageResponse.message && userMessageResponse.message.uploaded_files) {
+                updateMessageWithServerFiles(userMessageElement, userMessageResponse.message.uploaded_files);
+            }
+
         } catch (messageError) {
             console.error('Failed to persist user message', messageError);
             alert(t.messageSaveError);
@@ -1588,23 +1284,121 @@ function createMessageWithFiles(text, files, isUser = true) {
                 reader.readAsDataURL(file);
                 
                 img.addEventListener('click', () => {
+                    // For local files, we need to create a blob URL for the modal
                     const modal = document.createElement('div');
-                    modal.className = 'image-modal';
-                    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; align-items: center; justify-content: center; cursor: pointer;';
-                    
+                    modal.className = 'document-preview-modal';
+                    modal.style.cssText = `
+                        position: fixed;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        background: rgba(0,0,0,0.8);
+                        z-index: 3000;
+                        display: flex;
+                        align-items: stretch;
+                    `;
+
+                    // Create left panel for chat (simplified for local files)
+                    const leftPanel = document.createElement('div');
+                    leftPanel.style.cssText = `
+                        width: 40%;
+                        background: #ffffff;
+                        border-right: 1px solid #dee2e6;
+                        display: flex;
+                        flex-direction: column;
+                    `;
+
+                    // Chat header
+                    const chatHeader = document.createElement('div');
+                    chatHeader.style.cssText = `
+                        padding: 15px;
+                        background: #f8f9fa;
+                        border-bottom: 1px solid #dee2e6;
+                        font-weight: bold;
+                    `;
+                    chatHeader.textContent = 'Chat History';
+
+                    // Simple message for local file preview
+                    const chatContent = document.createElement('div');
+                    chatContent.style.cssText = `
+                        flex: 1;
+                        padding: 15px;
+                        background: #ffffff;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        color: #6c757d;
+                    `;
+                    chatContent.innerHTML = '<p>Upload the file to start chatting about it</p>';
+
+                    leftPanel.appendChild(chatHeader);
+                    leftPanel.appendChild(chatContent);
+
+                    // Create right panel for image preview
+                    const rightPanel = document.createElement('div');
+                    rightPanel.style.cssText = `
+                        flex: 1;
+                        background: white;
+                        display: flex;
+                        flex-direction: column;
+                        max-width: 60%;
+                    `;
+
+                    // Header for right panel
+                    const rightHeader = document.createElement('div');
+                    rightHeader.style.cssText = `
+                        padding: 15px;
+                        background: #f8f9fa;
+                        border-bottom: 1px solid #dee2e6;
+                        display: flex;
+                        justify-content: space-between;
+                        align-items: center;
+                    `;
+                    rightHeader.innerHTML = `
+                        <h3 style="margin: 0; font-size: 16px;">${file.name}</h3>
+                        <button class="close-preview-modal" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #6c757d;">&times;</button>
+                    `;
+
+                    // Content area for image
+                    const contentArea = document.createElement('div');
+                    contentArea.style.cssText = `
+                        flex: 1;
+                        padding: 0;
+                        overflow: hidden;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                    `;
+
                     const fullImg = document.createElement('img');
-                    const reader2 = new FileReader();
-                    reader2.onload = (e) => {
-                        fullImg.src = e.target.result;
-                    };
-                    reader2.readAsDataURL(file);
-                    fullImg.style.cssText = 'max-width: 90%; max-height: 90%; border-radius: 8px;';
-                    
-                    modal.appendChild(fullImg);
+                    fullImg.src = img.src; // Use the same src as the thumbnail
+                    fullImg.style.cssText = `
+                        max-width: 100%;
+                        max-height: 100%;
+                        object-fit: contain;
+                        border-radius: 8px;
+                    `;
+                    contentArea.appendChild(fullImg);
+
+                    rightPanel.appendChild(rightHeader);
+                    rightPanel.appendChild(contentArea);
+
+                    // Assemble modal
+                    modal.appendChild(leftPanel);
+                    modal.appendChild(rightPanel);
                     document.body.appendChild(modal);
-                    
-                    modal.addEventListener('click', () => {
+
+                    // Event listeners
+                    const closeBtn = rightHeader.querySelector('.close-preview-modal');
+                    closeBtn.addEventListener('click', () => {
                         document.body.removeChild(modal);
+                    });
+
+                    modal.addEventListener('click', (e) => {
+                        if (e.target === modal) {
+                            document.body.removeChild(modal);
+                        }
                     });
                 });
                 
@@ -1632,6 +1426,131 @@ function createMessageWithFiles(text, files, isUser = true) {
     return container;
 }
 
+function updateMessageWithServerFiles(messageElement, uploadedFiles) {
+    if (!uploadedFiles || !uploadedFiles.length) return;
+    
+    const messageContent = messageElement.querySelector('.message-content');
+    if (!messageContent) return;
+    
+    // Helper function to clean filename by removing timestamp
+    function cleanFileName(fileName) {
+        // Remove timestamp pattern: _ followed by digits before the extension
+        return fileName.replace(/_(\d+)(\.\w+)$/, '$2');
+    }
+    
+    // Remove existing file displays
+    const existingFileInfos = messageContent.querySelectorAll('div[style*="background"]');
+    existingFileInfos.forEach(info => {
+        if (info.innerHTML.includes('fas fa-file')) {
+            info.remove();
+        }
+    });
+    
+    // Add server-based file displays
+    uploadedFiles.forEach(filePath => {
+        const fullPath = `/static/${filePath}`;
+        const rawFileName = filePath.split('/').pop();
+        const displayFileName = cleanFileName(rawFileName);
+        
+        // Check if it's an image
+        const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(displayFileName);
+        
+        if (isImage) {
+            // For images, we could update the src, but since we already have the image displayed from local file,
+            // and the server URL should work the same, we might not need to change it.
+            // But to ensure consistency, let's update it
+            const existingImg = messageContent.querySelector('img.message-image');
+            if (existingImg) {
+                existingImg.src = fullPath;
+                // Update the modal click handler to use server URL
+                existingImg.onclick = () => {
+                    openDocumentPreviewModal(fullPath, displayFileName);
+                };
+            }
+        } else {
+            // For non-image files, replace the plain text with a clickable link
+            const fileInfo = document.createElement('div');
+            fileInfo.style.cssText = 'padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 8px; cursor: pointer;';
+            fileInfo.innerHTML = `<i class="fas fa-file"></i> ${displayFileName}`;
+            
+            fileInfo.addEventListener('click', () => {
+                openDocumentPreviewModal(fullPath, displayFileName);
+            });
+            
+            messageContent.appendChild(fileInfo);
+        }
+    });
+}
+
+function openDocumentPreviewModal(filePath, fileName) {
+    const mainContent = document.getElementById('main-content');
+    const previewPanel = document.getElementById('preview-panel');
+    const previewTitle = document.getElementById('preview-title');
+    const previewContent = document.getElementById('preview-content');
+    const closePreviewBtn = document.getElementById('closePreview');
+
+    // Set preview title
+    previewTitle.textContent = fileName;
+
+    // Clear previous content
+    previewContent.innerHTML = '';
+
+    // Determine file type and create appropriate preview
+    const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileName);
+    const isPDF = /\.pdf$/i.test(fileName);
+
+    if (isImage) {
+        const img = document.createElement('img');
+        img.src = filePath;
+        img.style.cssText = `
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: block;
+            border-radius: 8px;
+        `;
+        previewContent.appendChild(img);
+    } else if (isPDF) {
+        const iframe = document.createElement('iframe');
+        iframe.src = filePath;
+        iframe.style.cssText = `
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 8px;
+        `;
+        previewContent.appendChild(iframe);
+    } else {
+        // For other document types, try to display in iframe or show download link
+        const iframe = document.createElement('iframe');
+        iframe.src = filePath;
+        iframe.style.cssText = `
+            width: 100%;
+            height: 100%;
+            border: none;
+            border-radius: 8px;
+        `;
+        previewContent.appendChild(iframe);
+    }
+
+    // Show preview panel
+    mainContent.classList.add('preview-active');
+    previewPanel.style.display = 'flex';
+
+    // Add close event listener
+    closePreviewBtn.onclick = () => {
+        closeDocumentPreview();
+    };
+}
+
+function closeDocumentPreview() {
+    const mainContent = document.getElementById('main-content');
+    const previewPanel = document.getElementById('preview-panel');
+
+    mainContent.classList.remove('preview-active');
+    previewPanel.style.display = 'none';
+}
+
 function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
     const container = document.createElement('div');
     container.className = isUser ? 'user-message-container' : 'bot-message-container';
@@ -1654,15 +1573,22 @@ function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
     const messageContent = document.createElement('div');
     messageContent.className = 'message-content';
     
+    // Helper function to clean filename by removing timestamp
+    function cleanFileName(fileName) {
+        // Remove timestamp pattern: _ followed by digits before the extension
+        return fileName.replace(/_(\d+)(\.\w+)$/, '$2');
+    }
+    
     // Add uploaded files
     if (uploadedFiles && uploadedFiles.length > 0) {
         uploadedFiles.forEach(filePath => {
             // Assuming filePath is like "upload/filename.jpg"
             const fullPath = `/static/${filePath}`;
-            const fileName = filePath.split('/').pop();
+            const rawFileName = filePath.split('/').pop();
+            const displayFileName = cleanFileName(rawFileName);
             
             // Check if it's an image
-            const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileName);
+            const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(displayFileName);
             
             if (isImage) {
                 const img = document.createElement('img');
@@ -1673,28 +1599,20 @@ function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
                 img.style.marginBottom = '10px';
                 
                 img.addEventListener('click', () => {
-                    const modal = document.createElement('div');
-                    modal.className = 'image-modal';
-                    modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; align-items: center; justify-content: center; cursor: pointer;';
-                    
-                    const fullImg = document.createElement('img');
-                    fullImg.src = fullPath;
-                    fullImg.style.cssText = 'max-width: 90%; max-height: 90%; border-radius: 8px;';
-                    
-                    modal.appendChild(fullImg);
-                    document.body.appendChild(modal);
-                    
-                    modal.addEventListener('click', () => {
-                        document.body.removeChild(modal);
-                    });
+                    openDocumentPreviewModal(fullPath, displayFileName);
                 });
                 
                 messageContent.appendChild(img);
             } else {
-                // Show file name for non-image files
+                // Show file name for non-image files with preview modal
                 const fileInfo = document.createElement('div');
-                fileInfo.style.cssText = 'padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 8px;';
-                fileInfo.innerHTML = `<i class="fas fa-file"></i> <a href="${fullPath}" target="_blank">${fileName}</a>`;
+                fileInfo.style.cssText = 'padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 8px; cursor: pointer;';
+                fileInfo.innerHTML = `<i class="fas fa-file"></i> ${displayFileName}`;
+                
+                fileInfo.addEventListener('click', () => {
+                    openDocumentPreviewModal(fullPath, displayFileName);
+                });
+                
                 messageContent.appendChild(fileInfo);
             }
         });

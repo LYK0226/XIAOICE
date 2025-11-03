@@ -6,6 +6,8 @@
     <title>聊天盒子 - Chatbox</title>
     <!-- Main chat interface styles -->
     <link rel="stylesheet" href="../static/css/chatbox.css">
+    <!-- Sidebar styles -->
+    <link rel="stylesheet" href="../static/css/sidebar.css">
     <!-- Settings modal styles -->
     <link rel="stylesheet" href="../static/css/settings.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
@@ -13,6 +15,7 @@
 <body>
     <div id="sidebar">
         <div class="sidebar-header">
+            <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
             <i class="fas fa-comment"></i>
             <h2>聊天盒子</h2>
         </div>
@@ -32,77 +35,91 @@
     </div>
     
     <div id="main-content">
-        <div id="chat-header">
-            <div class="chat-title">
-                <i class="fas fa-comment"></i>
-                <span>聊天盒子</span>
+        <div id="chat-container">
+            <div id="chat-header">
+                <div class="chat-title">
+                    <button class="sidebar-show-btn" id="sidebarShowBtn" style="display: none;"><i class="fas fa-bars"></i></button>
+                    <i class="fas fa-comment"></i>
+                    <span>聊天盒子</span>
+                </div>
+                <div class="chat-actions">
+                    <button class="icon-btn"><i class="fas fa-search"></i></button>
+                    <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
+                    <button class="icon-btn"><i class="fas fa-ellipsis-h"></i></button>
+                </div>
             </div>
-            <div class="chat-actions">
-                <button class="icon-btn"><i class="fas fa-search"></i></button>
-                <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
-                <button class="icon-btn"><i class="fas fa-ellipsis-h"></i></button>
+            
+            <div id="messages">
+                <div class="bot-message-container">
+                    <div class="avatar bot-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content">
+                        <p>您好！我是您的智能助理。我可以透過回答您的問題來幫助您。您也可以問我任何問題。</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="input-container">
+                <div class="input-toolbar">
+                    <button class="toolbar-btn" id="fileUploadBtn" title="附加文件/圖像"><i class="fas fa-paperclip"></i></button>
+                    <button class="toolbar-btn" id="emojiBtn" title="表情符號"><i class="fas fa-smile"></i></button>
+                    <button class="toolbar-btn" id="voiceInputBtn" title="語音輸入"><i class="fas fa-microphone"></i></button>
+                    <button class="toolbar-btn" id="webcamBtn" title="攝影機"><i class="fas fa-camera"></i></button>
+                </div>
+                <div class="input-wrapper">
+                    <input type="text" id="messageInput" placeholder="在這裡輸入您的問題...">
+                    <input type="file" id="fileInput" accept="image/*,application/pdf,.doc,.docx,.txt" multiple style="display: none;">
+                    <button id="sendButton"><i class="fas fa-paper-plane"></i></button>
+                </div>
+                
+                <!-- File Preview Container -->
+                <div id="filePreviewContainer" class="file-preview-container" style="display: none;"></div>
+                
+                <!-- Emoji Picker -->
+                <div id="emojiPicker" class="emoji-picker" style="display: none;">
+                    <div class="emoji-header">
+                        <span class="emoji-tab active" data-category="smileys">😊</span>
+                        <span class="emoji-tab" data-category="gestures">👋</span>
+                        <span class="emoji-tab" data-category="animals">🐱</span>
+                        <span class="emoji-tab" data-category="food">🍕</span>
+                        <span class="emoji-tab" data-category="activities">⚽</span>
+                        <span class="emoji-tab" data-category="travel">✈️</span>
+                        <span class="emoji-tab" data-category="objects">💡</span>
+                        <span class="emoji-tab" data-category="symbols">❤️</span>
+                    </div>
+                    <div class="emoji-content" id="emojiContent"></div>
+                </div>
+                
+                <!-- Webcam Modal -->
+                <div id="webcamModal" class="webcam-modal" style="display: none;">
+                    <div class="webcam-content">
+                        <div class="webcam-header">
+                            <h3>拍照</h3>
+                            <button class="close-webcam" id="closeWebcam">&times;</button>
+                        </div>
+                        <div class="webcam-body">
+                            <video id="webcamVideo" autoplay playsinline></video>
+                            <canvas id="webcamCanvas" style="display: none;"></canvas>
+                        </div>
+                        <div class="webcam-footer">
+                            <button class="webcam-action-btn" id="captureBtn"><i class="fas fa-camera"></i> 拍照</button>
+                            <button class="webcam-action-btn" id="retakeBtn" style="display: none;"><i class="fas fa-redo"></i> 重拍</button>
+                            <button class="webcam-action-btn primary" id="usePhotoBtn" style="display: none;"><i class="fas fa-check"></i> 使用照片</button>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <div id="messages">
-            <div class="bot-message-container">
-                <div class="avatar bot-avatar">
-                    <i class="fas fa-robot"></i>
-                </div>
-                <div class="message-content">
-                    <p>您好！我是您的智能助理。我可以透過回答您的問題來幫助您。您也可以問我任何問題。</p>
-                </div>
+        <!-- Document Preview Panel -->
+        <div id="preview-panel" class="preview-panel" style="display: none;">
+            <div class="preview-header">
+                <h3 id="preview-title">Document Preview</h3>
+                <button class="close-preview" id="closePreview">&times;</button>
             </div>
-        </div>
-        
-        <div id="input-container">
-            <div class="input-toolbar">
-                <button class="toolbar-btn" id="fileUploadBtn" title="附加文件/圖像"><i class="fas fa-paperclip"></i></button>
-                <button class="toolbar-btn" id="emojiBtn" title="表情符號"><i class="fas fa-smile"></i></button>
-                <button class="toolbar-btn" id="voiceInputBtn" title="語音輸入"><i class="fas fa-microphone"></i></button>
-                <button class="toolbar-btn" id="webcamBtn" title="攝影機"><i class="fas fa-camera"></i></button>
-            </div>
-            <div class="input-wrapper">
-                <input type="text" id="messageInput" placeholder="在這裡輸入您的問題...">
-                <input type="file" id="fileInput" accept="image/*,application/pdf,.doc,.docx,.txt" multiple style="display: none;">
-                <button id="sendButton"><i class="fas fa-paper-plane"></i></button>
-            </div>
-            
-            <!-- File Preview Container -->
-            <div id="filePreviewContainer" class="file-preview-container" style="display: none;"></div>
-            
-            <!-- Emoji Picker -->
-            <div id="emojiPicker" class="emoji-picker" style="display: none;">
-                <div class="emoji-header">
-                    <span class="emoji-tab active" data-category="smileys">😊</span>
-                    <span class="emoji-tab" data-category="gestures">👋</span>
-                    <span class="emoji-tab" data-category="animals">🐱</span>
-                    <span class="emoji-tab" data-category="food">🍕</span>
-                    <span class="emoji-tab" data-category="activities">⚽</span>
-                    <span class="emoji-tab" data-category="travel">✈️</span>
-                    <span class="emoji-tab" data-category="objects">💡</span>
-                    <span class="emoji-tab" data-category="symbols">❤️</span>
-                </div>
-                <div class="emoji-content" id="emojiContent"></div>
-            </div>
-            
-            <!-- Webcam Modal -->
-            <div id="webcamModal" class="webcam-modal" style="display: none;">
-                <div class="webcam-content">
-                    <div class="webcam-header">
-                        <h3>拍照</h3>
-                        <button class="close-webcam" id="closeWebcam">&times;</button>
-                    </div>
-                    <div class="webcam-body">
-                        <video id="webcamVideo" autoplay playsinline></video>
-                        <canvas id="webcamCanvas" style="display: none;"></canvas>
-                    </div>
-                    <div class="webcam-footer">
-                        <button class="webcam-action-btn" id="captureBtn"><i class="fas fa-camera"></i> 拍照</button>
-                        <button class="webcam-action-btn" id="retakeBtn" style="display: none;"><i class="fas fa-redo"></i> 重拍</button>
-                        <button class="webcam-action-btn primary" id="usePhotoBtn" style="display: none;"><i class="fas fa-check"></i> 使用照片</button>
-                    </div>
-                </div>
+            <div class="preview-content" id="preview-content">
+                <!-- Preview content will be inserted here -->
             </div>
         </div>
     </div>
@@ -125,6 +142,8 @@
     
     <!-- 先載入 API 模塊 -->
     <script src="../static/js/api_module.js"></script>
+    <!-- 載入側邊欄功能 (在 chatbox 之前，因為 chatbox 會呼叫 sidebar 函數) -->
+    <script src="../static/js/sidebar.js"></script>
     <!-- 然後載入主要腳本 -->
     <script src="../static/js/chatbox.js"></script>
     <!-- 最後載入設定功能 -->

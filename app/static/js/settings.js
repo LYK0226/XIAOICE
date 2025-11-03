@@ -422,44 +422,6 @@ langOptions.forEach(option => {
     });
 });
 
-// Clear all data button
-const clearAllDataBtn = document.getElementById('clearAllData');
-if (clearAllDataBtn) {
-    clearAllDataBtn.addEventListener('click', () => {
-        if (confirm('確定要清除所有數據嗎？此操作無法撤銷。\n\nAre you sure you want to clear all data? This action cannot be undone.')) {
-            // Clear conversation history if available
-            if (typeof conversationHistory !== 'undefined') {
-                conversationHistory = [];
-            }
-            
-            // Clear messages
-            const messagesDiv = document.getElementById('messages');
-            if (messagesDiv) {
-                messagesDiv.innerHTML = '';
-            }
-            
-            // Clear localStorage
-            localStorage.removeItem('userAvatar');
-            localStorage.removeItem('botAvatar');
-            localStorage.removeItem('bgType');
-            localStorage.removeItem('bgValue');
-            
-            // Reset avatars if available
-            if (typeof userAvatar !== 'undefined') {
-                userAvatar = null;
-            }
-            if (typeof botAvatar !== 'undefined') {
-                botAvatar = null;
-            }
-            
-            // Show confirmation
-            alert('所有數據已清除。\n\nAll data has been cleared.');
-            // Reload page
-            location.reload();
-        }
-    });
-}
-
 // ===== API Key Management =====
 
 // API Key Modal Elements
