@@ -1,5 +1,4 @@
 # 忽略敏感配置文件
-.env
 config.js
 
 # 忽略备份文件
@@ -26,3 +25,38 @@ package-lock.json
 # 忽略临时文件
 tmp/
 temp/
+
+# Environments
+.venv
+.venv/
+.env
+.env.*
+venv/
+ENV/
+env.bak/
+venv.bak/
+.credentials/*
+!.credentials/.gitkeep
+
+# Spyder project settings
+.spyderproject
+
+# Python cache files
+__pycache__/
+*/__pycache__/
+**/__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Migration files (Flask-Migrate / Alembic)
+migrations/
+migrations/*
+
+# Local SQLite DB and DB files
+app.db
+*.db
+
+# Flask instance folder
+instance/
+upload/

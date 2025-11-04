@@ -1,0 +1,353 @@
+<!-- Avatar Settings Modal -->
+<div id="avatarModal" class="modal">
+    <div class="modal-content settings-modal">
+        <div class="settings-modal-header">
+            <h2><i class="fas fa-cog"></i> 設定 / Settings</h2>
+            <span class="close">&times;</span>
+        </div>
+        
+        <div class="settings-layout">
+            <!-- Left Sidebar with Groups -->
+            <div class="settings-sidebar">
+                <div class="settings-group active" data-group="avatar">
+                    <i class="fas fa-user-circle"></i>
+                    <span>頭像<br>Avatar</span>
+                </div>
+                <div class="settings-group" data-group="background">
+                    <i class="fas fa-palette"></i>
+                    <span>背景<br>Background</span>
+                </div>
+                <div class="settings-group" data-group="appearance">
+                    <i class="fas fa-paint-brush"></i>
+                    <span>外觀<br>Appearance</span>
+                </div>
+                <div class="settings-group" data-group="language">
+                    <i class="fas fa-globe"></i>
+                    <span>語言<br>Language</span>
+                </div>
+                <div class="settings-group" data-group="advanced">
+                    <i class="fa-solid fa-key"></i>
+                    <span>高級<br>Advanced</span>
+                </div>
+            </div>
+            
+            <!-- Right Panel with Options -->
+            <div class="settings-panel">
+                <!-- Avatar Settings -->
+                <div class="settings-content active" id="avatarTab">
+                    <div class="settings-header">
+                        <h3><i class="fas fa-user-circle"></i> 頭像設定 / Avatar Settings</h3>
+                        <p class="settings-description">自訂您和機器人的頭像 / Customize your and bot's avatars</p>
+                    </div>
+                    <div class="avatar-settings">
+                        <div class="avatar-section">
+                            <h4>您的頭像 / Your Avatar</h4>
+                            <div class="avatar-preview" id="userAvatarPreview">
+                                <i class="fas fa-user"></i>
+                            </div>
+                            <input type="file" id="userAvatarInput" accept="image/*" style="display: none;">
+                            <button class="upload-btn" onclick="document.getElementById('userAvatarInput').click()">
+                                <i class="fas fa-upload"></i> 上傳頭像 / Upload Avatar
+                            </button>
+                            <button class="clear-btn" id="clearUserAvatar">
+                                <i class="fas fa-times"></i> 清除 / Clear
+                            </button>
+                        </div>
+                        
+                        <div class="avatar-section">
+                            <h4>機器人頭像 / Bot Avatar</h4>
+                            <div class="avatar-preview" id="botAvatarPreview">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <input type="file" id="botAvatarInput" accept="image/*" style="display: none;">
+                            <button class="upload-btn" onclick="document.getElementById('botAvatarInput').click()">
+                                <i class="fas fa-upload"></i> 上傳頭像 / Upload Avatar
+                            </button>
+                            <button class="clear-btn" id="clearBotAvatar">
+                                <i class="fas fa-times"></i> 清除 / Clear
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Background Settings -->
+                <div class="settings-content" id="backgroundTab">
+                    <div class="settings-header">
+                        <h3><i class="fas fa-palette"></i> 背景設定 / Background Settings</h3>
+                        <p class="settings-description">選擇您喜歡的背景樣式 / Choose your preferred background style</p>
+                    </div>
+                    <!-- 自定义滚动进度指示器 -->
+                    <div style="position: sticky; top: 0; z-index: 10; background: white; padding-bottom: 10px; margin-bottom: 10px; border-bottom: 2px solid #e0e0e0;">
+                        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 8px; text-align: center; border-radius: 8px; font-weight: bold; font-size: 13px; margin-bottom: 8px;">
+                            ⬇️ 用滑鼠滾輪向下滾動查看更多選項！ ⬇️
+                        </div>
+                        <div style="background: #e9ecef; height: 6px; border-radius: 3px; overflow: hidden;">
+                            <div id="scrollProgress" style="background: linear-gradient(90deg, #667eea 0%, #764ba2 100%); height: 100%; width: 0%; transition: width 0.3s; border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                    <div class="background-settings">
+                        <h3>背景類型 / Background Type</h3>
+                        <div class="bg-type-selector">
+                            <button class="bg-type-btn active" data-type="gradient">
+                                <i class="fas fa-fill-drip"></i> 漸變色 / Gradient
+                            </button>
+                            <button class="bg-type-btn" data-type="solid">
+                                <i class="fas fa-square"></i> 純色 / Solid
+                            </button>
+                            <button class="bg-type-btn" data-type="image">
+                                <i class="fas fa-image"></i> 圖片 / Image
+                            </button>
+                        </div>
+                        
+                        <!-- Gradient Options -->
+                        <div class="bg-option active" id="gradientOptions">
+                            <h4>選擇漸變色 / Choose Gradient</h4>
+                            <div class="gradient-presets">
+                                <div class="gradient-item active" data-gradient="linear-gradient(135deg, #667eea 0%, #764ba2 100%)">
+                                    <div class="gradient-preview" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"></div>
+                                    <span>紫色夢幻</span>
+                                </div>
+                                <div class="gradient-item" data-gradient="linear-gradient(135deg, #f093fb 0%, #f5576c 100%)">
+                                    <div class="gradient-preview" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"></div>
+                                    <span>粉紅激情</span>
+                                </div>
+                                <div class="gradient-item" data-gradient="linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)">
+                                    <div class="gradient-preview" style="background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);"></div>
+                                    <span>清新藍天</span>
+                                </div>
+                                <div class="gradient-item" data-gradient="linear-gradient(135deg, #43e97b 0%, #38f9d7 100%)">
+                                    <div class="gradient-preview" style="background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);"></div>
+                                    <span>薄荷綠意</span>
+                                </div>
+                                <div class="gradient-item" data-gradient="linear-gradient(135deg, #fa709a 0%, #fee140 100%)">
+                                    <div class="gradient-preview" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);"></div>
+                                    <span>日落黃昏</span>
+                                </div>
+                                <div class="gradient-item" data-gradient="linear-gradient(135deg, #30cfd0 0%, #330867 100%)">
+                                    <div class="gradient-preview" style="background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);"></div>
+                                    <span>神秘深海</span>
+                                </div>
+                                <div class="gradient-item" data-gradient="linear-gradient(135deg, #a8edea 0%, #fed6e3 100%)">
+                                    <div class="gradient-preview" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);"></div>
+                                    <span>柔和夢境</span>
+                                </div>
+                                <div class="gradient-item" data-gradient="linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)">
+                                    <div class="gradient-preview" style="background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);"></div>
+                                    <span>甜蜜浪漫</span>
+                                </div>
+                            </div>
+                            
+                            <h4 style="margin-top: 20px;">自訂漸變 / Custom Gradient</h4>
+                            <div class="custom-gradient">
+                                <div class="color-input-group">
+                                    <label>顏色1 / Color 1:</label>
+                                    <input type="color" id="gradientColor1" value="#667eea">
+                                </div>
+                                <div class="color-input-group">
+                                    <label>顏色2 / Color 2:</label>
+                                    <input type="color" id="gradientColor2" value="#764ba2">
+                                </div>
+                                <button class="apply-btn" id="applyCustomGradient">
+                                    <i class="fas fa-check"></i> 應用自訂漸變 / Apply Custom
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Solid Color Options -->
+                        <div class="bg-option" id="solidOptions">
+                            <h4>選擇顏色 / Choose Color</h4>
+                            <div class="color-presets">
+                                <div class="color-item" data-color="#667eea" style="background: #667eea;"></div>
+                                <div class="color-item" data-color="#764ba2" style="background: #764ba2;"></div>
+                                <div class="color-item" data-color="#f093fb" style="background: #f093fb;"></div>
+                                <div class="color-item" data-color="#4facfe" style="background: #4facfe;"></div>
+                                <div class="color-item" data-color="#43e97b" style="background: #43e97b;"></div>
+                                <div class="color-item" data-color="#fa709a" style="background: #fa709a;"></div>
+                                <div class="color-item" data-color="#30cfd0" style="background: #30cfd0;"></div>
+                                <div class="color-item" data-color="#ff9a9e" style="background: #ff9a9e;"></div>
+                                <div class="color-item" data-color="#2c3e50" style="background: #2c3e50;"></div>
+                                <div class="color-item" data-color="#34495e" style="background: #34495e;"></div>
+                            </div>
+                            <div class="custom-color">
+                                <label>自訂義顏色 / Custom Color:</label>
+                                <input type="color" id="customSolidColor" value="#667eea">
+                                <button class="apply-btn" id="applyCustomColor">
+                                    <i class="fas fa-check"></i> 應用 / Apply
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Image Options -->
+                        <div class="bg-option" id="imageOptions">
+                            <h4>上傳背景圖片 / Upload Background Image</h4>
+                            <input type="file" id="bgImageInput" accept="image/*" style="display: none;">
+                            <div class="bg-image-preview" id="bgImagePreview">
+                                <i class="fas fa-image"></i>
+                                <p>點擊上傳圖片 / Click to Upload</p>
+                            </div>
+                            <button class="upload-btn" onclick="document.getElementById('bgImageInput').click()">
+                                <i class="fas fa-upload"></i> 選擇圖片 / Choose Image
+                            </button>
+                            <button class="clear-btn" id="clearBgImage">
+                                <i class="fas fa-times"></i> 清除背景 / Clear Background
+                            </button>
+                        </div>
+                        
+                        <button class="reset-btn" id="resetBackground">
+                            <i class="fas fa-undo"></i> 恢復默認背景 / Reset to Default
+                        </button>
+                    </div>
+                </div>
+                
+                <!-- Appearance Settings -->
+                <div class="settings-content" id="appearanceTab">
+                    <div class="settings-header">
+                        <h3><i class="fas fa-paint-brush"></i> 外觀設定 / Appearance Settings</h3>
+                        <p class="settings-description">自訂聊天界面的外觀 / Customize chat interface appearance</p>
+                    </div>
+                    <div class="setting-item">
+                        <label>主題模式 / Theme Mode</label>
+                        <div class="theme-selector">
+                            <button class="theme-btn active" data-theme="light"><i class="fas fa-sun"></i> 淺色 / Light</button>
+                            <button class="theme-btn" data-theme="dark"><i class="fas fa-moon"></i> 深色 / Dark</button>
+                            <button class="theme-btn" data-theme="auto"><i class="fas fa-circle-half-stroke"></i> 自動 / Auto</button>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label>字體大小 / Font Size</label>
+                        <input type="range" min="12" max="20" value="14" class="slider" id="fontSizeSlider">
+                        <span id="fontSizeValue">14px</span>
+                    </div>
+                    <div class="setting-item">
+                        <label>訊息密度 / Message Density</label>
+                        <select class="setting-select">
+                            <option value="comfortable">舒適 / Comfortable</option>
+                            <option value="compact">緊湊 / Compact</option>
+                            <option value="spacious">寬鬆 / Spacious</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Language Settings -->
+                <div class="settings-content" id="languageTab">
+                    <div class="settings-header">
+                        <h3><i class="fas fa-globe"></i> 語言設定 / Language Settings</h3>
+                        <p class="settings-description">選擇您的偏好語言 / Select your preferred language</p>
+                    </div>
+                    <div class="setting-item">
+                        <label>界面語言 / Interface Language</label>
+                        <div class="language-grid">
+                            <div class="lang-option active" data-lang="zh-CN">
+                                <i class="fas fa-check-circle"></i>
+                                <span>简体中文</span>
+                            </div>
+                            <div class="lang-option" data-lang="zh-TW">
+                                <i class="fas fa-circle"></i>
+                                <span>繁體中文</span>
+                            </div>
+                            <div class="lang-option" data-lang="en">
+                                <i class="fas fa-circle"></i>
+                                <span>English</span>
+                            </div>
+                            <div class="lang-option" data-lang="ja">
+                                <i class="fas fa-circle"></i>
+                                <span>日本語</span>
+                            </div>
+                            <div class="lang-option" data-lang="ko">
+                                <i class="fas fa-circle"></i>
+                                <span>한국어</span>
+                            </div>
+                            <div class="lang-option" data-lang="es">
+                                <i class="fas fa-circle"></i>
+                                <span>Español</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Advanced Settings -->
+                <div class="settings-content" id="advancedTab">
+                    <div class="settings-header">
+                        <h3><i class="fa-solid fa-key"></i> API 金鑰管理 / API Key Management</h3>
+                        <p class="settings-description">管理您的 Google AI API 金鑰 / Manage your Google AI API keys</p>
+                    </div>
+                    <!-- AI Model Selection -->
+                    <div class="setting-item">
+                        <label>AI 模型選擇 / AI Model Selection</label>
+                        <div class="model-selection">
+                            <select id="aiModelSelect" class="setting-select">
+                                <option value="gemini-2.5-flash">Gemini 2.5 Flash (推薦 / Recommended)</option>
+                                <option value="gemini-2.5-pro">Gemini 2.5 Pro (高品質 / High Quality)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- API Key Management -->
+                    <div class="setting-item">
+                        <label>API 金鑰 / API Key</label>
+                        <p class="setting-description" style="font-size: 15px;">您可以添加多個 API 金鑰以分散使用量 / You can add multiple API keys to distribute usage</p>
+                        <div class="api-key-section">
+                            <div class="api-key-list" id="apiKeyList">
+                                <!-- API keys will be loaded here -->
+                            </div>
+                            
+                            <button class="add-api-key-btn" id="addApiKeyBtn">
+                                <i class="fas fa-plus"></i> 添加 API 金鑰 / Add API Key
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Alert Modal -->
+<div id="customAlertModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <h3 id="customAlertTitle" style="text-align: center;">提示</h3>
+        <p id="customAlertMessage" style="margin: 20px 0; text-align: center;"></p>
+        <button id="customAlertCloseBtn" class="sidebar-btn" style="width: 50%; margin: 0 auto; text-align: center; display: block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold;">确定</button>
+    </div>
+</div>
+
+<!-- Webcam Modal -->
+<div id="webcamModal" class="modal">
+    <div class="modal-content">
+        <span class="close-webcam">&times;</span>
+        <h2>Webcam Input</h2>
+        <video id="webcamFeed" autoplay style="width: 100%; border-radius: 8px;"></video>
+        <button id="captureBtn" class="sidebar-btn" style="width: 100%; margin-top: 10px;"><i class="fas fa-camera"></i> Capture & Send</button>
+    </div>
+</div>
+
+<!-- API Key Modal -->
+<div id="apiKeyModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="settings-modal-header">
+            <h3 id="apiKeyModalTitle"><i class="fas fa-key"></i> 添加 API 金鑰 / Add API Key</h3>
+            <span class="close-api-key">&times;</span>
+        </div>
+        
+        <div class="api-key-form">
+            <div class="form-group">
+                <label for="apiKeyName">金鑰名稱 / Key Name</label>
+                <input type="text" id="apiKeyName" placeholder="例如：我的 Google API / e.g., My Google API" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="apiKeyValue">API 金鑰 / API Key</label>
+                <input type="password" id="apiKeyValue" placeholder="輸入您的 Google AI API 金鑰 / Enter your Google AI API key" required>
+                <small class="form-hint">您的 API 金鑰將被加密存儲 / Your API key will be encrypted and stored securely</small>
+            </div>
+            
+            <div class="form-actions">
+                <button id="saveApiKeyBtn" class="sidebar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <i class="fas fa-save"></i> 保存 / Save
+                </button>
+                <button id="cancelApiKeyBtn" class="sidebar-btn" style="background: #6c757d;">
+                    <i class="fas fa-times"></i> 取消 / Cancel
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
