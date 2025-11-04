@@ -29,7 +29,8 @@ temp/
 # Environments
 .venv
 .venv/
-env/
+.env
+.env.*
 venv/
 ENV/
 env.bak/
@@ -55,10 +56,6 @@ migrations/*
 # Local SQLite DB and DB files
 app.db
 *.db
-
-# Environment files
-.env
-.env.*
 
 # Flask instance folder
 instance/

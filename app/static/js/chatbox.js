@@ -831,6 +831,10 @@ function updateFilePreview() {
             const reader = new FileReader();
             reader.onload = (e) => {
                 img.src = e.target.result;
+                // Add click handler to open preview modal
+                img.addEventListener('click', () => {
+                    openDocumentPreviewModal(img.src, file.name);
+                });
             };
             reader.readAsDataURL(file);
             previewItem.appendChild(img);
@@ -1277,6 +1281,9 @@ function createMessageWithFiles(text, files, isUser = true) {
             if (file.type.startsWith('image/')) {
                 const img = document.createElement('img');
                 img.className = 'message-image';
+                // Append the image to DOM FIRST to preserve order
+                messageContent.appendChild(img);
+                
                 const reader = new FileReader();
                 reader.onload = (e) => {
                     img.src = e.target.result;
@@ -1284,125 +1291,9 @@ function createMessageWithFiles(text, files, isUser = true) {
                 reader.readAsDataURL(file);
                 
                 img.addEventListener('click', () => {
-                    // For local files, we need to create a blob URL for the modal
-                    const modal = document.createElement('div');
-                    modal.className = 'document-preview-modal';
-                    modal.style.cssText = `
-                        position: fixed;
-                        top: 0;
-                        left: 0;
-                        width: 100%;
-                        height: 100%;
-                        background: rgba(0,0,0,0.8);
-                        z-index: 3000;
-                        display: flex;
-                        align-items: stretch;
-                    `;
-
-                    // Create left panel for chat (simplified for local files)
-                    const leftPanel = document.createElement('div');
-                    leftPanel.style.cssText = `
-                        width: 40%;
-                        background: #ffffff;
-                        border-right: 1px solid #dee2e6;
-                        display: flex;
-                        flex-direction: column;
-                    `;
-
-                    // Chat header
-                    const chatHeader = document.createElement('div');
-                    chatHeader.style.cssText = `
-                        padding: 15px;
-                        background: #f8f9fa;
-                        border-bottom: 1px solid #dee2e6;
-                        font-weight: bold;
-                    `;
-                    chatHeader.textContent = 'Chat History';
-
-                    // Simple message for local file preview
-                    const chatContent = document.createElement('div');
-                    chatContent.style.cssText = `
-                        flex: 1;
-                        padding: 15px;
-                        background: #ffffff;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        color: #6c757d;
-                    `;
-                    chatContent.innerHTML = '<p>Upload the file to start chatting about it</p>';
-
-                    leftPanel.appendChild(chatHeader);
-                    leftPanel.appendChild(chatContent);
-
-                    // Create right panel for image preview
-                    const rightPanel = document.createElement('div');
-                    rightPanel.style.cssText = `
-                        flex: 1;
-                        background: white;
-                        display: flex;
-                        flex-direction: column;
-                        max-width: 60%;
-                    `;
-
-                    // Header for right panel
-                    const rightHeader = document.createElement('div');
-                    rightHeader.style.cssText = `
-                        padding: 15px;
-                        background: #f8f9fa;
-                        border-bottom: 1px solid #dee2e6;
-                        display: flex;
-                        justify-content: space-between;
-                        align-items: center;
-                    `;
-                    rightHeader.innerHTML = `
-                        <h3 style="margin: 0; font-size: 16px;">${file.name}</h3>
-                        <button class="close-preview-modal" style="background: none; border: none; font-size: 20px; cursor: pointer; color: #6c757d;">&times;</button>
-                    `;
-
-                    // Content area for image
-                    const contentArea = document.createElement('div');
-                    contentArea.style.cssText = `
-                        flex: 1;
-                        padding: 0;
-                        overflow: hidden;
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                    `;
-
-                    const fullImg = document.createElement('img');
-                    fullImg.src = img.src; // Use the same src as the thumbnail
-                    fullImg.style.cssText = `
-                        max-width: 100%;
-                        max-height: 100%;
-                        object-fit: contain;
-                        border-radius: 8px;
-                    `;
-                    contentArea.appendChild(fullImg);
-
-                    rightPanel.appendChild(rightHeader);
-                    rightPanel.appendChild(contentArea);
-
-                    // Assemble modal
-                    modal.appendChild(leftPanel);
-                    modal.appendChild(rightPanel);
-                    document.body.appendChild(modal);
-
-                    // Event listeners
-                    const closeBtn = rightHeader.querySelector('.close-preview-modal');
-                    closeBtn.addEventListener('click', () => {
-                        document.body.removeChild(modal);
-                    });
-
-                    modal.addEventListener('click', (e) => {
-                        if (e.target === modal) {
-                            document.body.removeChild(modal);
-                        }
-                    });
+                    // For local files, open the preview panel with data URL
+                    openDocumentPreviewModal(img.src, file.name);
                 });
-                
-                messageContent.appendChild(img);
             } else {
                 // Show file name for non-image files
                 const fileInfo = document.createElement('div');
@@ -1477,7 +1368,13 @@ function updateMessageWithServerFiles(messageElement, uploadedFiles) {
                 openDocumentPreviewModal(fullPath, displayFileName);
             });
             
-            messageContent.appendChild(fileInfo);
+            // Insert before the text paragraph to keep text at the bottom
+            const textParagraph = messageContent.querySelector('p');
+            if (textParagraph) {
+                messageContent.insertBefore(fileInfo, textParagraph);
+            } else {
+                messageContent.appendChild(fileInfo);
+            }
         }
     });
 }
