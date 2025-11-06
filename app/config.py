@@ -8,9 +8,6 @@ class Config:
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', SECRET_KEY)
     FLASK_APP = os.environ.get('FLASK_APP', 'run.py')
     FLASK_ENV = os.environ.get('FLASK_ENV', 'development')
-
-    # Google AI Studio
-    # API keys are now stored per user in the database
     
     # Gemini Model
     GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
