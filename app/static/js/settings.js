@@ -277,7 +277,6 @@ window.showCustomConfirm = showCustomConfirm;
 
 // Avatar Modal Functionality
 const avatarModal = document.getElementById('avatarModal');
-const closeModal = document.querySelector('.close');
 const userAvatarInput = document.getElementById('userAvatarInput');
 const botAvatarInput = document.getElementById('botAvatarInput');
 const userAvatarPreview = document.getElementById('userAvatarPreview');
@@ -293,13 +292,22 @@ document.getElementById('settings').addEventListener('click', () => {
     const supportedLangs = ['zh-TW', 'en', 'ja'];
     const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
     updateSettingsLanguage(langToUse);
+    
+    // Update theme buttons to reflect current theme after modal is shown
+    setTimeout(() => {
+        const currentTheme = localStorage.getItem('themeMode') || 'light';
+        const themeBtns = document.querySelectorAll('.theme-btn');
+        themeBtns.forEach(btn => {
+            if (btn.getAttribute('data-theme') === currentTheme) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }, 100);
 });
 
 // Close modal
-closeModal.onclick = function() {
-    avatarModal.style.display = 'none';
-};
-
 window.onclick = function(event) {
     if (event.target == avatarModal) {
         avatarModal.style.display = 'none';
@@ -408,6 +416,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const settingsGroups = document.querySelectorAll('.settings-group');
     const settingsContents = document.querySelectorAll('.settings-content');
 
+    // Initialize theme
+    initializeTheme();
+
     // Switch between settings groups (new sidebar navigation)
     settingsGroups.forEach(group => {
         group.addEventListener('click', () => {
@@ -431,16 +442,71 @@ window.addEventListener('DOMContentLoaded', () => {
 // ===== Personalization Settings =====
 
 // Theme selector
-const themeBtns = document.querySelectorAll('.theme-btn');
-themeBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        themeBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const theme = btn.getAttribute('data-theme');
-        console.log('Theme changed to:', theme);
-        // TODO: Implement actual theme switching
-    });
+document.addEventListener('click', (e) => {
+    if (e.target.closest('.theme-btn')) {
+        const clickedBtn = e.target.closest('.theme-btn');
+        const allThemeBtns = document.querySelectorAll('.theme-btn');
+        
+        // Remove active class from all buttons
+        allThemeBtns.forEach(btn => btn.classList.remove('active'));
+        
+        // Add active class to clicked button
+        clickedBtn.classList.add('active');
+        
+        const theme = clickedBtn.getAttribute('data-theme');
+        applyTheme(theme);
+        localStorage.setItem('themeMode', theme);
+    }
 });
+
+// Function to apply theme
+function applyTheme(theme) {
+    const body = document.body;
+    
+    if (theme === 'dark') {
+        body.classList.add('dark-theme');
+        body.classList.remove('light-theme');
+    } else if (theme === 'light') {
+        body.classList.add('light-theme');
+        body.classList.remove('dark-theme');
+    } else if (theme === 'auto') {
+        // Check system preference
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+            body.classList.add('dark-theme');
+            body.classList.remove('light-theme');
+        } else {
+            body.classList.add('light-theme');
+            body.classList.remove('dark-theme');
+        }
+    }
+}
+
+// Function to initialize theme on page load
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('themeMode') || 'light';
+    
+    // Set active button
+    const themeBtns = document.querySelectorAll('.theme-btn');
+    themeBtns.forEach(btn => {
+        if (btn.getAttribute('data-theme') === savedTheme) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+    
+    applyTheme(savedTheme);
+    
+    // Listen for system theme changes when in auto mode
+    if (savedTheme === 'auto') {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (localStorage.getItem('themeMode') === 'auto') {
+                applyTheme('auto');
+            }
+        });
+    }
+}
 
 // Language options in settings
 const langOptions = document.querySelectorAll('.lang-option');
@@ -510,7 +576,6 @@ langOptions.forEach(option => {
 
 // API Key Modal Elements
 const apiKeyModal = document.getElementById('apiKeyModal');
-const closeApiKeyModal = document.querySelector('.close-api-key');
 const addApiKeyBtn = document.getElementById('addApiKeyBtn');
 const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
 const cancelApiKeyBtn = document.getElementById('cancelApiKeyBtn');
@@ -528,11 +593,6 @@ document.getElementById('settings').addEventListener('click', () => {
 });
 
 // Modal event listeners
-closeApiKeyModal.onclick = function() {
-    apiKeyModal.style.display = 'none';
-    resetApiKeyForm();
-};
-
 cancelApiKeyBtn.addEventListener('click', () => {
     apiKeyModal.style.display = 'none';
     resetApiKeyForm();
@@ -552,7 +612,6 @@ addApiKeyBtn.addEventListener('click', () => {
     const supportedLangs = ['zh-TW', 'en', 'ja'];
     const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
     updateSettingsLanguage(langToUse); // Update language for the modal
-    document.getElementById('apiKeyModalTitle').innerHTML = '<i class="fas fa-key"></i> <span data-i18n="api_key_modal.title">添加 API 金鑰</span>';
     apiKeyModal.style.display = 'block';
     apiKeyNameInput.focus();
 });
