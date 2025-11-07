@@ -314,6 +314,11 @@ window.onclick = function(event) {
     }
 };
 
+// Close avatar settings
+document.querySelector('.close-avatar').addEventListener('click', () => {
+    avatarModal.style.display = 'none';
+});
+
 // Handle user avatar upload
 userAvatarInput.addEventListener('change', function(e) {
     const file = e.target.files[0];

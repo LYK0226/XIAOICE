@@ -209,6 +209,31 @@ body.dark-theme .settings-description {
     color: #000;
 }
 
+.close-avatar {
+    display: block;
+    margin: 16px 20px 16px 15px;
+    color: #555;
+    font-size: 30px;
+    line-height: 1;
+    user-select: none;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.close-avatar:hover,
+.close-avatar:focus {
+    color: #333;
+}
+
+body.dark-theme .close-avatar {
+    color: #bbb;
+}
+
+body.dark-theme .close-avatar:hover,
+body.dark-theme .close-avatar:focus {
+    color: #fff;
+}
+
 .modal-content h2 {
     margin-bottom: 20px;
     color: #333;

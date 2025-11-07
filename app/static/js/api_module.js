@@ -42,7 +42,7 @@ class ChatAPI {
      * @param {string} currentLanguage - 當前語言設置
      * @returns {Promise<string>} - AI 回應文字
      */
-    async sendChatMessage(userMessage, imageFile = null, currentLanguage = 'zh-CN', history = null) {
+    async sendChatMessage(userMessage, imageFile = null, currentLanguage = 'zh-TW', history = null) {
         const formData = new FormData();
         formData.append('message', userMessage);
         
@@ -85,7 +85,7 @@ class ChatAPI {
                 'en': 'Sorry, the service is temporarily unavailable. Please try again later.'
             };
             
-            throw new Error(errorMessages[currentLanguage] || errorMessages['zh-CN']);
+            throw new Error(errorMessages[currentLanguage] || errorMessages['zh-TW']);
         }
     }
 
@@ -243,7 +243,7 @@ class ChatAPI {
      * @param {string} language - 語言設置
      * @returns {Promise<string>}
      */
-    async sendTextMessage(message, language = 'zh-CN', history = null) {
+    async sendTextMessage(message, language = 'zh-TW', history = null) {
         return this.sendChatMessage(message, null, language, history);
     }
 
@@ -254,7 +254,7 @@ class ChatAPI {
      * @param {string} language - 語言設置
      * @returns {Promise<string>}
      */
-    async sendImageMessage(message, imageFile, language = 'zh-CN', history = null) {
+    async sendImageMessage(message, imageFile, language = 'zh-TW', history = null) {
         return this.sendChatMessage(message, imageFile, language, history);
     }
 

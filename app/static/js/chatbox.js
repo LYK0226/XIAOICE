@@ -19,7 +19,7 @@ const usePhotoBtn = document.getElementById('usePhotoBtn');
 const filePreviewContainer = document.getElementById('filePreviewContainer');
 
 // Language support
-let currentLanguage = 'zh-CN'; // Default to Simplified Chinese
+let currentLanguage = 'zh-TW'; // Default to Traditional Chinese
 
 // Avatar settings
 let userAvatar = null; // Will store user avatar URL

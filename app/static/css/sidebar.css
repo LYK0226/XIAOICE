@@ -354,9 +354,5 @@ body.dark-theme .sidebar-btn:hover {
 
 /* Responsive Design - Auto-hide sidebar on smaller screens */
 @media (max-width: 1024px) {
-    #sidebar {
-        margin-left: -240px;
-        opacity: 0;
-        pointer-events: none;
-    }
+    /* Removed automatic hiding - now handled by JavaScript for dynamic behavior */
 }

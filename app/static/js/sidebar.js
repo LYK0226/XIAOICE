@@ -312,6 +312,10 @@ document.addEventListener('click', (event) => {
     }
 });
 
+// Sidebar state tracking
+let sidebarManuallyClosed = false;
+let sidebarManuallyOpened = false;
+
 // Sidebar button functionality
 const newChatBtn = document.getElementById('newChat');
 if (newChatBtn) {
@@ -329,7 +333,19 @@ const sidebarShowBtn = document.getElementById('sidebarShowBtn');
 if (sidebarToggle) {
     sidebarToggle.addEventListener('click', () => {
         const sidebar = document.getElementById('sidebar');
+        const wasHidden = sidebar.classList.contains('hidden');
         sidebar.classList.toggle('hidden');
+        
+        if (sidebar.classList.contains('hidden')) {
+            // User manually closed the sidebar
+            sidebarManuallyClosed = true;
+            sidebarManuallyOpened = false;
+        } else {
+            // User manually opened the sidebar
+            sidebarManuallyOpened = true;
+            sidebarManuallyClosed = false;
+        }
+        
         if (sidebarShowBtn) {
             sidebarShowBtn.style.display = sidebar.classList.contains('hidden') ? 'flex' : 'none';
         }
@@ -341,10 +357,81 @@ if (sidebarShowBtn) {
         const sidebar = document.getElementById('sidebar');
         sidebar.classList.remove('hidden');
         sidebarShowBtn.style.display = 'none';
+        
+        // User manually opened the sidebar
+        sidebarManuallyOpened = true;
+        sidebarManuallyClosed = false;
     });
 }
 
-// Initialize conversations on page load
+// Track previous screen size state
+let previousScreenWasSmall = null;
+
+// Function to handle responsive sidebar behavior
+function handleResponsiveSidebar() {
+    const sidebar = document.getElementById('sidebar');
+    const sidebarShowBtn = document.getElementById('sidebarShowBtn');
+    const isSmallScreen = window.innerWidth <= 1024;
+    
+    // Detect transition between screen sizes
+    const transitionedToSmall = previousScreenWasSmall === false && isSmallScreen === true;
+    const transitionedToLarge = previousScreenWasSmall === true && isSmallScreen === false;
+    
+    if (isSmallScreen) {
+        // On smaller screens
+        // If user manually closed it, keep it closed
+        if (sidebarManuallyClosed) {
+            sidebar.classList.add('hidden');
+            if (sidebarShowBtn) {
+                sidebarShowBtn.style.display = 'flex';
+            }
+        } else if (!sidebarManuallyOpened || transitionedToSmall) {
+            // Auto-hide if not manually opened, or if just transitioned to small screen
+            sidebar.classList.add('hidden');
+            if (sidebarShowBtn) {
+                sidebarShowBtn.style.display = 'flex';
+            }
+        }
+    } else {
+        // On larger screens
+        // If user manually closed it, keep it closed
+        if (sidebarManuallyClosed) {
+            sidebar.classList.add('hidden');
+            if (sidebarShowBtn) {
+                sidebarShowBtn.style.display = 'flex';
+            }
+        } else if (!sidebarManuallyOpened || transitionedToLarge) {
+            // Auto-show if not manually opened/closed, or if just transitioned to large screen
+            sidebar.classList.remove('hidden');
+            if (sidebarShowBtn) {
+                sidebarShowBtn.style.display = 'none';
+            }
+        }
+    }
+    
+    // Update previous screen state
+    previousScreenWasSmall = isSmallScreen;
+}
+
+// Initialize responsive behavior on page load
 window.addEventListener('DOMContentLoaded', () => {
     loadConversations();
+    // Initialize manual state flags based on current visibility
+    const sidebar = document.getElementById('sidebar');
+    const isSmallScreen = window.innerWidth <= 1024;
+    
+    if (isSmallScreen && sidebar.classList.contains('hidden')) {
+        // Starts hidden on small screen - auto-hidden, not manually closed
+        sidebarManuallyClosed = false;
+        sidebarManuallyOpened = false;
+    } else if (!isSmallScreen && !sidebar.classList.contains('hidden')) {
+        // Starts visible on large screen - auto-visible, not manually opened
+        sidebarManuallyClosed = false;
+        sidebarManuallyOpened = false;
+    }
+    
+    handleResponsiveSidebar(); // Check initial screen size
 });
+
+// Handle window resize
+window.addEventListener('resize', handleResponsiveSidebar);
