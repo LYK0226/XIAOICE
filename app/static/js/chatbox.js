@@ -53,18 +53,6 @@ const emojiCategories = {
 
 // Bot responses in Simplified Chinese, Traditional Chinese, and English
 const botResponses = {
-    'zh-CN': [
-        "我在这里帮助您！您想了解什么？",
-        "这是一个有趣的问题。让我想想...",
-        "我明白您的意思。我可以告诉您...",
-        "好问题！根据您告诉我的...",
-        "我可以帮您解决这个问题。让我提供一些信息...",
-        "这是一个很好的观点。您考虑过...",
-        "我正在处理您的请求。这是我的回复...",
-        "您好！我是您的智能助手，很高兴为您服务。",
-        "明白了，让我为您详细解答。",
-        "这个问题很有意思，让我们一起探讨一下。"
-    ],
     'zh-TW': [
         "我在這裡幫助您！您想了解什麼？",
         "這是一個有趣的問題。讓我想想...",
@@ -90,35 +78,6 @@ const botResponses = {
 
 // UI Translations
 const translations = {
-    'zh-CN': {
-        chatbox: '聊天盒子',
-        chat: '聊天',
-        newChat: '新对话',
-        settings: '设置',
-        placeholder: '在这里输入您的问题...',
-        typing: '正在输入...',
-        analyzing: '正在分析图片...',
-        analyzeImage: '请分析这张图片',
-        welcomeMsg: '您好！我是您的智能助手。我可以通过回答您的问题来帮助您。您也可以问我任何问题。',
-        settingsComingSoon: '设置面板即将推出！',
-        langSwitched: '语言已切换为简体中文',
-        logout: '登出',
-        voiceRecording: '正在录音...',
-        voiceNotSupported: '您的浏览器不支持语音识别',
-        micPermissionDenied: '麦克风权限被拒绝，请在浏览器设置中允许访问麦克风',
-        webcamPermissionDenied: '无法访问摄像头，请在浏览器设置中允许访问摄像头',
-        errorMsg: '抱歉，发生了错误。请稍后再试。',
-        renameAction: '重命名',
-        deleteAction: '删除',
-        pinAction: '置顶',
-        unpinAction: '取消置顶',
-        openAction: '打开',
-        renamePrompt: '输入新的对话标题',
-        renameError: '重命名失败，请稍后再试。',
-        deleteConfirm: '确定要删除此对话吗？删除后无法恢复。',
-        deleteError: '删除对话失败，请稍后再试。',
-        pinError: '更新置顶状态失败，请稍后再试。'
-    },
     'zh-TW': {
         chatbox: '聊天盒子',
         chat: '聊天',
@@ -205,64 +164,6 @@ const translations = {
         deleteConfirm: 'この会話を削除しますか？削除すると元に戻せません。',
         deleteError: '会話を削除できませんでした。後でもう一度お試しください。',
         pinError: 'ピン留め状態を更新できませんでした。後でもう一度お試しください。'
-    },
-    'ko': {
-        chatbox: '채팅박스',
-        chat: '채팅',
-        newChat: '새 대화',
-        settings: '설정',
-        placeholder: '여기에 질문을 입력하세요...',
-        typing: '입력 중...',
-        analyzing: '이미지 분석 중...',
-        analyzeImage: '이 이미지를 분석해주세요',
-        welcomeMsg: '안녕하세요! 저는 당신의 스마트 어시스턴트입니다. 질문에 답변하여 도움을 드릴 수 있습니다.',
-        settingsComingSoon: '설정 패널 곧 출시!',
-        langSwitched: '언어가 한국어로 전환되었습니다',
-        logout: '로그아웃',
-        voiceRecording: '녹음 중...',
-        voiceNotSupported: '브라우저가 음성 인식을 지원하지 않습니다',
-        micPermissionDenied: '마이크 권한이 거부되었습니다. 브라우저 설정에서 마이크 액세스를 허용하세요.',
-        webcamPermissionDenied: '카메라에 액세스할 수 없습니다. 브라우저 설정에서 카메라 액세스를 허용하세요.',
-        errorMsg: '죄송합니다. 오류가 발생했습니다. 나중에 다시 시도하세요.',
-        renameAction: '이름 변경',
-        deleteAction: '삭제',
-        pinAction: '상단 고정',
-        unpinAction: '고정 해제',
-        openAction: '열기',
-        renamePrompt: '새 대화 제목을 입력하세요',
-        renameError: '이름을 변경하지 못했습니다. 잠시 후 다시 시도하세요.',
-        deleteConfirm: '이 대화를 삭제하시겠습니까? 삭제 후에는 복구할 수 없습니다.',
-        deleteError: '대화를 삭제하지 못했습니다. 잠시 후 다시 시도하세요.',
-        pinError: '상단 고정 상태를 업데이트하지 못했습니다. 잠시 후 다시 시도하세요.'
-    },
-    'es': {
-        chatbox: 'Caja de chat',
-        chat: 'Chat',
-        newChat: 'Nueva conversación',
-        settings: 'Configuración',
-        placeholder: 'Escribe tu pregunta aquí...',
-        typing: 'Escribiendo...',
-        analyzing: 'Analizando imagen...',
-        analyzeImage: 'Por favor analiza esta imagen',
-        welcomeMsg: '¡Hola! Soy tu asistente inteligente. Puedo ayudarte respondiendo tus preguntas.',
-        settingsComingSoon: '¡Panel de configuración próximamente!',
-        langSwitched: 'Idioma cambiado a español',
-        logout: 'Cerrar sesión',
-        voiceRecording: 'Grabando...',
-        voiceNotSupported: 'Su navegador no admite reconocimiento de voz',
-        micPermissionDenied: 'Permiso de micrófono denegado. Permita el acceso al micrófono en la configuración del navegador.',
-        webcamPermissionDenied: 'No se puede acceder a la cámara. Permita el acceso a la cámara en la configuración del navegador.',
-        errorMsg: 'Lo siento, ocurrió un error. Por favor, inténtelo de nuevo más tarde.',
-        renameAction: 'Renombrar',
-        deleteAction: 'Eliminar',
-        pinAction: 'Fijar',
-        unpinAction: 'Desfijar',
-        openAction: 'Abrir',
-        renamePrompt: 'Introduce un nuevo título para la conversación',
-        renameError: 'No se pudo renombrar la conversación. Inténtalo de nuevo.',
-        deleteConfirm: '¿Eliminar esta conversación? Esta acción no se puede deshacer.',
-        deleteError: 'No se pudo eliminar la conversación. Inténtalo de nuevo.',
-        pinError: 'No se pudo actualizar el estado de fijación. Inténtalo de nuevo.'
     }
 };
 
@@ -270,8 +171,8 @@ const translations = {
 function updateUILanguage(lang) {
     // Validate language
     if (!translations[lang]) {
-        console.warn(`Language ${lang} not found, using zh-CN as fallback`);
-        lang = 'zh-CN';
+        console.warn(`Language ${lang} not found, using zh-TW as fallback`);
+        lang = 'zh-TW';
     }
     
     const t = translations[lang];
@@ -513,23 +414,6 @@ function detectTestPaper(imageData) {
     
     // Simulate extracted questions based on language
     const sampleQuestions = {
-        'zh-CN': [
-            {
-                number: 1,
-                question: "下列哪个选项正确描述了光合作用的过程？",
-                options: ["A. 植物吸收二氧化碳释放氧气", "B. 植物吸收氧气释放二氧化碳", "C. 植物不需要光照", "D. 以上都不对"]
-            },
-            {
-                number: 2,
-                question: "计算: 25 × 4 + 16 ÷ 2 = ?",
-                options: null
-            },
-            {
-                number: 3,
-                question: "请解释\"水循环\"的基本过程。",
-                options: null
-            }
-        ],
         'zh-TW': [
             {
                 number: 1,
@@ -572,11 +456,6 @@ function detectTestPaper(imageData) {
 // Generate answers for questions
 function generateAnswer(question, questionNumber) {
     const answers = {
-        'zh-CN': {
-            1: "正确答案是 A。光合作用是植物利用光能，将二氧化碳和水转化为葡萄糖和氧气的过程。这个过程主要发生在叶绿体中，是植物生存和地球生态系统的基础。",
-            2: "让我们一步步计算：\n1. 首先计算乘法：25 × 4 = 100\n2. 然后计算除法：16 ÷ 2 = 8\n3. 最后相加：100 + 8 = 108\n\n答案是 108。",
-            3: "水循环的基本过程包括：\n1. 蒸发：太阳加热地表水，使其变成水蒸气\n2. 凝结：水蒸气上升冷却，形成云\n3. 降水：云中的水滴聚集变重，以雨、雪等形式降落\n4. 径流：降水流入河流、湖泊或渗入地下\n5. 重复循环"
-        },
         'zh-TW': {
             1: "正確答案是 A。光合作用是植物利用光能，將二氧化碳和水轉化為葡萄糖和氧氣的過程。這個過程主要發生在葉綠體中，是植物生存和地球生態系統的基礎。",
             2: "讓我們一步步計算：\n1. 首先計算乘法：25 × 4 = 100\n2. 然後計算除法：16 ÷ 2 = 8\n3. 最後相加：100 + 8 = 108\n\n答案是 108。",
@@ -598,11 +477,6 @@ function analyzeImage(imageData) {
     // For now, we'll simulate the response
     
     const responses = {
-        'zh-CN': [
-            "这是一张很有趣的图片！我看到了一些色彩丰富的元素。图片中似乎包含了多个物体或场景。",
-            "根据我的分析，这张图片展示了一个清晰的场景。我可以识别出其中的主要元素和构图。",
-            "图片质量很好！我能够看到图片中的细节。这看起来像是一张精心拍摄的照片。"
-        ],
         'zh-TW': [
             "這是一張很有趣的圖片！我看到了一些色彩豐富的元素。圖片中似乎包含了多個物體或場景。",
             "根據我的分析，這張圖片展示了一個清晰的場景。我可以識別出其中的主要元素和構圖。",
@@ -625,7 +499,6 @@ function processTestPaperQuestions(questions, imageData) {
     
     // First, show detection message
     const detectionMessages = {
-        'zh-CN': `我检测到这是一张试卷或测试题！我发现了 ${questions.length} 道题目。让我逐个为您解答。`,
         'zh-TW': `我檢測到這是一張試卷或測試題！我發現了 ${questions.length} 道題目。讓我逐個為您解答。`,
         'en': `I detected this is a test paper! I found ${questions.length} questions. Let me answer them one by one.`
     };
@@ -651,7 +524,6 @@ function processTestPaperQuestions(questions, imageData) {
             // Show thinking indicator
             setTimeout(() => {
                 const thinkingTexts = {
-                    'zh-CN': '正在思考答案...',
                     'zh-TW': '正在思考答案...',
                     'en': 'Thinking about the answer...'
                 };
@@ -666,7 +538,6 @@ function processTestPaperQuestions(questions, imageData) {
                     
                     const answer = generateAnswer(q, q.number);
                     const answerHeaders = {
-                        'zh-CN': `💡 **答案 ${q.number}:**\n\n`,
                         'zh-TW': `💡 **答案 ${q.number}:**\n\n`,
                         'en': `💡 **Answer ${q.number}:**\n\n`
                     };
@@ -680,7 +551,6 @@ function processTestPaperQuestions(questions, imageData) {
                     if (index === questions.length - 1) {
                         setTimeout(() => {
                             const completionMessages = {
-                                'zh-CN': '✅ 所有题目已解答完毕！如果您还有其他问题，请随时告诉我。',
                                 'zh-TW': '✅ 所有題目已解答完畢！如果您還有其他問題，請隨時告訴我。',
                                 'en': '✅ All questions have been answered! If you have any other questions, feel free to ask.'
                             };
@@ -697,21 +567,11 @@ function processTestPaperQuestions(questions, imageData) {
 }
 
 // Add translation for "question"
-translations['zh-CN'].question = '问题';
 translations['zh-TW'].question = '問題';
 translations['en'].question = 'Question';
 translations['ja'].question = '質問';
-translations['ko'].question = '질문';
-translations['es'].question = 'Pregunta';
 
 // Conversation management translations
-translations['zh-CN'].noConversations = '暂无对话';
-translations['zh-CN'].untitledConversation = '未命名对话';
-translations['zh-CN'].conversationLoadError = '加载对话失败，请稍后再试。';
-translations['zh-CN'].conversationCreateError = '创建对话失败，请稍后再试。';
-translations['zh-CN'].messageSaveError = '保存消息失败。';
-translations['zh-CN'].attachmentPlaceholder = '[附件]';
-
 translations['zh-TW'].noConversations = '暫無對話';
 translations['zh-TW'].untitledConversation = '未命名對話';
 translations['zh-TW'].conversationLoadError = '載入對話失敗，請稍後再試。';
@@ -732,20 +592,6 @@ translations['ja'].conversationLoadError = '会話を読み込めませんでし
 translations['ja'].conversationCreateError = '新しい会話を開始できませんでした。';
 translations['ja'].messageSaveError = 'メッセージを保存できませんでした。';
 translations['ja'].attachmentPlaceholder = '[添付]';
-
-translations['ko'].noConversations = '대화가 아직 없습니다';
-translations['ko'].untitledConversation = '제목 없는 대화';
-translations['ko'].conversationLoadError = '대화를 불러오지 못했습니다. 나중에 다시 시도하세요.';
-translations['ko'].conversationCreateError = '새 대화를 지금 시작할 수 없습니다.';
-translations['ko'].messageSaveError = '메시지를 저장하지 못했습니다.';
-translations['ko'].attachmentPlaceholder = '[첨부]';
-
-translations['es'].noConversations = 'Aún no hay conversaciones';
-translations['es'].untitledConversation = 'Conversación sin título';
-translations['es'].conversationLoadError = 'No se pudo cargar la conversación. Inténtalo de nuevo.';
-translations['es'].conversationCreateError = 'No se puede iniciar una nueva conversación ahora mismo.';
-translations['es'].messageSaveError = 'No se pudo guardar el mensaje.';
-translations['es'].attachmentPlaceholder = '[archivo adjunto]';
 
 // Load saved language preference on page load
 window.addEventListener('DOMContentLoaded', () => {
@@ -951,15 +797,12 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     
     // Set language based on current language
     const langMap = {
-        'zh-CN': 'zh-CN',
         'zh-TW': 'zh-TW',
         'en': 'en-US',
         'ja': 'ja-JP',
-        'ko': 'ko-KR',
-        'es': 'es-ES'
     };
     
-    recognition.lang = langMap[currentLanguage] || 'zh-CN';
+    recognition.lang = langMap[currentLanguage] || 'zh-TW';
     
     recognition.onstart = () => {
         isRecording = true;
@@ -1006,14 +849,11 @@ voiceInputBtn.addEventListener('click', () => {
     } else {
         // Update language before starting
         const langMap = {
-            'zh-CN': 'zh-CN',
             'zh-TW': 'zh-TW',
             'en': 'en-US',
             'ja': 'ja-JP',
-            'ko': 'ko-KR',
-            'es': 'es-ES'
         };
-        recognition.lang = langMap[currentLanguage] || 'zh-CN';
+        recognition.lang = langMap[currentLanguage] || 'zh-TW';
         recognition.start();
     }
 });

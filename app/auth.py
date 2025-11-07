@@ -2,6 +2,7 @@ from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from .models import db, User, UserProfile
 import re
+from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 
@@ -13,6 +14,14 @@ def validate_email(email):
 def validate_password(password):
     """Validate password strength (at least 6 characters)."""
     return len(password) >= 6
+
+def validate_username(username):
+    """Validate username (at least 3 characters, alphanumeric and underscores only)."""
+    if len(username) < 3:
+        return False
+    # Allow alphanumeric characters and underscores
+    pattern = r'^[a-zA-Z0-9_]+$'
+    return re.match(pattern, username) is not None
 
 @auth_bp.route('/signup', methods=['POST'])
 def signup():
@@ -145,24 +154,137 @@ def get_current_user():
         'user': user.to_dict()
     }), 200
 
-@auth_bp.route('/check', methods=['GET'])
-@jwt_required(optional=True)
-def check_auth():
-    """Check if user is authenticated."""
+@auth_bp.route('/update-avatar', methods=['POST'])
+@jwt_required()
+def update_avatar():
+    """Update user avatar."""
     try:
         user_id = int(get_jwt_identity())
         user = User.query.get(user_id)
-        if user:
-            return jsonify({
-                'authenticated': True,
-                'user': user.to_dict()
-            }), 200
-    except:
-        pass
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        data = request.get_json()
+        avatar = data.get('avatar', '')
+        
+        user.avatar = avatar
+        user.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Avatar updated successfully',
+            'user': user.to_dict()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Update failed: {str(e)}'}), 500
 
-    return jsonify({
-        'authenticated': False
-    }), 200
+@auth_bp.route('/update-profile', methods=['POST'])
+@jwt_required()
+def update_profile():
+    """Update user profile information."""
+    try:
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip().lower()
+        password = data.get('password', '')
+        
+        # Validation
+        if username:
+            if not validate_username(username):
+                return jsonify({'error': 'Username must be at least 3 characters and contain only letters, numbers, and underscores'}), 400
+            
+            # Check if username is already taken by another user
+            existing_user = User.query.filter_by(username=username).first()
+            if existing_user and existing_user.id != user_id:
+                return jsonify({'error': 'Username already taken'}), 400
+            
+            user.username = username
+        
+        if email:
+            if not validate_email(email):
+                return jsonify({'error': 'Invalid email format'}), 400
+            
+            # Check if email is already taken by another user
+            existing_user = User.query.filter_by(email=email).first()
+            if existing_user and existing_user.id != user_id:
+                return jsonify({'error': 'Email already in use'}), 400
+            
+            user.email = email
+        
+        if password:
+            if not validate_password(password):
+                return jsonify({'error': 'Password must be at least 6 characters'}), 400
+            
+            user.set_password(password)
+        
+        # Update timestamp
+        user.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Profile updated successfully',
+            'user': user.to_dict()
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Update failed: {str(e)}'}), 500
+
+@auth_bp.route('/change-password', methods=['POST'])
+@jwt_required()
+def change_password():
+    """Change user password with old password verification."""
+    try:
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+        
+        data = request.get_json()
+        old_password = data.get('old_password', '')
+        new_password = data.get('new_password', '')
+        
+        # Validation
+        if not old_password or not new_password:
+            return jsonify({'error': 'Old password and new password are required'}), 400
+        
+        # Verify old password
+        if not user.check_password(old_password):
+            return jsonify({'error': 'Current password is incorrect'}), 400
+        
+        # Validate new password
+        if not validate_password(new_password):
+            return jsonify({'error': 'New password must be at least 6 characters'}), 400
+        
+        # Check if new password is different from old password
+        if user.check_password(new_password):
+            return jsonify({'error': 'New password must be different from current password'}), 400
+        
+        # Update password
+        user.set_password(new_password)
+        user.updated_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Password changed successfully'
+        }), 200
+        
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Password change failed: {str(e)}'}), 500
 
 # ============================================================================
 # Password Reset Functionality

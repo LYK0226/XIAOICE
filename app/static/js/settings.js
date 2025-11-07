@@ -5,16 +5,18 @@
 // Translation dictionary for settings page
 const settingsTranslations = {
     'zh-TW': {
-        'settings.title': '設定',
-        'settings.avatar': '頭像',
         'settings.personalization': '個人化',
         'settings.advanced': '高級',
-        'settings.avatar.title': '頭像設定',
-        'settings.avatar.description': '自訂您和機器人的頭像',
-        'settings.avatar.your': '您的頭像',
-        'settings.avatar.bot': '機器人頭像',
-        'settings.avatar.upload': '上傳頭像',
-        'settings.avatar.clear': '清除',
+        'settings.profile.title': '個人資料',
+        'settings.profile': '個人資料',
+        'settings.profile.description': '管理您的個人資料和帳戶設定',
+        'settings.profile.avatar': '頭像',
+        'settings.profile.username': '用戶名稱',
+        'settings.profile.email': '電子郵件',
+        'settings.profile.password': '密碼',
+        'settings.profile.save': '保存更改',
+        'settings.profile.clear': '清除',
+        'settings.profile.edit': '編輯',
         'settings.personalization.title': '個人化設定',
         'settings.personalization.description': '自訂您的個人化偏好設定',
         'settings.personalization.theme': '主題模式',
@@ -32,7 +34,6 @@ const settingsTranslations = {
         'settings.advanced.api_key.add': '添加 API 金鑰',
         'alert.confirm': '確定',
         'alert.cancel': '取消',
-        'api_key_modal.title': '添加 API 金鑰',
         'api_key_modal.name_label': '金鑰名稱',
         'api_key_modal.key_label': 'API 金鑰',
         'api_key_modal.hint': '您的 API 金鑰將被加密存儲',
@@ -41,19 +42,37 @@ const settingsTranslations = {
         'api_key.in_use': '使用中',
         'api_key.use': '使用',
         'api_key.no_keys': '尚未添加任何 API 金鑰',
-        'api_key.no_keys_desc': '請添加您的 Google AI API 金鑰以使用聊天功能'
+        'api_key.no_keys_desc': '請添加您的 Google AI API 金鑰以使用聊天功能',
+        'settings.profile.edit_username': '編輯用戶名稱',
+        'settings.profile.edit_email': '編輯電子郵件',
+        'settings.profile.change_password': '變更密碼',
+        'settings.profile.old_password': '舊密碼',
+        'settings.profile.new_password': '新密碼',
+        'settings.profile.confirm_password': '確認新密碼',
+        'settings.profile.save': '保存',
+        'settings.profile.cancel': '取消'
     },
     'en': {
-        'settings.title': 'Settings',
-        'settings.avatar': 'Avatar',
         'settings.personalization': 'Personalization',
         'settings.advanced': 'Advanced',
-        'settings.avatar.title': 'Avatar Settings',
-        'settings.avatar.description': 'Customize your and bot\'s avatars',
-        'settings.avatar.your': 'Your Avatar',
-        'settings.avatar.bot': 'Bot Avatar',
-        'settings.avatar.upload': 'Upload Avatar',
-        'settings.avatar.clear': 'Clear',
+        'settings.profile.title': 'Profile',
+        'settings.profile': 'Profile',
+        'settings.profile.description': 'Manage your profile and account settings',
+        'settings.profile.avatar': 'Avatar',
+        'settings.profile.username': 'Username',
+        'settings.profile.email': 'Email',
+        'settings.profile.password': 'Password',
+        'settings.profile.save': 'Save Changes',
+        'settings.profile.clear': 'Clear',
+        'settings.profile.edit': 'Edit',
+        'settings.profile.edit_username': 'Edit Username',
+        'settings.profile.edit_email': 'Edit Email',
+        'settings.profile.change_password': 'Change Password',
+        'settings.profile.old_password': 'Old Password',
+        'settings.profile.new_password': 'New Password',
+        'settings.profile.confirm_password': 'Confirm New Password',
+        'settings.profile.save': 'Save',
+        'settings.profile.cancel': 'Cancel',
         'settings.personalization.title': 'Personalization Settings',
         'settings.personalization.description': 'Customize your personalization preferences',
         'settings.personalization.theme': 'Theme Mode',
@@ -71,7 +90,6 @@ const settingsTranslations = {
         'settings.advanced.api_key.add': 'Add API Key',
         'alert.confirm': 'OK',
         'alert.cancel': 'Cancel',
-        'api_key_modal.title': 'Add API Key',
         'api_key_modal.name_label': 'Key Name',
         'api_key_modal.key_label': 'API Key',
         'api_key_modal.hint': 'Your API key will be encrypted and stored securely',
@@ -83,16 +101,26 @@ const settingsTranslations = {
         'api_key.no_keys_desc': 'Please add your Google AI API key to use chat features'
     },
     'ja': {
-        'settings.title': '設定',
-        'settings.avatar': 'アバター',
         'settings.personalization': 'パーソナライズ',
         'settings.advanced': '詳細設定',
-        'settings.avatar.title': 'アバター設定',
-        'settings.avatar.description': 'あなたとボットのアバターをカスタマイズ',
-        'settings.avatar.your': 'あなたのアバター',
-        'settings.avatar.bot': 'ボットのアバター',
-        'settings.avatar.upload': 'アバターをアップロード',
-        'settings.avatar.clear': 'クリア',
+        'settings.profile.title': 'プロフィール',
+        'settings.profile': 'プロフィール',
+        'settings.profile.description': 'プロフィールとアカウント設定を管理',
+        'settings.profile.avatar': 'アバター',
+        'settings.profile.username': 'ユーザー名',
+        'settings.profile.email': 'メールアドレス',
+        'settings.profile.password': 'パスワード',
+        'settings.profile.save': '変更を保存',
+        'settings.profile.clear': 'クリア',
+        'settings.profile.edit': '編集',
+        'settings.profile.edit_username': 'ユーザー名を編集',
+        'settings.profile.edit_email': 'メールアドレスを編集',
+        'settings.profile.change_password': 'パスワードを変更',
+        'settings.profile.old_password': '現在のパスワード',
+        'settings.profile.new_password': '新しいパスワード',
+        'settings.profile.confirm_password': '新しいパスワードを確認',
+        'settings.profile.save': '保存',
+        'settings.profile.cancel': 'キャンセル',
         'settings.personalization.title': 'パーソナライズ設定',
         'settings.personalization.description': 'パーソナライズの設定をカスタマイズ',
         'settings.personalization.theme': 'テーマモード',
@@ -110,7 +138,6 @@ const settingsTranslations = {
         'settings.advanced.api_key.add': 'APIキーを追加',
         'alert.confirm': 'OK',
         'alert.cancel': 'キャンセル',
-        'api_key_modal.title': 'APIキーを追加',
         'api_key_modal.name_label': 'キー名',
         'api_key_modal.key_label': 'APIキー',
         'api_key_modal.hint': 'APIキーは暗号化されて安全に保存されます',
@@ -147,23 +174,49 @@ function updateSettingsLanguage(lang) {
     const placeholders = {
         'zh-TW': {
             'apiKeyName': '例如：我的 Google API',
-            'apiKeyValue': '輸入您的 Google AI API 金鑰'
+            'apiKeyValue': '輸入您的 Google AI API 金鑰',
+            'editUsername': '輸入新的用戶名稱',
+            'editEmail': '輸入新的電子郵件地址',
+            'oldPassword': '輸入舊密碼',
+            'newPassword': '輸入新密碼',
+            'confirmPassword': '再次輸入新密碼'
         },
         'en': {
             'apiKeyName': 'e.g., My Google API',
-            'apiKeyValue': 'Enter your Google AI API key'
+            'apiKeyValue': 'Enter your Google AI API key',
+            'editUsername': 'Enter new username',
+            'editEmail': 'Enter new email address',
+            'oldPassword': 'Enter old password',
+            'newPassword': 'Enter new password',
+            'confirmPassword': 'Confirm new password'
         },
         'ja': {
             'apiKeyName': '例: 私の Google API',
-            'apiKeyValue': 'Google AI APIキーを入力してください'
+            'apiKeyValue': 'Google AI APIキーを入力してください',
+            'editUsername': '新しいユーザー名を入力',
+            'editEmail': '新しいメールアドレスを入力',
+            'oldPassword': '現在のパスワードを入力',
+            'newPassword': '新しいパスワードを入力',
+            'confirmPassword': '新しいパスワードを確認'
         }
     };
     
     if (placeholders[lang]) {
         const apiKeyNameInput = document.getElementById('apiKeyName');
         const apiKeyValueInput = document.getElementById('apiKeyValue');
+        const editUsernameInput = document.getElementById('editUsernameInput');
+        const editEmailInput = document.getElementById('editEmailInput');
+        const oldPasswordInput = document.getElementById('oldPasswordInput');
+        const newPasswordInput = document.getElementById('newPasswordInput');
+        const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+        
         if (apiKeyNameInput) apiKeyNameInput.placeholder = placeholders[lang].apiKeyName;
         if (apiKeyValueInput) apiKeyValueInput.placeholder = placeholders[lang].apiKeyValue;
+        if (editUsernameInput) editUsernameInput.placeholder = placeholders[lang].editUsername;
+        if (editEmailInput) editEmailInput.placeholder = placeholders[lang].editEmail;
+        if (oldPasswordInput) oldPasswordInput.placeholder = placeholders[lang].oldPassword;
+        if (newPasswordInput) newPasswordInput.placeholder = placeholders[lang].newPassword;
+        if (confirmPasswordInput) confirmPasswordInput.placeholder = placeholders[lang].confirmPassword;
     }
 }
 
@@ -278,9 +331,7 @@ window.showCustomConfirm = showCustomConfirm;
 // Avatar Modal Functionality
 const avatarModal = document.getElementById('avatarModal');
 const userAvatarInput = document.getElementById('userAvatarInput');
-const botAvatarInput = document.getElementById('botAvatarInput');
 const userAvatarPreview = document.getElementById('userAvatarPreview');
-const botAvatarPreview = document.getElementById('botAvatarPreview');
 
 // Open modal when settings is clicked
 document.getElementById('settings').addEventListener('click', () => {
@@ -314,7 +365,7 @@ window.onclick = function(event) {
     }
 };
 
-// Close avatar settings
+// Close modal with cross button
 document.querySelector('.close-avatar').addEventListener('click', () => {
     avatarModal.style.display = 'none';
 });
@@ -333,28 +384,9 @@ userAvatarInput.addEventListener('change', function(e) {
             
             // Save to localStorage
             localStorage.setItem('userAvatar', userAvatar);
-        };
-        reader.readAsDataURL(file);
-    }
-});
-
-// Handle bot avatar upload
-botAvatarInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            botAvatar = event.target.result;
-            botAvatarPreview.style.backgroundImage = `url(${botAvatar})`;
-            botAvatarPreview.style.backgroundSize = 'cover';
-            botAvatarPreview.style.backgroundPosition = 'center';
-            botAvatarPreview.innerHTML = '';
             
-            // Save to localStorage
-            localStorage.setItem('botAvatar', botAvatar);
-            
-            // Update initial bot message avatar
-            updateInitialBotAvatar();
+            // Save to server
+            saveAvatarToServer(userAvatar);
         };
         reader.readAsDataURL(file);
     }
@@ -366,37 +398,14 @@ document.getElementById('clearUserAvatar').addEventListener('click', () => {
     userAvatarPreview.style.backgroundImage = 'none';
     userAvatarPreview.innerHTML = '<i class="fas fa-user"></i>';
     localStorage.removeItem('userAvatar');
+    
+    // Clear from server
+    saveAvatarToServer(null);
 });
-
-// Clear bot avatar
-document.getElementById('clearBotAvatar').addEventListener('click', () => {
-    botAvatar = null;
-    botAvatarPreview.style.backgroundImage = 'none';
-    botAvatarPreview.innerHTML = '<i class="fas fa-robot"></i>';
-    localStorage.removeItem('botAvatar');
-    updateInitialBotAvatar();
-});
-
-// Update initial bot message avatar
-function updateInitialBotAvatar() {
-    const initialBotAvatar = document.querySelector('.bot-message-container .avatar');
-    if (initialBotAvatar) {
-        if (botAvatar) {
-            initialBotAvatar.style.backgroundImage = `url(${botAvatar})`;
-            initialBotAvatar.style.backgroundSize = 'cover';
-            initialBotAvatar.style.backgroundPosition = 'center';
-            initialBotAvatar.innerHTML = '';
-        } else {
-            initialBotAvatar.style.backgroundImage = 'none';
-            initialBotAvatar.innerHTML = '<i class="fas fa-robot"></i>';
-        }
-    }
-}
 
 // Load saved avatars from localStorage on page load
 window.addEventListener('load', () => {
     const savedUserAvatar = localStorage.getItem('userAvatar');
-    const savedBotAvatar = localStorage.getItem('botAvatar');
     
     if (savedUserAvatar) {
         userAvatar = savedUserAvatar;
@@ -406,15 +415,408 @@ window.addEventListener('load', () => {
         userAvatarPreview.innerHTML = '';
     }
     
-    if (savedBotAvatar) {
-        botAvatar = savedBotAvatar;
-        botAvatarPreview.style.backgroundImage = `url(${botAvatar})`;
-        botAvatarPreview.style.backgroundSize = 'cover';
-        botAvatarPreview.style.backgroundPosition = 'center';
-        botAvatarPreview.innerHTML = '';
-        updateInitialBotAvatar();
+    // Load user profile information
+    loadUserProfile();
+});
+
+// Load user profile information
+async function loadUserProfile() {
+    try {
+        const response = await fetch('/auth/me', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const user = data.user;
+            
+            // Populate form fields
+            document.getElementById('profileUsername').value = user.username || '';
+            document.getElementById('profileEmail').value = user.email || '';
+            
+            // Load user avatar if available
+            if (user.avatar) {
+                userAvatar = user.avatar;
+                userAvatarPreview.style.backgroundImage = `url(${user.avatar})`;
+                userAvatarPreview.style.backgroundSize = 'cover';
+                userAvatarPreview.style.backgroundPosition = 'center';
+                userAvatarPreview.innerHTML = '';
+            }
+        } else {
+            console.error('Failed to load user profile');
+        }
+    } catch (error) {
+        console.error('Error loading user profile:', error);
+    }
+}
+
+// ===== Profile Field Edit Functionality =====
+
+// Edit buttons functionality - now opens modals instead of inline editing
+document.getElementById('editUsernameBtn').addEventListener('click', () => {
+    openEditUsernameModal();
+});
+
+document.getElementById('editEmailBtn').addEventListener('click', () => {
+    openEditEmailModal();
+});
+
+document.getElementById('editPasswordBtn').addEventListener('click', () => {
+    openChangePasswordModal();
+});
+
+// Modal functionality for username
+function openEditUsernameModal() {
+    const modal = document.getElementById('editUsernameModal');
+    const input = document.getElementById('editUsernameInput');
+    
+    // Pre-fill with current value
+    input.value = document.getElementById('profileUsername').value;
+    
+    modal.style.display = 'block';
+    
+    // Update language for the modal
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+    updateSettingsLanguage(langToUse);
+    
+    input.focus();
+}
+
+// Modal functionality for email
+function openEditEmailModal() {
+    const modal = document.getElementById('editEmailModal');
+    const input = document.getElementById('editEmailInput');
+    
+    // Pre-fill with current value
+    input.value = document.getElementById('profileEmail').value;
+    
+    modal.style.display = 'block';
+    
+    // Update language for the modal
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+    updateSettingsLanguage(langToUse);
+    
+    input.focus();
+}
+
+// Modal functionality for password change
+function openChangePasswordModal() {
+    const modal = document.getElementById('changePasswordModal');
+    
+    modal.style.display = 'block';
+    
+    // Update language for the modal
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+    updateSettingsLanguage(langToUse);
+    
+    // Clear all inputs
+    document.getElementById('oldPasswordInput').value = '';
+    document.getElementById('newPasswordInput').value = '';
+    document.getElementById('confirmPasswordInput').value = '';
+    
+    // Focus on old password input
+    document.getElementById('oldPasswordInput').focus();
+}
+
+// Save username from modal
+document.getElementById('saveUsernameBtn').addEventListener('click', async () => {
+    const input = document.getElementById('editUsernameInput');
+    const value = input.value.trim();
+    
+    if (!value) {
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '用戶名稱不能為空',
+            'en': 'Username cannot be empty',
+            'ja': 'ユーザー名は空にできません'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        return;
+    }
+    
+    try {
+        const response = await fetch('/auth/update-profile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({ username: value })
+        });
+        
+        if (response.ok) {
+            // Update the display field
+            document.getElementById('profileUsername').value = value;
+            
+            // Close modal
+            document.getElementById('editUsernameModal').style.display = 'none';
+            
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            const successMessages = {
+                'zh-TW': '用戶名稱已更新',
+                'en': 'Username updated successfully',
+                'ja': 'ユーザー名が正常に更新されました'
+            };
+            showCustomAlert(successMessages[langToUse] || successMessages['en']);
+        } else {
+            const error = await response.json();
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            const errorMessages = {
+                'zh-TW': '更新失敗',
+                'en': 'Update failed',
+                'ja': '更新に失敗しました'
+            };
+            showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
+        }
+    } catch (error) {
+        console.error('Error updating username:', error);
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '更新失敗',
+            'en': 'Update failed',
+            'ja': '更新に失敗しました'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
     }
 });
+
+// Save email from modal
+document.getElementById('saveEmailBtn').addEventListener('click', async () => {
+    const input = document.getElementById('editEmailInput');
+    const value = input.value.trim();
+    
+    if (!value) {
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '電子郵件不能為空',
+            'en': 'Email cannot be empty',
+            'ja': 'メールアドレスは空にできません'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        return;
+    }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '請輸入有效的電子郵件地址',
+            'en': 'Please enter a valid email address',
+            'ja': '有効なメールアドレスを入力してください'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        return;
+    }
+    
+    try {
+        const response = await fetch('/auth/update-profile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({ email: value })
+        });
+        
+        if (response.ok) {
+            // Update the display field
+            document.getElementById('profileEmail').value = value;
+            
+            // Close modal
+            document.getElementById('editEmailModal').style.display = 'none';
+            
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            const successMessages = {
+                'zh-TW': '電子郵件已更新',
+                'en': 'Email updated successfully',
+                'ja': 'メールアドレスが正常に更新されました'
+            };
+            showCustomAlert(successMessages[langToUse] || successMessages['en']);
+        } else {
+            const error = await response.json();
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            const errorMessages = {
+                'zh-TW': '更新失敗',
+                'en': 'Update failed',
+                'ja': '更新に失敗しました'
+            };
+            showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
+        }
+    } catch (error) {
+        console.error('Error updating email:', error);
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '更新失敗',
+            'en': 'Update failed',
+            'ja': '更新に失敗しました'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+    }
+});
+
+// Save password from modal
+document.getElementById('savePasswordBtn').addEventListener('click', async () => {
+    const oldPassword = document.getElementById('oldPasswordInput').value;
+    const newPassword = document.getElementById('newPasswordInput').value;
+    const confirmPassword = document.getElementById('confirmPasswordInput').value;
+    
+    // Validation
+    if (!oldPassword || !newPassword || !confirmPassword) {
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '請填寫所有欄位',
+            'en': 'Please fill in all fields',
+            'ja': 'すべてのフィールドを入力してください'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '新密碼與確認密碼不匹配',
+            'en': 'New passwords do not match',
+            'ja': '新しいパスワードが一致しません'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '新密碼至少需要6個字符',
+            'en': 'New password must be at least 6 characters',
+            'ja': '新しいパスワードは6文字以上である必要があります'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        return;
+    }
+    
+    try {
+        const response = await fetch('/auth/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({ 
+                old_password: oldPassword,
+                new_password: newPassword 
+            })
+        });
+        
+        if (response.ok) {
+            // Close modal
+            document.getElementById('changePasswordModal').style.display = 'none';
+            
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            const successMessages = {
+                'zh-TW': '密碼已成功更改',
+                'en': 'Password changed successfully',
+                'ja': 'パスワードが正常に変更されました'
+            };
+            showCustomAlert(successMessages[langToUse] || successMessages['en']);
+        } else {
+            const error = await response.json();
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            const errorMessages = {
+                'zh-TW': '密碼更改失敗',
+                'en': 'Password change failed',
+                'ja': 'パスワードの変更に失敗しました'
+            };
+            showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
+        }
+    } catch (error) {
+        console.error('Error changing password:', error);
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '密碼更改失敗',
+            'en': 'Password change failed',
+            'ja': 'パスワードの変更に失敗しました'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+    }
+});
+
+// Cancel buttons for modals
+document.getElementById('cancelUsernameBtn').addEventListener('click', () => {
+    document.getElementById('editUsernameModal').style.display = 'none';
+});
+
+document.getElementById('cancelEmailBtn').addEventListener('click', () => {
+    document.getElementById('editEmailModal').style.display = 'none';
+});
+
+document.getElementById('cancelPasswordBtn').addEventListener('click', () => {
+    document.getElementById('changePasswordModal').style.display = 'none';
+});
+
+// Close modals when clicking outside
+window.onclick = function(event) {
+    const avatarModal = document.getElementById('avatarModal');
+    const apiKeyModal = document.getElementById('apiKeyModal');
+    const editUsernameModal = document.getElementById('editUsernameModal');
+    const editEmailModal = document.getElementById('editEmailModal');
+    const changePasswordModal = document.getElementById('changePasswordModal');
+    
+    if (event.target == avatarModal) {
+        avatarModal.style.display = 'none';
+    }
+    if (event.target == apiKeyModal) {
+        apiKeyModal.style.display = 'none';
+        resetApiKeyForm();
+    }
+    if (event.target == editUsernameModal) {
+        editUsernameModal.style.display = 'none';
+    }
+    if (event.target == editEmailModal) {
+        editEmailModal.style.display = 'none';
+    }
+    if (event.target == changePasswordModal) {
+        changePasswordModal.style.display = 'none';
+    }
+};
 
 // Initialize settings functionality when DOM is loaded
 window.addEventListener('DOMContentLoaded', () => {
@@ -851,7 +1253,16 @@ async function deleteApiKey(keyId, name) {
 function resetApiKeyForm() {
     apiKeyNameInput.value = '';
     apiKeyValueInput.value = '';
-    apiKeyValueInput.placeholder = '輸入您的 Google AI API 金鑰';
+    // Update placeholder to current language
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+    const placeholders = {
+        'zh-TW': { 'apiKeyValue': '輸入您的 Google AI API 金鑰' },
+        'en': { 'apiKeyValue': 'Enter your Google AI API key' },
+        'ja': { 'apiKeyValue': 'Google AI APIキーを入力してください' }
+    };
+    apiKeyValueInput.placeholder = placeholders[langToUse]?.apiKeyValue || placeholders['en'].apiKeyValue;
 }
 
 // Make functions global for onclick handlers
@@ -935,3 +1346,23 @@ document.getElementById('aiModelSelect').addEventListener('change', async (event
         showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
     }
 });
+
+// Save avatar to server
+async function saveAvatarToServer(avatarData) {
+    try {
+        const response = await fetch('/auth/update-avatar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({ avatar: avatarData })
+        });
+        
+        if (!response.ok) {
+            console.error('Failed to save avatar to server');
+        }
+    } catch (error) {
+        console.error('Error saving avatar to server:', error);
+    }
+}

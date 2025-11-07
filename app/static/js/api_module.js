@@ -80,7 +80,7 @@ class ChatAPI {
             
             // 返回對應語言的錯誤訊息
             const errorMessages = {
-                'zh-CN': '抱歉，服務暫時無法使用。請稍後再試。',
+                'zh-TW': '抱歉，服務暫時無法使用。請稍後再試。',
                 'zh-TW': '抱歉，服務暫時無法使用。請稍後再試。',
                 'en': 'Sorry, the service is temporarily unavailable. Please try again later.'
             };
