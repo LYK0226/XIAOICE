@@ -2,6 +2,27 @@
 
 ### ⚠️ **重要**：請勿將 ENCRYPTION_KEY 提交到 Git 倉庫！
 
+### .env
+```bash
+# Environment variables for Flask and Google AI Studio
+# Flask
+SECRET_KEY="your_very_secret_key_here"
+FLASK_APP="run.py"
+FLASK_ENV="development"
+
+# Encryption key for API keys (generate a secure random key)
+# DO NOT COMMIT: Replace "your_32_byte_encryption_key_here" with your actual Fernet key
+ENCRYPTION_KEY="your_32_byte_encryption_key_here"
+
+```
+# API 設定
+
+### 取得您的加密金鑰 (填入 .env -> ENCRYPTION_KEY="your_32_byte_encryption_key_here")
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
+設定 -> 高級 ->填入你的 API Key
+
+
 ### 安裝依賴並啟動應用
 
 ```bash

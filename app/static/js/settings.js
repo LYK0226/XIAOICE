@@ -1,30 +1,374 @@
 // Settings functionality - separated from chatbox.js
 
+// ===== Translation System for Settings =====
+
+// Translation dictionary for settings page
+const settingsTranslations = {
+    'zh-TW': {
+        'settings.personalization': '個人化',
+        'settings.advanced': '高級',
+        'settings.profile.title': '個人資料',
+        'settings.profile': '個人資料',
+        'settings.profile.description': '管理您的個人資料和帳戶設定',
+        'settings.profile.avatar': '頭像',
+        'settings.profile.username': '用戶名稱',
+        'settings.profile.email': '電子郵件',
+        'settings.profile.password': '密碼',
+        'settings.profile.save': '保存更改',
+        'settings.profile.clear': '清除',
+        'settings.profile.edit': '編輯',
+        'settings.personalization.title': '個人化設定',
+        'settings.personalization.description': '自訂您的個人化偏好設定',
+        'settings.personalization.theme': '主題模式',
+        'settings.personalization.theme.light': '淺色',
+        'settings.personalization.theme.dark': '深色',
+        'settings.personalization.theme.auto': '自動',
+        'settings.personalization.language': '界面語言',
+        'settings.advanced.title': 'API 金鑰管理',
+        'settings.advanced.description': '管理您的 Google AI API 金鑰',
+        'settings.advanced.model': 'AI 模型選擇',
+        'settings.advanced.model.flash': 'Gemini 2.5 Flash (推薦)',
+        'settings.advanced.model.pro': 'Gemini 2.5 Pro (高品質)',
+        'settings.advanced.api_key': 'API 金鑰',
+        'settings.advanced.api_key.description': '您可以添加多個 API 金鑰以分散使用量',
+        'settings.advanced.api_key.add': '添加 API 金鑰',
+        'alert.confirm': '確定',
+        'alert.cancel': '取消',
+        'api_key_modal.name_label': '金鑰名稱',
+        'api_key_modal.key_label': 'API 金鑰',
+        'api_key_modal.hint': '您的 API 金鑰將被加密存儲',
+        'api_key_modal.save': '保存',
+        'api_key_modal.cancel': '取消',
+        'api_key.in_use': '使用中',
+        'api_key.use': '使用',
+        'api_key.no_keys': '尚未添加任何 API 金鑰',
+        'api_key.no_keys_desc': '請添加您的 Google AI API 金鑰以使用聊天功能',
+        'settings.profile.edit_username': '編輯用戶名稱',
+        'settings.profile.edit_email': '編輯電子郵件',
+        'settings.profile.change_password': '變更密碼',
+        'settings.profile.old_password': '舊密碼',
+        'settings.profile.new_password': '新密碼',
+        'settings.profile.confirm_password': '確認新密碼',
+        'settings.profile.save': '保存',
+        'settings.profile.cancel': '取消'
+    },
+    'en': {
+        'settings.personalization': 'Personalization',
+        'settings.advanced': 'Advanced',
+        'settings.profile.title': 'Profile',
+        'settings.profile': 'Profile',
+        'settings.profile.description': 'Manage your profile and account settings',
+        'settings.profile.avatar': 'Avatar',
+        'settings.profile.username': 'Username',
+        'settings.profile.email': 'Email',
+        'settings.profile.password': 'Password',
+        'settings.profile.save': 'Save Changes',
+        'settings.profile.clear': 'Clear',
+        'settings.profile.edit': 'Edit',
+        'settings.profile.edit_username': 'Edit Username',
+        'settings.profile.edit_email': 'Edit Email',
+        'settings.profile.change_password': 'Change Password',
+        'settings.profile.old_password': 'Old Password',
+        'settings.profile.new_password': 'New Password',
+        'settings.profile.confirm_password': 'Confirm New Password',
+        'settings.profile.save': 'Save',
+        'settings.profile.cancel': 'Cancel',
+        'settings.personalization.title': 'Personalization Settings',
+        'settings.personalization.description': 'Customize your personalization preferences',
+        'settings.personalization.theme': 'Theme Mode',
+        'settings.personalization.theme.light': 'Light',
+        'settings.personalization.theme.dark': 'Dark',
+        'settings.personalization.theme.auto': 'Auto',
+        'settings.personalization.language': 'Interface Language',
+        'settings.advanced.title': 'API Key Management',
+        'settings.advanced.description': 'Manage your Google AI API keys',
+        'settings.advanced.model': 'AI Model Selection',
+        'settings.advanced.model.flash': 'Gemini 2.5 Flash (Recommended)',
+        'settings.advanced.model.pro': 'Gemini 2.5 Pro (High Quality)',
+        'settings.advanced.api_key': 'API Key',
+        'settings.advanced.api_key.description': 'You can add multiple API keys to distribute usage',
+        'settings.advanced.api_key.add': 'Add API Key',
+        'alert.confirm': 'OK',
+        'alert.cancel': 'Cancel',
+        'api_key_modal.name_label': 'Key Name',
+        'api_key_modal.key_label': 'API Key',
+        'api_key_modal.hint': 'Your API key will be encrypted and stored securely',
+        'api_key_modal.save': 'Save',
+        'api_key_modal.cancel': 'Cancel',
+        'api_key.in_use': 'In Use',
+        'api_key.use': 'Use',
+        'api_key.no_keys': 'No API keys added yet',
+        'api_key.no_keys_desc': 'Please add your Google AI API key to use chat features'
+    },
+    'ja': {
+        'settings.personalization': 'パーソナライズ',
+        'settings.advanced': '詳細設定',
+        'settings.profile.title': 'プロフィール',
+        'settings.profile': 'プロフィール',
+        'settings.profile.description': 'プロフィールとアカウント設定を管理',
+        'settings.profile.avatar': 'アバター',
+        'settings.profile.username': 'ユーザー名',
+        'settings.profile.email': 'メールアドレス',
+        'settings.profile.password': 'パスワード',
+        'settings.profile.save': '変更を保存',
+        'settings.profile.clear': 'クリア',
+        'settings.profile.edit': '編集',
+        'settings.profile.edit_username': 'ユーザー名を編集',
+        'settings.profile.edit_email': 'メールアドレスを編集',
+        'settings.profile.change_password': 'パスワードを変更',
+        'settings.profile.old_password': '現在のパスワード',
+        'settings.profile.new_password': '新しいパスワード',
+        'settings.profile.confirm_password': '新しいパスワードを確認',
+        'settings.profile.save': '保存',
+        'settings.profile.cancel': 'キャンセル',
+        'settings.personalization.title': 'パーソナライズ設定',
+        'settings.personalization.description': 'パーソナライズの設定をカスタマイズ',
+        'settings.personalization.theme': 'テーマモード',
+        'settings.personalization.theme.light': 'ライト',
+        'settings.personalization.theme.dark': 'ダーク',
+        'settings.personalization.theme.auto': '自動',
+        'settings.personalization.language': 'インターフェース言語',
+        'settings.advanced.title': 'APIキー管理',
+        'settings.advanced.description': 'Google AI APIキーを管理',
+        'settings.advanced.model': 'AIモデル選択',
+        'settings.advanced.model.flash': 'Gemini 2.5 Flash (推奨)',
+        'settings.advanced.model.pro': 'Gemini 2.5 Pro (高品質)',
+        'settings.advanced.api_key': 'APIキー',
+        'settings.advanced.api_key.description': '使用量を分散するために複数のAPIキーを追加できます',
+        'settings.advanced.api_key.add': 'APIキーを追加',
+        'alert.confirm': 'OK',
+        'alert.cancel': 'キャンセル',
+        'api_key_modal.name_label': 'キー名',
+        'api_key_modal.key_label': 'APIキー',
+        'api_key_modal.hint': 'APIキーは暗号化されて安全に保存されます',
+        'api_key_modal.save': '保存',
+        'api_key_modal.cancel': 'キャンセル',
+        'api_key.in_use': '使用中',
+        'api_key.use': '使用',
+        'api_key.no_keys': 'まだAPIキーが追加されていません',
+        'api_key.no_keys_desc': 'チャット機能を使用するにはGoogle AI APIキーを追加してください'
+    }
+};
+
+// Function to update settings page language
+function updateSettingsLanguage(lang) {
+    const translations = settingsTranslations[lang] || settingsTranslations['en'];
+    
+    // Update all elements with data-i18n attributes
+    document.querySelectorAll('[data-i18n]').forEach(element => {
+        const key = element.getAttribute('data-i18n');
+        if (translations[key]) {
+            element.textContent = translations[key];
+        }
+    });
+    
+    // Update select options
+    document.querySelectorAll('option[data-i18n]').forEach(option => {
+        const key = option.getAttribute('data-i18n');
+        if (translations[key]) {
+            option.textContent = translations[key];
+        }
+    });
+    
+    // Update placeholders
+    const placeholders = {
+        'zh-TW': {
+            'apiKeyName': '例如：我的 Google API',
+            'apiKeyValue': '輸入您的 Google AI API 金鑰',
+            'editUsername': '輸入新的用戶名稱',
+            'editEmail': '輸入新的電子郵件地址',
+            'oldPassword': '輸入舊密碼',
+            'newPassword': '輸入新密碼',
+            'confirmPassword': '再次輸入新密碼'
+        },
+        'en': {
+            'apiKeyName': 'e.g., My Google API',
+            'apiKeyValue': 'Enter your Google AI API key',
+            'editUsername': 'Enter new username',
+            'editEmail': 'Enter new email address',
+            'oldPassword': 'Enter old password',
+            'newPassword': 'Enter new password',
+            'confirmPassword': 'Confirm new password'
+        },
+        'ja': {
+            'apiKeyName': '例: 私の Google API',
+            'apiKeyValue': 'Google AI APIキーを入力してください',
+            'editUsername': '新しいユーザー名を入力',
+            'editEmail': '新しいメールアドレスを入力',
+            'oldPassword': '現在のパスワードを入力',
+            'newPassword': '新しいパスワードを入力',
+            'confirmPassword': '新しいパスワードを確認'
+        }
+    };
+    
+    if (placeholders[lang]) {
+        const apiKeyNameInput = document.getElementById('apiKeyName');
+        const apiKeyValueInput = document.getElementById('apiKeyValue');
+        const editUsernameInput = document.getElementById('editUsernameInput');
+        const editEmailInput = document.getElementById('editEmailInput');
+        const oldPasswordInput = document.getElementById('oldPasswordInput');
+        const newPasswordInput = document.getElementById('newPasswordInput');
+        const confirmPasswordInput = document.getElementById('confirmPasswordInput');
+        
+        if (apiKeyNameInput) apiKeyNameInput.placeholder = placeholders[lang].apiKeyName;
+        if (apiKeyValueInput) apiKeyValueInput.placeholder = placeholders[lang].apiKeyValue;
+        if (editUsernameInput) editUsernameInput.placeholder = placeholders[lang].editUsername;
+        if (editEmailInput) editEmailInput.placeholder = placeholders[lang].editEmail;
+        if (oldPasswordInput) oldPasswordInput.placeholder = placeholders[lang].oldPassword;
+        if (newPasswordInput) newPasswordInput.placeholder = placeholders[lang].newPassword;
+        if (confirmPasswordInput) confirmPasswordInput.placeholder = placeholders[lang].confirmPassword;
+    }
+}
+
+// ===== Custom Modal Functions =====
+
+// Custom alert function using modal instead of browser alert
+function showCustomAlert(message) {
+    const modal = document.getElementById('customAlertModal');
+    const messageElement = document.getElementById('customAlertMessage');
+    const closeBtn = document.getElementById('customAlertCloseBtn');
+    
+    if (modal && messageElement && closeBtn) {
+        messageElement.textContent = message;
+        modal.style.display = 'block';
+        
+        // Update language for the modal
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        updateSettingsLanguage(langToUse);
+        
+        // Close modal when close button is clicked
+        const closeHandler = () => {
+            modal.style.display = 'none';
+            closeBtn.removeEventListener('click', closeHandler);
+        };
+        closeBtn.addEventListener('click', closeHandler);
+        
+        // Close modal when clicking outside
+        const outsideClickHandler = (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+                window.removeEventListener('click', outsideClickHandler);
+            }
+        };
+        window.addEventListener('click', outsideClickHandler);
+    } else {
+        // Fallback to browser alert
+        alert(message);
+    }
+}
+
+// Custom confirm function using modal instead of browser confirm
+function showCustomConfirm(message, callback) {
+    const modal = document.getElementById('customConfirmModal');
+    const messageElement = document.getElementById('customConfirmMessage');
+    const okBtn = document.getElementById('customConfirmOkBtn');
+    const cancelBtn = document.getElementById('customConfirmCancelBtn');
+    
+    if (modal && messageElement && okBtn && cancelBtn) {
+        messageElement.textContent = message;
+        modal.style.display = 'block';
+        
+        // Update language for the modal
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        updateSettingsLanguage(langToUse);
+        
+        // Handle OK button
+        const okHandler = () => {
+            modal.style.display = 'none';
+            okBtn.removeEventListener('click', okHandler);
+            cancelBtn.removeEventListener('click', cancelHandler);
+            window.removeEventListener('click', outsideClickHandler);
+            if (typeof callback === 'function') {
+                callback(true);
+            }
+        };
+        okBtn.addEventListener('click', okHandler);
+        
+        // Handle Cancel button
+        const cancelHandler = () => {
+            modal.style.display = 'none';
+            okBtn.removeEventListener('click', okHandler);
+            cancelBtn.removeEventListener('click', cancelHandler);
+            window.removeEventListener('click', outsideClickHandler);
+            if (typeof callback === 'function') {
+                callback(false);
+            }
+        };
+        cancelBtn.addEventListener('click', cancelHandler);
+        
+        // Close modal when clicking outside (treat as cancel)
+        const outsideClickHandler = (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+                okBtn.removeEventListener('click', okHandler);
+                cancelBtn.removeEventListener('click', cancelHandler);
+                window.removeEventListener('click', outsideClickHandler);
+                if (typeof callback === 'function') {
+                    callback(false);
+                }
+            }
+        };
+        window.addEventListener('click', outsideClickHandler);
+    } else {
+        // Fallback to browser confirm
+        const result = confirm(message);
+        if (typeof callback === 'function') {
+            callback(result);
+        }
+    }
+}
+
+// Make functions global
+window.showCustomAlert = showCustomAlert;
+window.showCustomConfirm = showCustomConfirm;
+
 // ===== Avatar Settings =====
 
 // Avatar Modal Functionality
 const avatarModal = document.getElementById('avatarModal');
-const closeModal = document.querySelector('.close');
 const userAvatarInput = document.getElementById('userAvatarInput');
-const botAvatarInput = document.getElementById('botAvatarInput');
 const userAvatarPreview = document.getElementById('userAvatarPreview');
-const botAvatarPreview = document.getElementById('botAvatarPreview');
 
 // Open modal when settings is clicked
 document.getElementById('settings').addEventListener('click', () => {
     avatarModal.style.display = 'block';
+    
+    // Update settings language to current interface language
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    // If current language is not supported, default to English
+    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+    updateSettingsLanguage(langToUse);
+    
+    // Update theme buttons to reflect current theme after modal is shown
+    setTimeout(() => {
+        const currentTheme = localStorage.getItem('themeMode') || 'light';
+        const themeBtns = document.querySelectorAll('.theme-btn');
+        themeBtns.forEach(btn => {
+            if (btn.getAttribute('data-theme') === currentTheme) {
+                btn.classList.add('active');
+            } else {
+                btn.classList.remove('active');
+            }
+        });
+    }, 100);
 });
 
 // Close modal
-closeModal.onclick = function() {
-    avatarModal.style.display = 'none';
-};
-
 window.onclick = function(event) {
     if (event.target == avatarModal) {
         avatarModal.style.display = 'none';
     }
 };
+
+// Close modal with cross button
+document.querySelector('.close-avatar').addEventListener('click', () => {
+    avatarModal.style.display = 'none';
+});
 
 // Handle user avatar upload
 userAvatarInput.addEventListener('change', function(e) {
@@ -40,28 +384,9 @@ userAvatarInput.addEventListener('change', function(e) {
             
             // Save to localStorage
             localStorage.setItem('userAvatar', userAvatar);
-        };
-        reader.readAsDataURL(file);
-    }
-});
-
-// Handle bot avatar upload
-botAvatarInput.addEventListener('change', function(e) {
-    const file = e.target.files[0];
-    if (file) {
-        const reader = new FileReader();
-        reader.onload = function(event) {
-            botAvatar = event.target.result;
-            botAvatarPreview.style.backgroundImage = `url(${botAvatar})`;
-            botAvatarPreview.style.backgroundSize = 'cover';
-            botAvatarPreview.style.backgroundPosition = 'center';
-            botAvatarPreview.innerHTML = '';
             
-            // Save to localStorage
-            localStorage.setItem('botAvatar', botAvatar);
-            
-            // Update initial bot message avatar
-            updateInitialBotAvatar();
+            // Save to server
+            saveAvatarToServer(userAvatar);
         };
         reader.readAsDataURL(file);
     }
@@ -73,37 +398,14 @@ document.getElementById('clearUserAvatar').addEventListener('click', () => {
     userAvatarPreview.style.backgroundImage = 'none';
     userAvatarPreview.innerHTML = '<i class="fas fa-user"></i>';
     localStorage.removeItem('userAvatar');
+    
+    // Clear from server
+    saveAvatarToServer(null);
 });
-
-// Clear bot avatar
-document.getElementById('clearBotAvatar').addEventListener('click', () => {
-    botAvatar = null;
-    botAvatarPreview.style.backgroundImage = 'none';
-    botAvatarPreview.innerHTML = '<i class="fas fa-robot"></i>';
-    localStorage.removeItem('botAvatar');
-    updateInitialBotAvatar();
-});
-
-// Update initial bot message avatar
-function updateInitialBotAvatar() {
-    const initialBotAvatar = document.querySelector('.bot-message-container .avatar');
-    if (initialBotAvatar) {
-        if (botAvatar) {
-            initialBotAvatar.style.backgroundImage = `url(${botAvatar})`;
-            initialBotAvatar.style.backgroundSize = 'cover';
-            initialBotAvatar.style.backgroundPosition = 'center';
-            initialBotAvatar.innerHTML = '';
-        } else {
-            initialBotAvatar.style.backgroundImage = 'none';
-            initialBotAvatar.innerHTML = '<i class="fas fa-robot"></i>';
-        }
-    }
-}
 
 // Load saved avatars from localStorage on page load
 window.addEventListener('load', () => {
     const savedUserAvatar = localStorage.getItem('userAvatar');
-    const savedBotAvatar = localStorage.getItem('botAvatar');
     
     if (savedUserAvatar) {
         userAvatar = savedUserAvatar;
@@ -113,32 +415,419 @@ window.addEventListener('load', () => {
         userAvatarPreview.innerHTML = '';
     }
     
-    if (savedBotAvatar) {
-        botAvatar = savedBotAvatar;
-        botAvatarPreview.style.backgroundImage = `url(${botAvatar})`;
-        botAvatarPreview.style.backgroundSize = 'cover';
-        botAvatarPreview.style.backgroundPosition = 'center';
-        botAvatarPreview.innerHTML = '';
-        updateInitialBotAvatar();
+    // Load user profile information
+    loadUserProfile();
+    
+    // Load user profile settings
+    loadUserProfileSettings();
+});
+
+// Load user profile information
+async function loadUserProfile() {
+    try {
+        const response = await fetch('/auth/me', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const user = data.user;
+            
+            // Populate form fields
+            document.getElementById('profileUsername').value = user.username || '';
+            document.getElementById('profileEmail').value = user.email || '';
+            
+            // Load user avatar if available
+            if (user.avatar) {
+                userAvatar = user.avatar;
+                userAvatarPreview.style.backgroundImage = `url(${user.avatar})`;
+                userAvatarPreview.style.backgroundSize = 'cover';
+                userAvatarPreview.style.backgroundPosition = 'center';
+                userAvatarPreview.innerHTML = '';
+            }
+        } else {
+            console.error('Failed to load user profile');
+        }
+    } catch (error) {
+        console.error('Error loading user profile:', error);
+    }
+}
+
+// ===== Profile Field Edit Functionality =====
+
+// Edit buttons functionality - now opens modals instead of inline editing
+document.getElementById('editUsernameBtn').addEventListener('click', () => {
+    openEditUsernameModal();
+});
+
+document.getElementById('editEmailBtn').addEventListener('click', () => {
+    openEditEmailModal();
+});
+
+document.getElementById('editPasswordBtn').addEventListener('click', () => {
+    openChangePasswordModal();
+});
+
+// Modal functionality for username
+function openEditUsernameModal() {
+    const modal = document.getElementById('editUsernameModal');
+    const input = document.getElementById('editUsernameInput');
+    
+    // Pre-fill with current value
+    input.value = document.getElementById('profileUsername').value;
+    
+    modal.style.display = 'block';
+    
+    // Update language for the modal
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+    updateSettingsLanguage(langToUse);
+    
+    input.focus();
+}
+
+// Modal functionality for email
+function openEditEmailModal() {
+    const modal = document.getElementById('editEmailModal');
+    const input = document.getElementById('editEmailInput');
+    
+    // Pre-fill with current value
+    input.value = document.getElementById('profileEmail').value;
+    
+    modal.style.display = 'block';
+    
+    // Update language for the modal
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+    updateSettingsLanguage(langToUse);
+    
+    input.focus();
+}
+
+// Modal functionality for password change
+function openChangePasswordModal() {
+    const modal = document.getElementById('changePasswordModal');
+    
+    modal.style.display = 'block';
+    
+    // Update language for the modal
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+    updateSettingsLanguage(langToUse);
+    
+    // Clear all inputs
+    document.getElementById('oldPasswordInput').value = '';
+    document.getElementById('newPasswordInput').value = '';
+    document.getElementById('confirmPasswordInput').value = '';
+    
+    // Focus on old password input
+    document.getElementById('oldPasswordInput').focus();
+}
+
+// Save username from modal
+document.getElementById('saveUsernameBtn').addEventListener('click', async () => {
+    const input = document.getElementById('editUsernameInput');
+    const value = input.value.trim();
+    
+    if (!value) {
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '用戶名稱不能為空',
+            'en': 'Username cannot be empty',
+            'ja': 'ユーザー名は空にできません'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        return;
+    }
+    
+    try {
+        const response = await fetch('/auth/update-profile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({ username: value })
+        });
+        
+        if (response.ok) {
+            // Update the display field
+            document.getElementById('profileUsername').value = value;
+            
+            // Close modal
+            document.getElementById('editUsernameModal').style.display = 'none';
+            
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            const successMessages = {
+                'zh-TW': '用戶名稱已更新',
+                'en': 'Username updated successfully',
+                'ja': 'ユーザー名が正常に更新されました'
+            };
+            showCustomAlert(successMessages[langToUse] || successMessages['en']);
+        } else {
+            const error = await response.json();
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            const errorMessages = {
+                'zh-TW': '更新失敗',
+                'en': 'Update failed',
+                'ja': '更新に失敗しました'
+            };
+            showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
+        }
+    } catch (error) {
+        console.error('Error updating username:', error);
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '更新失敗',
+            'en': 'Update failed',
+            'ja': '更新に失敗しました'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
     }
 });
 
-// ===== Background Customization Settings =====
+// Save email from modal
+document.getElementById('saveEmailBtn').addEventListener('click', async () => {
+    const input = document.getElementById('editEmailInput');
+    const value = input.value.trim();
+    
+    if (!value) {
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '電子郵件不能為空',
+            'en': 'Email cannot be empty',
+            'ja': 'メールアドレスは空にできません'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        return;
+    }
+    
+    // Email validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(value)) {
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '請輸入有效的電子郵件地址',
+            'en': 'Please enter a valid email address',
+            'ja': '有効なメールアドレスを入力してください'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        return;
+    }
+    
+    try {
+        const response = await fetch('/auth/update-profile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({ email: value })
+        });
+        
+        if (response.ok) {
+            // Update the display field
+            document.getElementById('profileEmail').value = value;
+            
+            // Close modal
+            document.getElementById('editEmailModal').style.display = 'none';
+            
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            const successMessages = {
+                'zh-TW': '電子郵件已更新',
+                'en': 'Email updated successfully',
+                'ja': 'メールアドレスが正常に更新されました'
+            };
+            showCustomAlert(successMessages[langToUse] || successMessages['en']);
+        } else {
+            const error = await response.json();
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            const errorMessages = {
+                'zh-TW': '更新失敗',
+                'en': 'Update failed',
+                'ja': '更新に失敗しました'
+            };
+            showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
+        }
+    } catch (error) {
+        console.error('Error updating email:', error);
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '更新失敗',
+            'en': 'Update failed',
+            'ja': '更新に失敗しました'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+    }
+});
+
+// Save password from modal
+document.getElementById('savePasswordBtn').addEventListener('click', async () => {
+    const oldPassword = document.getElementById('oldPasswordInput').value;
+    const newPassword = document.getElementById('newPasswordInput').value;
+    const confirmPassword = document.getElementById('confirmPasswordInput').value;
+    
+    // Validation
+    if (!oldPassword || !newPassword || !confirmPassword) {
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '請填寫所有欄位',
+            'en': 'Please fill in all fields',
+            'ja': 'すべてのフィールドを入力してください'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        return;
+    }
+    
+    if (newPassword !== confirmPassword) {
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '新密碼與確認密碼不匹配',
+            'en': 'New passwords do not match',
+            'ja': '新しいパスワードが一致しません'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        return;
+    }
+    
+    if (newPassword.length < 6) {
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '新密碼至少需要6個字符',
+            'en': 'New password must be at least 6 characters',
+            'ja': '新しいパスワードは6文字以上である必要があります'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        return;
+    }
+    
+    try {
+        const response = await fetch('/auth/change-password', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({ 
+                old_password: oldPassword,
+                new_password: newPassword 
+            })
+        });
+        
+        if (response.ok) {
+            // Close modal
+            document.getElementById('changePasswordModal').style.display = 'none';
+            
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            const successMessages = {
+                'zh-TW': '密碼已成功更改',
+                'en': 'Password changed successfully',
+                'ja': 'パスワードが正常に変更されました'
+            };
+            showCustomAlert(successMessages[langToUse] || successMessages['en']);
+        } else {
+            const error = await response.json();
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            const errorMessages = {
+                'zh-TW': '密碼更改失敗',
+                'en': 'Password change failed',
+                'ja': 'パスワードの変更に失敗しました'
+            };
+            showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
+        }
+    } catch (error) {
+        console.error('Error changing password:', error);
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const errorMessages = {
+            'zh-TW': '密碼更改失敗',
+            'en': 'Password change failed',
+            'ja': 'パスワードの変更に失敗しました'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+    }
+});
+
+// Cancel buttons for modals
+document.getElementById('cancelUsernameBtn').addEventListener('click', () => {
+    document.getElementById('editUsernameModal').style.display = 'none';
+});
+
+document.getElementById('cancelEmailBtn').addEventListener('click', () => {
+    document.getElementById('editEmailModal').style.display = 'none';
+});
+
+document.getElementById('cancelPasswordBtn').addEventListener('click', () => {
+    document.getElementById('changePasswordModal').style.display = 'none';
+});
+
+// Close modals when clicking outside
+window.onclick = function(event) {
+    const avatarModal = document.getElementById('avatarModal');
+    const apiKeyModal = document.getElementById('apiKeyModal');
+    const editUsernameModal = document.getElementById('editUsernameModal');
+    const editEmailModal = document.getElementById('editEmailModal');
+    const changePasswordModal = document.getElementById('changePasswordModal');
+    
+    if (event.target == avatarModal) {
+        avatarModal.style.display = 'none';
+    }
+    if (event.target == apiKeyModal) {
+        apiKeyModal.style.display = 'none';
+        resetApiKeyForm();
+    }
+    if (event.target == editUsernameModal) {
+        editUsernameModal.style.display = 'none';
+    }
+    if (event.target == editEmailModal) {
+        editEmailModal.style.display = 'none';
+    }
+    if (event.target == changePasswordModal) {
+        changePasswordModal.style.display = 'none';
+    }
+};
 
 // Initialize settings functionality when DOM is loaded
 window.addEventListener('DOMContentLoaded', () => {
     const settingsGroups = document.querySelectorAll('.settings-group');
     const settingsContents = document.querySelectorAll('.settings-content');
-    const bgTypeBtns = document.querySelectorAll('.bg-type-btn');
-    const bgOptions = document.querySelectorAll('.bg-option');
-    const gradientItems = document.querySelectorAll('.gradient-item');
-    const colorItems = document.querySelectorAll('.color-item');
-    const bgImageInput = document.getElementById('bgImageInput');
-    const bgImagePreview = document.getElementById('bgImagePreview');
-    const applyCustomGradient = document.getElementById('applyCustomGradient');
-    const applyCustomColor = document.getElementById('applyCustomColor');
-    const clearBgImage = document.getElementById('clearBgImage');
-    const resetBackground = document.getElementById('resetBackground');
+
+    // Initialize theme
+    initializeTheme();
 
     // Switch between settings groups (new sidebar navigation)
     settingsGroups.forEach(group => {
@@ -158,215 +847,78 @@ window.addEventListener('DOMContentLoaded', () => {
             });
         });
     });
-
-    // Switch between background types
-    bgTypeBtns.forEach(btn => {
-        btn.addEventListener('click', () => {
-            const bgType = btn.getAttribute('data-type');
-            
-            // Update active button
-            bgTypeBtns.forEach(b => b.classList.remove('active'));
-            btn.classList.add('active');
-            
-            // Show corresponding options
-            bgOptions.forEach(option => {
-                option.classList.remove('active');
-                if (option.id === bgType + 'Options') {
-                    option.classList.add('active');
-                }
-            });
-        });
-    });
-
-    // Apply gradient presets
-    gradientItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const gradient = item.getAttribute('data-gradient');
-            
-            // Update active state
-            gradientItems.forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-            
-            // Apply gradient
-            document.body.style.background = gradient;
-            
-            // Save to localStorage
-            localStorage.setItem('bgType', 'gradient');
-            localStorage.setItem('bgValue', gradient);
-        });
-    });
-
-    // Apply custom gradient
-    applyCustomGradient.addEventListener('click', () => {
-        const color1 = document.getElementById('gradientColor1').value;
-        const color2 = document.getElementById('gradientColor2').value;
-        const gradient = `linear-gradient(135deg, ${color1} 0%, ${color2} 100%)`;
-        
-        document.body.style.background = gradient;
-        
-        // Save to localStorage
-        localStorage.setItem('bgType', 'gradient');
-        localStorage.setItem('bgValue', gradient);
-        
-        // Show confirmation
-        alert('自定义渐变已应用！/ Custom gradient applied!');
-    });
-
-    // Apply solid color presets
-    colorItems.forEach(item => {
-        item.addEventListener('click', () => {
-            const color = item.getAttribute('data-color');
-            
-            // Update active state
-            colorItems.forEach(i => i.classList.remove('active'));
-            item.classList.add('active');
-            
-            // Apply color
-            document.body.style.background = color;
-            
-            // Save to localStorage
-            localStorage.setItem('bgType', 'solid');
-            localStorage.setItem('bgValue', color);
-        });
-    });
-
-    // Apply custom solid color
-    applyCustomColor.addEventListener('click', () => {
-        const color = document.getElementById('customSolidColor').value;
-        
-        document.body.style.background = color;
-        
-        // Save to localStorage
-        localStorage.setItem('bgType', 'solid');
-        localStorage.setItem('bgValue', color);
-        
-        alert('自定义颜色已应用！/ Custom color applied!');
-    });
-
-    // Upload background image
-    bgImageInput.addEventListener('change', function(e) {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = function(event) {
-                const imageData = event.target.result;
-                
-                // Update preview
-                bgImagePreview.style.backgroundImage = `url(${imageData})`;
-                bgImagePreview.classList.add('has-image');
-                bgImagePreview.innerHTML = '';
-                
-                // Apply to body
-                document.body.style.background = `url(${imageData}) center/cover no-repeat`;
-                
-                // Save to localStorage
-                localStorage.setItem('bgType', 'image');
-                localStorage.setItem('bgValue', imageData);
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
-    // Click preview to upload
-    bgImagePreview.addEventListener('click', () => {
-        bgImageInput.click();
-    });
-
-    // Clear background image
-    clearBgImage.addEventListener('click', () => {
-        bgImagePreview.style.backgroundImage = '';
-        bgImagePreview.classList.remove('has-image');
-        bgImagePreview.innerHTML = '<i class="fas fa-image"></i><p>点击上传图片 / Click to Upload</p>';
-        
-        // Reset to default gradient
-        const defaultGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-        document.body.style.background = defaultGradient;
-        
-        // Save to localStorage
-        localStorage.setItem('bgType', 'gradient');
-        localStorage.setItem('bgValue', defaultGradient);
-    });
-
-    // Reset to default background
-    resetBackground.addEventListener('click', () => {
-        const defaultGradient = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
-        document.body.style.background = defaultGradient;
-        
-        // Clear localStorage
-        localStorage.removeItem('bgType');
-        localStorage.removeItem('bgValue');
-        
-        // Reset all active states
-        gradientItems.forEach((item, index) => {
-            item.classList.remove('active');
-            if (index === 0) item.classList.add('active');
-        });
-        colorItems.forEach(item => item.classList.remove('active'));
-        
-        // Reset preview
-        bgImagePreview.style.backgroundImage = '';
-        bgImagePreview.classList.remove('has-image');
-        bgImagePreview.innerHTML = '<i class="fas fa-image"></i><p>点击上传图片 / Click to Upload</p>';
-        
-        alert('已恢复默认背景！/ Default background restored!');
-    });
-
-    // Load saved background
-    const savedBgType = localStorage.getItem('bgType');
-    const savedBgValue = localStorage.getItem('bgValue');
-    
-    if (savedBgType && savedBgValue) {
-        if (savedBgType === 'image') {
-            document.body.style.background = `url(${savedBgValue}) center/cover no-repeat`;
-            bgImagePreview.style.backgroundImage = `url(${savedBgValue})`;
-            bgImagePreview.classList.add('has-image');
-            bgImagePreview.innerHTML = '';
-        } else {
-            document.body.style.background = savedBgValue;
-        }
-    }
-    
-    // 滚动进度指示器
-    const backgroundTab = document.getElementById('backgroundTab');
-    const scrollProgress = document.getElementById('scrollProgress');
-    
-    if (backgroundTab && scrollProgress) {
-        backgroundTab.addEventListener('scroll', () => {
-            const scrollTop = backgroundTab.scrollTop;
-            const scrollHeight = backgroundTab.scrollHeight - backgroundTab.clientHeight;
-            const scrollPercentage = (scrollTop / scrollHeight) * 100;
-            scrollProgress.style.width = scrollPercentage + '%';
-        });
-    }
 });
 
-// ===== Appearance Settings =====
+// ===== Personalization Settings =====
 
 // Theme selector
-const themeBtns = document.querySelectorAll('.theme-btn');
-themeBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-        themeBtns.forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
-        const theme = btn.getAttribute('data-theme');
-        console.log('Theme changed to:', theme);
-        // TODO: Implement actual theme switching
-    });
+document.addEventListener('click', (e) => {
+    if (e.target.closest('.theme-btn')) {
+        const clickedBtn = e.target.closest('.theme-btn');
+        const allThemeBtns = document.querySelectorAll('.theme-btn');
+        
+        // Remove active class from all buttons
+        allThemeBtns.forEach(btn => btn.classList.remove('active'));
+        
+        // Add active class to clicked button
+        clickedBtn.classList.add('active');
+        
+        const theme = clickedBtn.getAttribute('data-theme');
+        applyTheme(theme);
+        localStorage.setItem('themeMode', theme);
+        
+        // Save to server
+        saveUserProfile({ theme: theme });
+    }
 });
 
-// Font size slider
-const fontSizeSlider = document.getElementById('fontSizeSlider');
-const fontSizeValue = document.getElementById('fontSizeValue');
-if (fontSizeSlider && fontSizeValue) {
-    fontSizeSlider.addEventListener('input', (e) => {
-        const size = e.target.value;
-        fontSizeValue.textContent = size + 'px';
-        // Apply font size to messages
-        const messagesDiv = document.getElementById('messages');
-        if (messagesDiv) {
-            messagesDiv.style.fontSize = size + 'px';
+// Function to apply theme
+function applyTheme(theme) {
+    const body = document.body;
+    
+    if (theme === 'dark') {
+        body.classList.add('dark-theme');
+        body.classList.remove('light-theme');
+    } else if (theme === 'light') {
+        body.classList.add('light-theme');
+        body.classList.remove('dark-theme');
+    } else if (theme === 'auto') {
+        // Check system preference
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        if (prefersDark) {
+            body.classList.add('dark-theme');
+            body.classList.remove('light-theme');
+        } else {
+            body.classList.add('light-theme');
+            body.classList.remove('dark-theme');
+        }
+    }
+}
+
+// Function to initialize theme on page load
+function initializeTheme() {
+    const savedTheme = localStorage.getItem('themeMode') || 'light';
+    
+    // Set active button
+    const themeBtns = document.querySelectorAll('.theme-btn');
+    themeBtns.forEach(btn => {
+        if (btn.getAttribute('data-theme') === savedTheme) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
         }
     });
+    
+    applyTheme(savedTheme);
+    
+    // Listen for system theme changes when in auto mode
+    if (savedTheme === 'auto') {
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
+            if (localStorage.getItem('themeMode') === 'auto') {
+                applyTheme('auto');
+            }
+        });
+    }
 }
 
 // Language options in settings
@@ -388,37 +940,51 @@ langOptions.forEach(option => {
         }
         if (typeof updateUILanguage === 'function') {
             updateUILanguage(lang);
-            
-            // Show confirmation alert with language-specific message
-            const confirmMessages = {
-                'zh-CN': '语言已切换为简体中文',
-                'zh-TW': '語言已切換為繁體中文',
-                'en': 'Language switched to English',
-                'ja': '言語が日本語に切り替わりました',
-                'ko': '언어가 한국어로 전환되었습니다',
-                'es': 'Idioma cambiado a español'
-            };
-            
-            const message = confirmMessages[lang] || confirmMessages['en'];
-            
-            // Use custom alert if available, otherwise use standard alert
-            if (typeof showCustomAlert === 'function') {
-                showCustomAlert('✓', message);
-            } else {
-                // Create a temporary notification
-                const notification = document.createElement('div');
-                notification.style.cssText = 'position: fixed; top: 20px; right: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 25px; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 10000; font-size: 14px; font-weight: 500; animation: slideIn 0.3s ease-out;';
-                notification.textContent = message;
-                document.body.appendChild(notification);
-                
-                setTimeout(() => {
-                    notification.style.animation = 'slideOut 0.3s ease-in';
-                    setTimeout(() => {
-                        document.body.removeChild(notification);
-                    }, 300);
-                }, 2000);
-            }
         }
+        
+        // Update settings page language
+        updateSettingsLanguage(lang);
+        
+        // Reload API keys to update button text
+        if (typeof loadApiKeys === 'function') {
+            loadApiKeys();
+        }
+        
+        // Save to server
+        saveUserProfile({ language: lang });
+        
+        // Show language change banner
+        const bannerMessages = {
+            'zh-TW': '語言已切換為繁體中文',
+            'en': 'Language switched to English',
+            'ja': '言語が日本語に切り替わりました'
+        };
+        
+        const bannerMessage = bannerMessages[lang] || bannerMessages['en'];
+        
+        // Remove any existing language change banners
+        const existingBanners = document.querySelectorAll('.language-change-banner');
+        existingBanners.forEach(banner => {
+            if (banner.parentNode) {
+                banner.parentNode.removeChild(banner);
+            }
+        });
+        
+        // Create and show banner notification
+        const banner = document.createElement('div');
+        banner.className = 'language-change-banner';
+        banner.textContent = bannerMessage;
+        document.body.appendChild(banner);
+        
+        // Remove banner after 3 seconds
+        setTimeout(() => {
+            banner.style.animation = 'slideUp 0.3s ease-in';
+            setTimeout(() => {
+                if (banner.parentNode) {
+                    document.body.removeChild(banner);
+                }
+            }, 300);
+        }, 3000);
     });
 });
 
@@ -426,7 +992,6 @@ langOptions.forEach(option => {
 
 // API Key Modal Elements
 const apiKeyModal = document.getElementById('apiKeyModal');
-const closeApiKeyModal = document.querySelector('.close-api-key');
 const addApiKeyBtn = document.getElementById('addApiKeyBtn');
 const saveApiKeyBtn = document.getElementById('saveApiKeyBtn');
 const cancelApiKeyBtn = document.getElementById('cancelApiKeyBtn');
@@ -444,11 +1009,6 @@ document.getElementById('settings').addEventListener('click', () => {
 });
 
 // Modal event listeners
-closeApiKeyModal.onclick = function() {
-    apiKeyModal.style.display = 'none';
-    resetApiKeyForm();
-};
-
 cancelApiKeyBtn.addEventListener('click', () => {
     apiKeyModal.style.display = 'none';
     resetApiKeyForm();
@@ -463,7 +1023,11 @@ window.onclick = function(event) {
 
 // Add API key button
 addApiKeyBtn.addEventListener('click', () => {
-    document.getElementById('apiKeyModalTitle').innerHTML = '<i class="fas fa-key"></i> 添加 API 金鑰 / Add API Key';
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    // If current language is not supported, default to English
+    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+    updateSettingsLanguage(langToUse); // Update language for the modal
     apiKeyModal.style.display = 'block';
     apiKeyNameInput.focus();
 });
@@ -474,7 +1038,18 @@ saveApiKeyBtn.addEventListener('click', async () => {
     const apiKey = apiKeyValueInput.value.trim();
     
     if (!name || !apiKey) {
-        alert('請填寫所有欄位 / Please fill in all fields');
+        // Get current language for error message
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        const translations = settingsTranslations[langToUse] || settingsTranslations['en'];
+        
+        const errorMessages = {
+            'zh-TW': '請填寫所有欄位',
+            'en': 'Please fill in all fields',
+            'ja': 'すべてのフィールドを入力してください'
+        };
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
         return;
     }
     
@@ -497,11 +1072,27 @@ saveApiKeyBtn.addEventListener('click', async () => {
             // No alert needed since it auto-selects
         } else {
             const error = await response.json();
-            alert(error.error || '保存失敗 / Save failed');
+            const errorMessages = {
+                'zh-TW': '保存失敗',
+                'en': 'Save failed',
+                'ja': '保存に失敗しました'
+            };
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
         }
     } catch (error) {
         console.error('Error saving API key:', error);
-        alert('保存失敗 / Save failed');
+        const errorMessages = {
+            'zh-TW': '保存失敗',
+            'en': 'Save failed',
+            'ja': '保存に失敗しました'
+        };
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
     }
 });
 
@@ -529,12 +1120,18 @@ async function loadApiKeys() {
 function renderApiKeys(apiKeys, selectedId) {
     apiKeyList.innerHTML = '';
     
+    // Get current language
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+    const translations = settingsTranslations[langToUse] || settingsTranslations['en'];
+    
     if (apiKeys.length === 0) {
         apiKeyList.innerHTML = `
             <div style="text-align: center; color: #666; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
                 <i class="fas fa-key" style="font-size: 24px; color: #ccc; margin-bottom: 10px;"></i>
-                <p style="margin: 0 0 10px 0; font-weight: 500;">尚未添加任何 API 金鑰 / No API keys added yet</p>
-                <p style="margin: 0; font-size: 14px;">請添加您的 Google AI API 金鑰以使用聊天功能<br>Please add your Google AI API key to use chat features</p>
+                <p style="margin: 0 0 10px 0; font-weight: 500;">${translations['api_key.no_keys']}</p>
+                <p style="margin: 0; font-size: 14px;">${translations['api_key.no_keys_desc']}</p>
             </div>
         `;
         return;
@@ -545,6 +1142,8 @@ function renderApiKeys(apiKeys, selectedId) {
         const keyItem = document.createElement('div');
         keyItem.className = `api-key-item ${isSelected ? 'selected' : ''}`;
         
+        const buttonText = isSelected ? translations['api_key.in_use'] : translations['api_key.use'];
+        
         keyItem.innerHTML = `
             <div class="api-key-info">
                 <div class="api-key-name">${key.name}</div>
@@ -553,7 +1152,7 @@ function renderApiKeys(apiKeys, selectedId) {
             <div class="api-key-actions">
                 <button class="api-key-btn toggle ${isSelected ? 'selected' : ''}" onclick="toggleApiKey(${key.id})">
                     <i class="fas ${isSelected ? 'fa-check-circle' : 'fa-circle'}"></i> 
-                    ${isSelected ? '使用中 / In Use' : '使用 / Use'}
+                    ${buttonText}
                 </button>
                 <button class="api-key-btn delete" onclick="deleteApiKey(${key.id}, '${key.name.replace(/'/g, "\\'")}')">
                     <i class="fas fa-trash"></i>
@@ -579,49 +1178,100 @@ async function toggleApiKey(keyId) {
             const result = await response.json();
             loadApiKeys();
             // Optional: show brief feedback
-            // alert(result.message || 'API key toggled successfully');
+            // showCustomAlert(result.message || 'API key toggled successfully');
         } else {
             const error = await response.json();
-            alert(error.error || '切換失敗 / Toggle failed');
+            const errorMessages = {
+                'zh-TW': '切換失敗',
+                'en': 'Toggle failed',
+                'ja': '切り替えに失敗しました'
+            };
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
         }
     } catch (error) {
         console.error('Error toggling API key:', error);
-        alert('切換失敗 / Toggle failed');
+        const errorMessages = {
+            'zh-TW': '切換失敗',
+            'en': 'Toggle failed',
+            'ja': '切り替えに失敗しました'
+        };
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
     }
 }
 
 // Delete API key
 async function deleteApiKey(keyId, name) {
-    if (!confirm(`確定要刪除 API 金鑰 "${name}" 嗎？\n\nAre you sure you want to delete the API key "${name}"?`)) {
-        return;
-    }
+    const confirmMessages = {
+        'zh-TW': `確定要刪除 API 金鑰 "${name}" 嗎？`,
+        'en': `Are you sure you want to delete the API key "${name}"?`,
+        'ja': `APIキー "${name}" を削除してもよろしいですか？`
+    };
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
     
-    try {
-        const response = await fetch(`/api/keys/${keyId}`, {
-            method: 'DELETE',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            }
-        });
-        
-        if (response.ok) {
-            loadApiKeys();
-            alert('API 金鑰已刪除 / API key deleted successfully');
-        } else {
-            const error = await response.json();
-            alert(error.error || '刪除失敗 / Delete failed');
+    showCustomConfirm(confirmMessages[langToUse] || confirmMessages['en'], async (confirmed) => {
+        if (!confirmed) {
+            return;
         }
-    } catch (error) {
-        console.error('Error deleting API key:', error);
-        alert('刪除失敗 / Delete failed');
-    }
+        
+        try {
+            const response = await fetch(`/api/keys/${keyId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                }
+            });
+            
+            if (response.ok) {
+                loadApiKeys();
+                const successMessages = {
+                    'zh-TW': 'API 金鑰已刪除',
+                    'en': 'API key deleted',
+                    'ja': 'APIキーが削除されました'
+                };
+                showCustomAlert(successMessages[langToUse] || successMessages['en']);
+            } else {
+                const error = await response.json();
+                const errorMessages = {
+                    'zh-TW': '刪除失敗',
+                    'en': 'Delete failed',
+                    'ja': '削除に失敗しました'
+                };
+                showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
+            }
+        } catch (error) {
+            console.error('Error deleting API key:', error);
+            const errorMessages = {
+                'zh-TW': '刪除失敗',
+                'en': 'Delete failed',
+                'ja': '削除に失敗しました'
+            };
+            showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        }
+    });
 }
 
 // Reset API key form
 function resetApiKeyForm() {
     apiKeyNameInput.value = '';
     apiKeyValueInput.value = '';
-    apiKeyValueInput.placeholder = '輸入您的 Google AI API 金鑰 / Enter your Google AI API key';
+    // Update placeholder to current language
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+    const placeholders = {
+        'zh-TW': { 'apiKeyValue': '輸入您的 Google AI API 金鑰' },
+        'en': { 'apiKeyValue': 'Enter your Google AI API key' },
+        'ja': { 'apiKeyValue': 'Google AI APIキーを入力してください' }
+    };
+    apiKeyValueInput.placeholder = placeholders[langToUse]?.apiKeyValue || placeholders['en'].apiKeyValue;
 }
 
 // Make functions global for onclick handlers
@@ -682,10 +1332,129 @@ document.getElementById('aiModelSelect').addEventListener('change', async (event
             console.log('AI model updated successfully');
         } else {
             const error = await response.json();
-            alert(error.error || '保存失敗 / Save failed');
+            const errorMessages = {
+                'zh-TW': '保存失敗',
+                'en': 'Save failed',
+                'ja': '保存に失敗しました'
+            };
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
         }
     } catch (error) {
         console.error('Error saving AI model:', error);
-        alert('保存失敗 / Save failed');
+        const errorMessages = {
+            'zh-TW': '保存失敗',
+            'en': 'Save failed',
+            'ja': '保存に失敗しました'
+        };
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
     }
+});
+
+// Save avatar to server
+async function saveAvatarToServer(avatarData) {
+    try {
+        const response = await fetch('/auth/update-avatar', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({ avatar: avatarData })
+        });
+        
+        if (!response.ok) {
+            console.error('Failed to save avatar to server');
+        }
+    } catch (error) {
+        console.error('Error saving avatar to server:', error);
+    }
+}
+
+// ===== User Profile Management =====
+
+// Load user profile settings from server
+async function loadUserProfileSettings() {
+    try {
+        const response = await fetch('/api/user/profile', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const profile = await response.json();
+            
+            // Apply theme
+            if (profile.theme) {
+                localStorage.setItem('themeMode', profile.theme);
+                initializeTheme();
+            }
+            
+            // Apply language
+            if (profile.language && typeof currentLanguage !== 'undefined') {
+                currentLanguage = profile.language;
+                if (typeof updateUILanguage === 'function') {
+                    updateUILanguage(profile.language);
+                }
+                updateSettingsLanguage(profile.language);
+                
+                // Update language selector UI
+                const langOptions = document.querySelectorAll('.lang-option');
+                langOptions.forEach(option => {
+                    const lang = option.getAttribute('data-lang');
+                    if (lang === profile.language) {
+                        option.classList.add('active');
+                        option.querySelector('i').className = 'fas fa-check-circle';
+                    } else {
+                        option.classList.remove('active');
+                        option.querySelector('i').className = 'fas fa-circle';
+                    }
+                });
+            }
+            
+            console.log('User profile settings loaded successfully');
+        } else {
+            console.error('Failed to load user profile settings');
+        }
+    } catch (error) {
+        console.error('Error loading user profile settings:', error);
+    }
+}
+
+// Save user profile settings to server
+async function saveUserProfile(settings) {
+    try {
+        const response = await fetch('/api/user/profile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify(settings)
+        });
+        
+        if (response.ok) {
+            console.log('Profile settings saved successfully');
+        } else {
+            console.error('Failed to save profile settings');
+        }
+    } catch (error) {
+        console.error('Error saving profile settings:', error);
+    }
+}
+
+// Load user profile settings when settings modal opens
+document.getElementById('settings').addEventListener('click', () => {
+    // Load API keys when opening settings
+    setTimeout(() => {
+        loadApiKeys();
+        loadUserModel();
+        loadUserProfileSettings();
+    }, 100);
 });

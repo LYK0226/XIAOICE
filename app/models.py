@@ -38,10 +38,8 @@ class UserProfile(db.Model):
     __tablename__ = 'user_profiles'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)
-    language = db.Column(db.String(20), default='zh-CN')
+    language = db.Column(db.String(20), default='zh-TW')
     theme = db.Column(db.String(20), default='light')
-    background_type = db.Column(db.String(20), default='gradient')
-    background_value = db.Column(db.Text, default='linear-gradient(135deg, #667eea 0%, #764ba2 100%)')
     bot_avatar = db.Column(db.Text)
     selected_api_key_id = db.Column(db.Integer, db.ForeignKey('user_api_keys.id'), nullable=True)
     ai_model = db.Column(db.String(50), default='gemini-2.5-flash')  # Add AI model selection
@@ -59,8 +57,6 @@ class UserProfile(db.Model):
             'user_id': self.user_id,
             'language': self.language,
             'theme': self.theme,
-            'background_type': self.background_type,
-            'background_value': self.background_value,
             'bot_avatar': self.bot_avatar,
             'selected_api_key_id': self.selected_api_key_id,
             'ai_model': self.ai_model

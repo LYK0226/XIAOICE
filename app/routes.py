@@ -295,6 +295,78 @@ def set_user_model():
         current_app.logger.error(f"Error setting user model: {e}")
         return jsonify({'error': 'Failed to update AI model'}), 500
 
+@bp.route('/api/user/profile', methods=['GET'])
+@jwt_required()
+def get_user_profile():
+    """Get the current user's profile settings."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import UserProfile
+    
+    user_id = get_jwt_identity()
+    
+    try:
+        user_profile = UserProfile.query.filter_by(user_id=user_id).first()
+        if not user_profile:
+            # Return default profile if no profile exists
+            return jsonify({
+                'language': 'zh-TW',
+                'theme': 'light',
+                'bot_avatar': None,
+                'selected_api_key_id': None,
+                'ai_model': 'gemini-2.5-flash'
+            })
+        
+        return jsonify(user_profile.to_dict())
+    except Exception as e:
+        current_app.logger.error(f"Error getting user profile: {e}")
+        return jsonify({'error': 'Failed to get user profile'}), 500
+
+@bp.route('/api/user/profile', methods=['POST'])
+@jwt_required()
+def update_user_profile():
+    """Update the current user's profile settings."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import UserProfile, db
+    
+    user_id = get_jwt_identity()
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    allowed_fields = {
+        'language', 'theme', 'bot_avatar'
+    }
+    
+    # Validate allowed languages
+    allowed_languages = ['zh-TW', 'en', 'ja']
+    if 'language' in data and data['language'] not in allowed_languages:
+        return jsonify({'error': f'Invalid language. Allowed: {", ".join(allowed_languages)}'}), 400
+    
+    # Validate theme
+    allowed_themes = ['light', 'dark', 'auto']
+    if 'theme' in data and data['theme'] not in allowed_themes:
+        return jsonify({'error': f'Invalid theme. Allowed: {", ".join(allowed_themes)}'}), 400
+    
+    try:
+        user_profile = UserProfile.query.filter_by(user_id=user_id).first()
+        if not user_profile:
+            user_profile = UserProfile(user_id=user_id)
+            db.session.add(user_profile)
+        
+        # Update only allowed fields
+        for field in allowed_fields:
+            if field in data:
+                setattr(user_profile, field, data[field])
+        
+        db.session.commit()
+        
+        return jsonify({'message': 'Profile updated successfully', 'profile': user_profile.to_dict()})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating user profile: {e}")
+        return jsonify({'error': 'Failed to update profile'}), 500
+
 
 # ===== Conversation & Message Routes =====
 

@@ -44,7 +44,6 @@ def view_users():
             print(f"\n  Profile Settings:")
             print(f"    Language:       {profile.language}")
             print(f"    Theme:          {profile.theme}")
-            print(f"    Background:     {profile.background_type}")
             print(f"    Bot Avatar:     {'Set' if profile.bot_avatar else 'Not set'}")
 
 def view_user_profiles():
@@ -76,8 +75,6 @@ def view_user_profiles():
         
         print(f"  Language:        {profile.language}")
         print(f"  Theme:           {profile.theme}")
-        print(f"  Background Type: {profile.background_type}")
-        print(f"  Background Val:  {profile.background_value[:50] + '...' if profile.background_value and len(profile.background_value) > 50 else profile.background_value}")
         print(f"  Bot Avatar:      {'Set' if profile.bot_avatar else 'Not set'}")
         print(f"  Created:         {profile.created_at}")
         print(f"  Updated:         {profile.updated_at}")
