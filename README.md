@@ -22,6 +22,7 @@ python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().
 
 設定 -> 高級 ->填入你的 API Key
 
+
 ### 安裝依賴並啟動應用
 
 ```bash
@@ -35,6 +36,13 @@ pip install -r requirements.txt
 flask db init
 flask db migrate 
 flask db upgrade
+
+# API 設定
+
+# 取得您的加密金鑰 (填入 .env -> ENCRYPTION_KEY="your_32_byte_encryption_key_here")
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
+設定 -> 高級 ->填入你的 API Key
 
 # 測試 API 連接（可選但建議）
 python test_api.py
