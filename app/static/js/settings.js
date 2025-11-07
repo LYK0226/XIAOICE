@@ -417,6 +417,9 @@ window.addEventListener('load', () => {
     
     // Load user profile information
     loadUserProfile();
+    
+    // Load user profile settings
+    loadUserProfileSettings();
 });
 
 // Load user profile information
@@ -863,6 +866,9 @@ document.addEventListener('click', (e) => {
         const theme = clickedBtn.getAttribute('data-theme');
         applyTheme(theme);
         localStorage.setItem('themeMode', theme);
+        
+        // Save to server
+        saveUserProfile({ theme: theme });
     }
 });
 
@@ -943,6 +949,9 @@ langOptions.forEach(option => {
         if (typeof loadApiKeys === 'function') {
             loadApiKeys();
         }
+        
+        // Save to server
+        saveUserProfile({ language: lang });
         
         // Show language change banner
         const bannerMessages = {
@@ -1366,3 +1375,86 @@ async function saveAvatarToServer(avatarData) {
         console.error('Error saving avatar to server:', error);
     }
 }
+
+// ===== User Profile Management =====
+
+// Load user profile settings from server
+async function loadUserProfileSettings() {
+    try {
+        const response = await fetch('/api/user/profile', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const profile = await response.json();
+            
+            // Apply theme
+            if (profile.theme) {
+                localStorage.setItem('themeMode', profile.theme);
+                initializeTheme();
+            }
+            
+            // Apply language
+            if (profile.language && typeof currentLanguage !== 'undefined') {
+                currentLanguage = profile.language;
+                if (typeof updateUILanguage === 'function') {
+                    updateUILanguage(profile.language);
+                }
+                updateSettingsLanguage(profile.language);
+                
+                // Update language selector UI
+                const langOptions = document.querySelectorAll('.lang-option');
+                langOptions.forEach(option => {
+                    const lang = option.getAttribute('data-lang');
+                    if (lang === profile.language) {
+                        option.classList.add('active');
+                        option.querySelector('i').className = 'fas fa-check-circle';
+                    } else {
+                        option.classList.remove('active');
+                        option.querySelector('i').className = 'fas fa-circle';
+                    }
+                });
+            }
+            
+            console.log('User profile settings loaded successfully');
+        } else {
+            console.error('Failed to load user profile settings');
+        }
+    } catch (error) {
+        console.error('Error loading user profile settings:', error);
+    }
+}
+
+// Save user profile settings to server
+async function saveUserProfile(settings) {
+    try {
+        const response = await fetch('/api/user/profile', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify(settings)
+        });
+        
+        if (response.ok) {
+            console.log('Profile settings saved successfully');
+        } else {
+            console.error('Failed to save profile settings');
+        }
+    } catch (error) {
+        console.error('Error saving profile settings:', error);
+    }
+}
+
+// Load user profile settings when settings modal opens
+document.getElementById('settings').addEventListener('click', () => {
+    // Load API keys when opening settings
+    setTimeout(() => {
+        loadApiKeys();
+        loadUserModel();
+        loadUserProfileSettings();
+    }, 100);
+});

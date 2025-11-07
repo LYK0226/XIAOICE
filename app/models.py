@@ -38,7 +38,7 @@ class UserProfile(db.Model):
     __tablename__ = 'user_profiles'
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, unique=True)
-    language = db.Column(db.String(20), default='zh-CN')
+    language = db.Column(db.String(20), default='zh-TW')
     theme = db.Column(db.String(20), default='light')
     bot_avatar = db.Column(db.Text)
     selected_api_key_id = db.Column(db.Integer, db.ForeignKey('user_api_keys.id'), nullable=True)
