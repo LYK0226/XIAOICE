@@ -22,7 +22,7 @@ const filePreviewContainer = document.getElementById('filePreviewContainer');
 let currentLanguage = 'zh-TW'; // Default to Traditional Chinese
 
 // Avatar settings
-let userAvatar = null; // Will store user avatar URL
+window.userAvatar = null; // Will store user avatar URL
 let botAvatar = null; // Will store bot avatar URL
 
 // File and image storage
@@ -263,8 +263,8 @@ function createMessage(text, isUser = false) {
     avatar.className = isUser ? 'avatar user-avatar' : 'avatar bot-avatar';
     
     // Use custom avatar if available, otherwise use default icon
-    if (isUser && userAvatar) {
-        avatar.style.backgroundImage = `url(${userAvatar})`;
+    if (isUser && window.userAvatar) {
+        avatar.style.backgroundImage = `url(${window.userAvatar})`;
         avatar.style.backgroundSize = 'cover';
         avatar.style.backgroundPosition = 'center';
     } else if (!isUser && botAvatar) {
@@ -316,8 +316,8 @@ function createImageMessage(imageData, text, isUser = true) {
     avatar.className = isUser ? 'avatar user-avatar' : 'avatar bot-avatar';
     
     // Use custom avatar if available
-    if (isUser && userAvatar) {
-        avatar.style.backgroundImage = `url(${userAvatar})`;
+    if (isUser && window.userAvatar) {
+        avatar.style.backgroundImage = `url(${window.userAvatar})`;
         avatar.style.backgroundSize = 'cover';
         avatar.style.backgroundPosition = 'center';
     } else if (!isUser && botAvatar) {
@@ -1100,8 +1100,8 @@ function createMessageWithFiles(text, files, isUser = true) {
     const avatar = document.createElement('div');
     avatar.className = isUser ? 'avatar user-avatar' : 'avatar bot-avatar';
     
-    if (isUser && userAvatar) {
-        avatar.style.backgroundImage = `url(${userAvatar})`;
+    if (isUser && window.userAvatar) {
+        avatar.style.backgroundImage = `url(${window.userAvatar})`;
         avatar.style.backgroundSize = 'cover';
         avatar.style.backgroundPosition = 'center';
     } else if (!isUser && botAvatar) {
@@ -1295,8 +1295,8 @@ function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
     const avatar = document.createElement('div');
     avatar.className = isUser ? 'avatar user-avatar' : 'avatar bot-avatar';
     
-    if (isUser && userAvatar) {
-        avatar.style.backgroundImage = `url(${userAvatar})`;
+    if (isUser && window.userAvatar) {
+        avatar.style.backgroundImage = `url(${window.userAvatar})`;
         avatar.style.backgroundSize = 'cover';
         avatar.style.backgroundPosition = 'center';
     } else if (!isUser && botAvatar) {

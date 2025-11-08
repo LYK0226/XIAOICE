@@ -165,16 +165,46 @@ def update_avatar():
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
-        data = request.get_json()
-        avatar = data.get('avatar', '')
+        # Check if a file was uploaded
+        if 'avatar' not in request.files:
+            return jsonify({'error': 'No avatar file provided'}), 400
         
-        user.avatar = avatar
+        file = request.files['avatar']
+        
+        if file.filename == '':
+            return jsonify({'error': 'No selected file'}), 400
+        
+        # Validate file type
+        allowed_extensions = {'png', 'jpg', 'jpeg', 'gif'}
+        if not file.filename.lower().split('.')[-1] in allowed_extensions:
+            return jsonify({'error': 'Invalid file type. Only PNG, JPG, JPEG, and GIF are allowed'}), 400
+        
+        # Generate unique filename
+        from werkzeug.utils import secure_filename
+        import os
+        from datetime import datetime
+        
+        filename = secure_filename(file.filename)
+        name, ext = os.path.splitext(filename)
+        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+        unique_filename = f"{name}_{timestamp}{ext}"
+        
+        # Save file to upload folder
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        os.makedirs(upload_folder, exist_ok=True)
+        file_path = os.path.join(upload_folder, unique_filename)
+        file.save(file_path)
+        
+        # Store relative path in database
+        relative_path = f"upload/{unique_filename}"
+        user.avatar = relative_path
         user.updated_at = datetime.utcnow()
         
         db.session.commit()
         
         return jsonify({
             'message': 'Avatar updated successfully',
+            'avatar_path': relative_path,
             'user': user.to_dict()
         }), 200
         
