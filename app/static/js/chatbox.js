@@ -282,12 +282,12 @@ function createMessage(text, isUser = false) {
     paragraph.textContent = text;
     messageContent.appendChild(paragraph);
 
-    if (!isUser) {
+    if (!isUser && text.trim()) {
         const speakBtn = document.createElement('button');
         speakBtn.className = 'speak-btn';
         speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-        speakBtn.title = '朗讀訊息';
-        speakBtn.onclick = () => speakMessage(text);
+        speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
+        speakBtn.onclick = () => speakMessage(text, speakBtn);
         messageContent.appendChild(speakBtn);
     }
     
@@ -298,13 +298,56 @@ function createMessage(text, isUser = false) {
 }
 
 // Text-to-Speech Functionality
-function speakMessage(text) {
-    // Cancel any ongoing speech before starting new one
-    speechSynthesis.cancel();
-    
+function speakMessage(text, buttonElement = null) {
+    // If speech is currently playing, stop it
+    if (speechSynthesis.speaking) {
+        speechSynthesis.cancel();
+        if (buttonElement) {
+            updateSpeakButtonState(buttonElement, false);
+        }
+        return;
+    }
+
+    // Start new speech
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = currentLanguage;
+
+    // Update button state when speech starts
+    utterance.onstart = () => {
+        if (buttonElement) {
+            updateSpeakButtonState(buttonElement, true);
+        }
+    };
+
+    // Update button state when speech ends
+    utterance.onend = () => {
+        if (buttonElement) {
+            updateSpeakButtonState(buttonElement, false);
+        }
+    };
+
+    // Handle speech errors
+    utterance.onerror = () => {
+        if (buttonElement) {
+            updateSpeakButtonState(buttonElement, false);
+        }
+    };
+
     speechSynthesis.speak(utterance);
+}
+
+// Function to update speak button visual state
+function updateSpeakButtonState(buttonElement, isSpeaking) {
+    const iconElement = buttonElement.querySelector('i');
+    if (!iconElement) return;
+
+    if (isSpeaking) {
+        iconElement.className = 'fas fa-stop';
+        buttonElement.title = translations[currentLanguage].stopReading || '停止朗讀';
+    } else {
+        iconElement.className = 'fas fa-volume-up';
+        buttonElement.title = translations[currentLanguage].readMessage || '朗讀訊息';
+    }
 }
 
 // Function to create a message with image
@@ -566,10 +609,14 @@ function processTestPaperQuestions(questions, imageData) {
     });
 }
 
-// Add translation for "question"
-translations['zh-TW'].question = '問題';
-translations['en'].question = 'Question';
-translations['ja'].question = '質問';
+translations['zh-TW'].readMessage = '朗讀訊息';
+translations['zh-TW'].stopReading = '停止朗讀';
+
+translations['en'].readMessage = 'Read message';
+translations['en'].stopReading = 'Stop reading';
+
+translations['ja'].readMessage = 'メッセージを読み上げる';
+translations['ja'].stopReading = '読み上げを停止';
 
 // Conversation management translations
 translations['zh-TW'].noConversations = '暫無對話';
@@ -995,10 +1042,6 @@ async function sendMessageWithFiles() {
         time: Date.now()
     });
 
-    const typingIndicator = createTypingIndicator();
-    messagesDiv.appendChild(typingIndicator);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
     let conversationId = activeConversationId;
 
     try {
@@ -1045,47 +1088,135 @@ async function sendMessageWithFiles() {
         }
 
         const imageFile = attachmentsSnapshot.find((file) => file.type.startsWith('image/'));
-        let aiResponse;
-
-        if (imageFile) {
-            aiResponse = await chatAPI.sendImageMessage(
-                messageText || t.analyzeImage,
-                imageFile,
-                currentLanguage,
-                conversationHistory
-            );
-        } else {
-            aiResponse = await chatAPI.sendTextMessage(
-                messageText || placeholderText,
-                currentLanguage,
-                conversationHistory
-            );
-        }
-
-        if (typingIndicator.parentNode) {
-            typingIndicator.parentNode.removeChild(typingIndicator);
-        }
-
-        const botMessageElement = createMessage(aiResponse, false);
+        
+        // Create bot message element with typing indicator
+        const botMessageElement = createMessage('', false);
+        botMessageElement.classList.add('typing-indicator');
+        const botMessageContent = botMessageElement.querySelector('.message-content p');
+        botMessageContent.textContent = t.typing || 'Typing...';
         messagesDiv.appendChild(botMessageElement);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
-
-        conversationHistory.push({ role: 'bot', content: aiResponse, time: Date.now() });
-
+        
+        let fullResponse = '';
+        
+        // Function to display text with typing effect
+        const typeText = (text, element, speed = 30) => {
+            return new Promise((resolve) => {
+                let index = 0;
+                const typeInterval = setInterval(() => {
+                    if (index < text.length) {
+                        element.textContent += text[index];
+                        index++;
+                        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    } else {
+                        clearInterval(typeInterval);
+                        resolve();
+                    }
+                }, speed);
+            });
+        };
+        
         try {
-            const assistantMessageResponse = await chatAPI.addMessage(conversationId, aiResponse, 'assistant');
-            if (assistantMessageResponse.conversation) {
-                upsertConversation(assistantMessageResponse.conversation);
+            if (imageFile) {
+                // For images, use non-streaming for now (can be updated later)
+                const aiResponse = await chatAPI.sendImageMessage(
+                    messageText || t.analyzeImage,
+                    imageFile,
+                    currentLanguage,
+                    conversationHistory
+                );
+                botMessageElement.classList.remove('typing-indicator');
+                botMessageContent.textContent = '';
+                await typeText(aiResponse, botMessageContent);
+                fullResponse = aiResponse;
+                // Add speak button after typing is complete
+                const speakBtn = document.createElement('button');
+                speakBtn.className = 'speak-btn';
+                speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
+                speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
+                botMessageElement.querySelector('.message-content').appendChild(speakBtn);
+            } else {
+                // Use streaming for text messages
+                let currentTypingIndex = 0;
+                let pendingText = '';
+                
+                await chatAPI.streamChatMessage(
+                    messageText || placeholderText,
+                    null,
+                    currentLanguage,
+                    conversationHistory,
+                    (chunk) => {
+                        // Accumulate chunks
+                        pendingText += chunk;
+                        
+                        // Type out the accumulated text character by character
+                        const typePendingText = () => {
+                            if (currentTypingIndex < pendingText.length) {
+                                botMessageContent.textContent = pendingText.slice(0, currentTypingIndex + 1);
+                                currentTypingIndex++;
+                                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                                setTimeout(typePendingText, 30); // Typing speed
+                            }
+                        };
+                        
+                        if (currentTypingIndex < pendingText.length) {
+                            typePendingText();
+                        }
+                    },
+                    () => {
+                        // Streaming complete
+                        fullResponse = pendingText;
+                        botMessageElement.classList.remove('typing-indicator');
+                        // Add speak button after streaming is complete
+                        const speakBtn = document.createElement('button');
+                        speakBtn.className = 'speak-btn';
+                        speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                        speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
+                        speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
+                        botMessageElement.querySelector('.message-content').appendChild(speakBtn);
+                    },
+                    (error) => {
+                        console.error('Streaming error:', error);
+                        botMessageElement.classList.remove('typing-indicator');
+                        botMessageContent.textContent = t.errorMsg || '抱歉，發生了錯誤。請稍後再試。';
+                        fullResponse = botMessageContent.textContent;
+                        // Add speak button for error message too
+                        const speakBtn = document.createElement('button');
+                        speakBtn.className = 'speak-btn';
+                        speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                        speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
+                        speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
+                        botMessageElement.querySelector('.message-content').appendChild(speakBtn);
+                    }
+                );
             }
-        } catch (assistantError) {
-            console.error('Failed to persist assistant message', assistantError);
+            
+            conversationHistory.push({ role: 'bot', content: fullResponse, time: Date.now() });
+            
+            try {
+                const assistantMessageResponse = await chatAPI.addMessage(conversationId, fullResponse, 'assistant');
+                if (assistantMessageResponse.conversation) {
+                    upsertConversation(assistantMessageResponse.conversation);
+                }
+            } catch (assistantError) {
+                console.error('Failed to persist assistant message', assistantError);
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            botMessageElement.classList.remove('typing-indicator');
+            botMessageContent.textContent = t.errorMsg || '抱歉，發生了錯誤。請稍後再試。';
+            fullResponse = botMessageContent.textContent;
+            // Add speak button for error
+            const speakBtn = document.createElement('button');
+            speakBtn.className = 'speak-btn';
+            speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+            speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
+            speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
+            botMessageElement.querySelector('.message-content').appendChild(speakBtn);
         }
     } catch (error) {
         console.error('Error:', error);
-        if (typingIndicator.parentNode) {
-            typingIndicator.parentNode.removeChild(typingIndicator);
-        }
-
         const errorMsg = t.errorMsg || '抱歉，发生了错误。';
         const botMessage = createMessage(errorMsg, false);
         messagesDiv.appendChild(botMessage);
