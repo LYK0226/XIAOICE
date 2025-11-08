@@ -8,20 +8,51 @@ import os
 import sys
 from dotenv import load_dotenv
 
+import os
+import sys
+from dotenv import load_dotenv
+
 # 載入環境變數
 load_dotenv()
 
 print("🔍 檢查 Google AI Studio API 設定...\n")
 
-# 檢查 API key
-api_key = os.environ.get('GOOGLE_API_KEY')
-if not api_key:
-    print("❌ 錯誤：GOOGLE_API_KEY 未在環境變數中設定")
-    print("   請在 .env 文件中設定您的 API key")
-    print("   範例：GOOGLE_API_KEY=\"your-api-key-here\"")
+# 檢查 ENCRYPTION_KEY
+encryption_key = os.environ.get('ENCRYPTION_KEY')
+if not encryption_key:
+    print("❌ 錯誤：ENCRYPTION_KEY 未在環境變數中設定")
+    print("   請在 .env 文件中設定您的加密金鑰")
     sys.exit(1)
 
-print(f"✅ API Key 已找到（長度：{len(api_key)} 字元）")
+print("✅ ENCRYPTION_KEY 已找到")
+
+# 導入應用程式和模型
+try:
+    from app import create_app
+    from app.models import UserApiKey
+    print("✅ 應用程式和模型已正確導入")
+except ImportError as e:
+    print("❌ 錯誤：無法導入應用程式或模型")
+    print(f"   {e}")
+    sys.exit(1)
+
+# 創建應用程式實例並獲取 API key
+app = create_app()
+with app.app_context():
+    # 從資料庫獲取第一個有效的 API key
+    user_api_key = UserApiKey.query.filter_by(is_active=True).first()
+    if not user_api_key:
+        print("❌ 錯誤：資料庫中沒有找到有效的 API key")
+        print("   請確保至少有一個有效的 user_api_keys 記錄")
+        sys.exit(1)
+    
+    api_key = user_api_key.get_decrypted_key()
+    if not api_key:
+        print("❌ 錯誤：無法解密 API key")
+        print("   請檢查 ENCRYPTION_KEY 是否正確")
+        sys.exit(1)
+
+print(f"✅ API Key 已從資料庫獲取（長度：{len(api_key)} 字元）")
 
 # 嘗試導入 google.genai
 try:
@@ -43,7 +74,7 @@ except Exception as e:
     sys.exit(1)
 
 # 測試模型
-model_name = os.environ.get('GEMINI_MODEL', 'gemini-1.5-flash')
+model_name = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
 print(f"\n📡 測試模型：{model_name}")
 
 # 發送測試請求

@@ -36,13 +36,16 @@ class ChatAPI {
     }
 
     /**
-     * 調用後端聊天 API
+     * 調用後端聊天 API (串流版本)
      * @param {string} userMessage - 用戶輸入的文字訊息
      * @param {File} imageFile - 可選的圖片文件
      * @param {string} currentLanguage - 當前語言設置
-     * @returns {Promise<string>} - AI 回應文字
+     * @param {function} onChunk - 回調函數，用於處理每個文字區塊
+     * @param {function} onComplete - 完成時的回調函數
+     * @param {function} onError - 錯誤時的回調函數
+     * @returns {Promise} - 可取消的 Promise
      */
-    async sendChatMessage(userMessage, imageFile = null, currentLanguage = 'zh-TW', history = null) {
+    async streamChatMessage(userMessage, imageFile = null, currentLanguage = 'zh-TW', history = null, onChunk, onComplete, onError) {
         const formData = new FormData();
         formData.append('message', userMessage);
         
@@ -59,7 +62,7 @@ class ChatAPI {
         const headers = this._getAuthHeaders();
 
         try {
-            const response = await fetch(this.endpoints.chat, {
+            const response = await fetch('/chat/stream', {
                 method: 'POST',
                 headers: headers,
                 body: formData
@@ -72,20 +75,65 @@ class ChatAPI {
                 throw new Error(errorData.error || `API Error: ${response.status}`);
             }
 
-            const data = await response.json();
-            return data.response;
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            let buffer = '';
+            let isDone = false;
+
+            while (!isDone) {
+                const { done, value } = await reader.read();
+                isDone = done;
+
+                if (value) {
+                    buffer += decoder.decode(value, { stream: true });
+                    
+                    // Process complete SSE messages
+                    const lines = buffer.split('\n');
+                    buffer = lines.pop(); // Keep incomplete line in buffer
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ')) {
+                            const data = line.slice(6); // Remove 'data: '
+                            if (data.trim()) {
+                                onChunk(data);
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Process any remaining data
+            if (buffer.trim()) {
+                const lines = buffer.split('\n');
+                for (const line of lines) {
+                    if (line.startsWith('data: ')) {
+                        const data = line.slice(6);
+                        if (data.trim()) {
+                            onChunk(data);
+                        }
+                    }
+                }
+            }
+
+            if (onComplete) {
+                onComplete();
+            }
 
         } catch (error) {
-            console.error('Backend API Error:', error);
+            console.error('Streaming API Error:', error);
             
-            // 返回對應語言的錯誤訊息
-            const errorMessages = {
-                'zh-TW': '抱歉，服務暫時無法使用。請稍後再試。',
-                'zh-TW': '抱歉，服務暫時無法使用。請稍後再試。',
-                'en': 'Sorry, the service is temporarily unavailable. Please try again later.'
-            };
-            
-            throw new Error(errorMessages[currentLanguage] || errorMessages['zh-TW']);
+            if (onError) {
+                onError(error);
+            } else {
+                // 返回對應語言的錯誤訊息
+                const errorMessages = {
+                    'zh-TW': '抱歉，服務暫時無法使用。請稍後再試。',
+                    'en': 'Sorry, the service is temporarily unavailable. Please try again later.'
+                };
+                
+                throw new Error(errorMessages[currentLanguage] || errorMessages['zh-TW']);
+            }
         }
     }
 
@@ -241,10 +289,32 @@ class ChatAPI {
      * 發送純文字訊息
      * @param {string} message - 文字訊息
      * @param {string} language - 語言設置
+     * @param {Array} history - 對話歷史
      * @returns {Promise<string>}
      */
     async sendTextMessage(message, language = 'zh-TW', history = null) {
-        return this.sendChatMessage(message, null, language, history);
+        return new Promise((resolve, reject) => {
+            let fullResponse = '';
+
+            this.streamChatMessage(
+                message,
+                null, // no image file
+                language,
+                history,
+                (chunk) => {
+                    // Accumulate chunks
+                    fullResponse += chunk;
+                },
+                () => {
+                    // On complete, resolve with the full response
+                    resolve(fullResponse);
+                },
+                (error) => {
+                    // On error, reject with the error
+                    reject(error);
+                }
+            );
+        });
     }
 
     /**
@@ -252,10 +322,32 @@ class ChatAPI {
      * @param {string} message - 文字訊息
      * @param {File} imageFile - 圖片文件
      * @param {string} language - 語言設置
+     * @param {Array} history - 對話歷史
      * @returns {Promise<string>}
      */
     async sendImageMessage(message, imageFile, language = 'zh-TW', history = null) {
-        return this.sendChatMessage(message, imageFile, language, history);
+        return new Promise((resolve, reject) => {
+            let fullResponse = '';
+
+            this.streamChatMessage(
+                message,
+                imageFile,
+                language,
+                history,
+                (chunk) => {
+                    // Accumulate chunks
+                    fullResponse += chunk;
+                },
+                () => {
+                    // On complete, resolve with the full response
+                    resolve(fullResponse);
+                },
+                (error) => {
+                    // On error, reject with the error
+                    reject(error);
+                }
+            );
+        });
     }
 
     /**

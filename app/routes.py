@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, Response
 from flask_jwt_extended import jwt_required, decode_token
 import os
 import json
@@ -36,10 +36,10 @@ def forgot_password_page():
     """Render the forgot password page."""
     return render_template('forget_password.html')
 
-@bp.route('/chat', methods=['POST'])
+@bp.route('/chat/stream', methods=['POST'])
 @jwt_required()
-def chat():
-    """Handle chat messages and image uploads."""
+def chat_stream():
+    """Handle streaming chat messages and image uploads."""
     from flask_jwt_extended import get_jwt_identity
     from .models import UserProfile, UserApiKey
     
@@ -95,20 +95,34 @@ def chat():
         if user_profile and user_profile.ai_model:
             ai_model = user_profile.ai_model
 
-        # Get response from Vertex AI (pass history for memory/context)
-        response_text = vertex_ai.generate_response(
-            message,
-            image_path=image_path,
-            image_mime_type=image_mime_type,
-            history=history,
-            api_key=api_key,
-            model_name=ai_model
-        )
-        
-        return jsonify({'response': response_text})
+        def generate():
+            try:
+                for chunk in vertex_ai.generate_streaming_response(
+                    message,
+                    image_path=image_path,
+                    image_mime_type=image_mime_type,
+                    history=history,
+                    api_key=api_key,
+                    model_name=ai_model
+                ):
+                    # Clean up common AI prefixes that might appear in responses
+                    chunk = chunk.strip()
+                    # Remove common prefixes that AI models might add
+                    prefixes_to_remove = ['Assistant:', 'AI:', 'Bot:', 'System:', 'Human:']
+                    for prefix in prefixes_to_remove:
+                        if chunk.startswith(prefix):
+                            chunk = chunk[len(prefix):].strip()
+                            break
+                    
+                    yield f"data: {chunk}\n\n"
+            except Exception as e:
+                current_app.logger.error(f"Error in streaming endpoint: {e}")
+                yield f"data: Error: {str(e)}\n\n"
+
+        return Response(generate(), mimetype='text/event-stream')
 
     except Exception as e:
-        current_app.logger.error(f"Error in chat endpoint: {e}")
+        current_app.logger.error(f"Error in chat stream endpoint: {e}")
         return jsonify({'error': 'An error occurred while processing your request.'}), 500
 
 # ===== API Key Management Routes =====

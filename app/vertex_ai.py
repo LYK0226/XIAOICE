@@ -12,10 +12,10 @@ def init_gemini(api_key=None):
         raise ValueError("API key is required but not provided")
     return genai.Client(api_key=api_key)
 
-def generate_response(message, image_path=None, image_mime_type=None, history=None, api_key=None, model_name=None):
+def generate_streaming_response(message, image_path=None, image_mime_type=None, history=None, api_key=None, model_name=None):
     """
-    Generates a response from the Gemini model.
-    Can handle both text and image inputs.
+    Generates a streaming response from the Gemini model.
+    Yields chunks of text as they are generated.
     """
     client = init_gemini(api_key)
     
@@ -69,13 +69,16 @@ def generate_response(message, image_path=None, image_mime_type=None, history=No
             
         except FileNotFoundError:
             current_app.logger.error(f"Image file not found: {image_path}")
-            return "Error: Could not read the uploaded image file."
+            yield "Error: Could not read the uploaded image file."
+            return
         except Exception as e:
             current_app.logger.error(f"Error reading image file: {e}")
-            return "Error: Failed to process the image."
+            yield "Error: Failed to process the image."
+            return
 
     if not contents:
-        return "Please provide a message or an image."
+        yield "Please provide a message or an image."
+        return
 
     generation_config = genai.types.GenerateContentConfig(
         max_output_tokens=8192,
@@ -103,44 +106,34 @@ def generate_response(message, image_path=None, image_mime_type=None, history=No
     ]
 
     try:
-        response = client.models.generate_content(
+        # Use streaming response
+        response_stream = client.models.generate_content_stream(
             model=model_name,
             contents=contents,
             config=generation_config,
         )
         
-        if response.candidates and response.candidates[0].content.parts:
-            response_text = response.candidates[0].content.parts[0].text
-            
-            # Clean up common AI prefixes that might appear in responses
-            response_text = response_text.strip()
-            # Remove common prefixes that AI models might add
-            prefixes_to_remove = ['Assistant:', 'AI:', 'Bot:', 'System:', 'Human:']
-            for prefix in prefixes_to_remove:
-                if response_text.startswith(prefix):
-                    response_text = response_text[len(prefix):].strip()
-                    break
-            
-            return response_text
-        else:
-            # Handle cases where the response might be blocked or empty
-            return "I'm sorry, I couldn't generate a response. This might be due to safety settings or other issues."
+        for chunk in response_stream:
+            if chunk.candidates and chunk.candidates[0].content.parts:
+                text_chunk = chunk.candidates[0].content.parts[0].text
+                yield text_chunk
+                
     except Exception as e:
-        current_app.logger.error(f"Error generating response: {e}")
+        current_app.logger.error(f"Error generating streaming response: {e}")
 
         # Handle specific Google API errors with user-friendly messages
         error_str = str(e).lower()
         if "user location is not supported" in error_str or "failed_precondition" in error_str:
-            return ("I'm sorry, but the Google AI service is currently not available in your location. "
+            yield ("I'm sorry, but the Google AI service is currently not available in your location. "
                    "This is a regional restriction imposed by Google. "
                    "Please try using a VPN service to connect from a supported region (like the US), "
                    "or consider using a different AI service.")
         elif "api key" in error_str and ("invalid" in error_str or "unauthorized" in error_str):
-            return ("API key error: Please check that your Google AI API key is valid and has the necessary permissions. "
+            yield ("API key error: Please check that your Google AI API key is valid and has the necessary permissions. "
                    "You can verify your API key in the settings page.")
         elif "quota" in error_str or "rate limit" in error_str:
-            return ("API quota exceeded: You've reached the usage limit for your Google AI API key. "
+            yield ("API quota exceeded: You've reached the usage limit for your Google AI API key. "
                    "Please wait a few minutes before trying again, or check your API usage limits.")
         else:
-            return f"Error: Failed to generate response. {str(e)}"
+            yield f"Error: Failed to generate response. {str(e)}"
 

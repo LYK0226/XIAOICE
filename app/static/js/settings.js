@@ -374,21 +374,18 @@ document.querySelector('.close-avatar').addEventListener('click', () => {
 userAvatarInput.addEventListener('change', function(e) {
     const file = e.target.files[0];
     if (file) {
+        // Preview the image
         const reader = new FileReader();
         reader.onload = function(event) {
-            userAvatar = event.target.result;
-            userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
+            userAvatarPreview.style.backgroundImage = `url(${event.target.result})`;
             userAvatarPreview.style.backgroundSize = 'cover';
             userAvatarPreview.style.backgroundPosition = 'center';
             userAvatarPreview.innerHTML = '';
-            
-            // Save to localStorage
-            localStorage.setItem('userAvatar', userAvatar);
-            
-            // Save to server
-            saveAvatarToServer(userAvatar);
         };
         reader.readAsDataURL(file);
+        
+        // Save to server
+        saveAvatarToServer(file);
     }
 });
 
@@ -405,16 +402,6 @@ document.getElementById('clearUserAvatar').addEventListener('click', () => {
 
 // Load saved avatars from localStorage on page load
 window.addEventListener('load', () => {
-    const savedUserAvatar = localStorage.getItem('userAvatar');
-    
-    if (savedUserAvatar) {
-        userAvatar = savedUserAvatar;
-        userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
-        userAvatarPreview.style.backgroundSize = 'cover';
-        userAvatarPreview.style.backgroundPosition = 'center';
-        userAvatarPreview.innerHTML = '';
-    }
-    
     // Load user profile information
     loadUserProfile();
     
@@ -441,11 +428,15 @@ async function loadUserProfile() {
             
             // Load user avatar if available
             if (user.avatar) {
-                userAvatar = user.avatar;
-                userAvatarPreview.style.backgroundImage = `url(${user.avatar})`;
+                userAvatar = `/static/${user.avatar}`;
+                userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
                 userAvatarPreview.style.backgroundSize = 'cover';
                 userAvatarPreview.style.backgroundPosition = 'center';
                 userAvatarPreview.innerHTML = '';
+                // Update global userAvatar for chatbox.js
+                if (window.userAvatar !== undefined) {
+                    window.userAvatar = userAvatar;
+                }
             }
         } else {
             console.error('Failed to load user profile');
@@ -1357,18 +1348,55 @@ document.getElementById('aiModelSelect').addEventListener('change', async (event
 });
 
 // Save avatar to server
-async function saveAvatarToServer(avatarData) {
+async function saveAvatarToServer(file) {
+    if (!file) {
+        // Clear avatar
+        try {
+            const response = await fetch('/auth/update-avatar', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                },
+                body: new FormData() // Empty form data to clear avatar
+            });
+            
+            if (!response.ok) {
+                console.error('Failed to clear avatar on server');
+            }
+        } catch (error) {
+            console.error('Error clearing avatar on server:', error);
+        }
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('avatar', file);
+    
     try {
         const response = await fetch('/auth/update-avatar', {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('access_token')}`
             },
-            body: JSON.stringify({ avatar: avatarData })
+            body: formData
         });
         
-        if (!response.ok) {
+        if (response.ok) {
+            const result = await response.json();
+            console.log('Avatar saved to server successfully');
+            // Update the user avatar path for display
+            if (result.avatar_path) {
+                userAvatar = `/static/${result.avatar_path}`;
+                userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
+                userAvatarPreview.style.backgroundSize = 'cover';
+                userAvatarPreview.style.backgroundPosition = 'center';
+                userAvatarPreview.innerHTML = '';
+                // Update global userAvatar for chatbox.js
+                if (window.userAvatar !== undefined) {
+                    window.userAvatar = userAvatar;
+                }
+            }
+        } else {
             console.error('Failed to save avatar to server');
         }
     } catch (error) {
