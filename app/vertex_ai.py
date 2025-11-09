@@ -1,12 +1,20 @@
 from google import genai
 from flask import current_app
 import os
+import logging
+
+# Get logger for this module
+logger = logging.getLogger(__name__)
 
 def init_gemini(api_key=None):
     """Initializes the Google Generative AI client."""
     if api_key is None:
         # Fallback to config for backward compatibility
-        api_key = current_app.config.get('GOOGLE_API_KEY')
+        try:
+            api_key = current_app.config.get('GOOGLE_API_KEY')
+        except RuntimeError:
+            # If we're outside app context, api_key must be provided
+            pass
 
     if not api_key:
         raise ValueError("API key is required but not provided")
@@ -17,11 +25,15 @@ def generate_streaming_response(message, image_path=None, image_mime_type=None, 
     Generates a streaming response from the Gemini model.
     Yields chunks of text as they are generated.
     """
-    client = init_gemini(api_key)
-    
-    # Use provided model_name or fall back to config default
+    # Get model_name from config if not provided (before entering generator context)
     if model_name is None:
-        model_name = current_app.config['GEMINI_MODEL']
+        try:
+            model_name = current_app.config.get('GEMINI_MODEL', 'gemini-2.5-flash')
+        except RuntimeError:
+            # If we're outside app context, use default
+            model_name = 'gemini-2.5-flash'
+    
+    client = init_gemini(api_key)
 
     contents = []
 
@@ -52,7 +64,7 @@ def generate_streaming_response(message, image_path=None, image_mime_type=None, 
             context_text = "\n".join(convo_lines)
             contents.append(context_text)
         except Exception as e:
-            current_app.logger.warning(f"Failed to process history for context: {e}")
+            logger.warning(f"Failed to process history for context: {e}")
 
     if message:
         contents.append(message)
@@ -68,11 +80,11 @@ def generate_streaming_response(message, image_path=None, image_mime_type=None, 
             contents.append(image_part)
             
         except FileNotFoundError:
-            current_app.logger.error(f"Image file not found: {image_path}")
+            logger.error(f"Image file not found: {image_path}")
             yield "Error: Could not read the uploaded image file."
             return
         except Exception as e:
-            current_app.logger.error(f"Error reading image file: {e}")
+            logger.error(f"Error reading image file: {e}")
             yield "Error: Failed to process the image."
             return
 
@@ -119,7 +131,7 @@ def generate_streaming_response(message, image_path=None, image_mime_type=None, 
                 yield text_chunk
                 
     except Exception as e:
-        current_app.logger.error(f"Error generating streaming response: {e}")
+        logger.error(f"Error generating streaming response: {e}")
 
         # Handle specific Google API errors with user-friendly messages
         error_str = str(e).lower()
