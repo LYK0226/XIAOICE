@@ -2,7 +2,7 @@ from google import genai
 from flask import current_app
 import os
 import logging
-from app.adk import get_current_time
+from app.adk import get_current_time, read_pdf, get_pdf_info
 
 # Get logger for this module
 logger = logging.getLogger(__name__)
@@ -21,10 +21,19 @@ def init_gemini(api_key=None):
         raise ValueError("API key is required but not provided")
     return genai.Client(api_key=api_key)
 
-def generate_streaming_response(message, image_path=None, image_mime_type=None, history=None, api_key=None, model_name=None):
+def generate_streaming_response(message, image_path=None, image_mime_type=None, pdf_path=None, history=None, api_key=None, model_name=None):
     """
     Generates a streaming response from the Gemini model.
     Yields chunks of text as they are generated.
+    
+    Args:
+        message: User's text message
+        image_path: Path to image file (optional)
+        image_mime_type: MIME type of image (optional)
+        pdf_path: Path to PDF file (optional)
+        history: Conversation history (optional)
+        api_key: Google AI API key
+        model_name: Model name to use
     """
     # Get model_name from config if not provided (before entering generator context)
     if model_name is None:
@@ -71,7 +80,25 @@ def generate_streaming_response(message, image_path=None, image_mime_type=None, 
         # Add current time context to the message
         current_time = get_current_time()
         system_context = f"[系统信息: 当前时间是 {current_time}]\n\n"
-        contents.append(system_context + message)
+        
+        # Check if there's a PDF to process
+        pdf_content = ""
+        if pdf_path:
+            logger.info(f"Processing PDF file: {pdf_path}")
+            pdf_result = read_pdf(pdf_path, max_pages=50)  # Limit to 50 pages
+            
+            if pdf_result['success']:
+                logger.info(f"PDF read successfully: {pdf_result['pages_read']} pages")
+                pdf_content = f"\n\n[PDF文件内容 - {pdf_result['file_path']}]\n"
+                pdf_content += f"共 {pdf_result['num_pages']} 页，已读取 {pdf_result['pages_read']} 页\n"
+                pdf_content += "=" * 50 + "\n"
+                pdf_content += pdf_result['text']
+                pdf_content += "\n" + "=" * 50 + "\n\n"
+            else:
+                logger.error(f"PDF read failed: {pdf_result.get('error')}")
+                pdf_content = f"\n\n[PDF读取失败: {pdf_result.get('error')}]\n\n"
+        
+        contents.append(system_context + pdf_content + message)
     
     if image_path and image_mime_type:
         try:

@@ -1088,6 +1088,7 @@ async function sendMessageWithFiles() {
         }
 
         const imageFile = attachmentsSnapshot.find((file) => file.type.startsWith('image/'));
+        const pdfFile = attachmentsSnapshot.find((file) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
         
         // Create bot message element with typing indicator
         const botMessageElement = createMessage('', false);
@@ -1117,25 +1118,63 @@ async function sendMessageWithFiles() {
         };
         
         try {
-            if (imageFile) {
-                // For images, use non-streaming for now (can be updated later)
-                const aiResponse = await chatAPI.sendImageMessage(
-                    messageText || t.analyzeImage,
-                    imageFile,
+            if (imageFile || pdfFile) {
+                // For images and PDFs, use streaming with file attachment
+                const fileToSend = imageFile || pdfFile;
+                const defaultMessage = imageFile ? (t.analyzeImage || '分析這張圖片') : (t.analyzePDF || '分析這個 PDF 文件');
+                
+                let currentTypingIndex = 0;
+                let pendingText = '';
+                
+                await chatAPI.streamChatMessage(
+                    messageText || defaultMessage,
+                    fileToSend,
                     currentLanguage,
-                    conversationHistory
+                    conversationHistory,
+                    (chunk) => {
+                        // Accumulate chunks
+                        pendingText += chunk;
+                        
+                        // Type out the accumulated text character by character
+                        const typePendingText = () => {
+                            if (currentTypingIndex < pendingText.length) {
+                                botMessageContent.textContent = pendingText.slice(0, currentTypingIndex + 1);
+                                currentTypingIndex++;
+                                messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                                setTimeout(typePendingText, 30); // Typing speed
+                            }
+                        };
+                        
+                        if (currentTypingIndex < pendingText.length) {
+                            typePendingText();
+                        }
+                    },
+                    () => {
+                        // Streaming complete
+                        fullResponse = pendingText;
+                        botMessageElement.classList.remove('typing-indicator');
+                        // Add speak button after streaming is complete
+                        const speakBtn = document.createElement('button');
+                        speakBtn.className = 'speak-btn';
+                        speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                        speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
+                        speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
+                        botMessageElement.querySelector('.message-content').appendChild(speakBtn);
+                    },
+                    (error) => {
+                        console.error('Streaming error:', error);
+                        botMessageElement.classList.remove('typing-indicator');
+                        botMessageContent.textContent = t.errorMsg || '抱歉，發生了錯誤。請稍後再試。';
+                        fullResponse = botMessageContent.textContent;
+                        // Add speak button for error message too
+                        const speakBtn = document.createElement('button');
+                        speakBtn.className = 'speak-btn';
+                        speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                        speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
+                        speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
+                        botMessageElement.querySelector('.message-content').appendChild(speakBtn);
+                    }
                 );
-                botMessageElement.classList.remove('typing-indicator');
-                botMessageContent.textContent = '';
-                await typeText(aiResponse, botMessageContent);
-                fullResponse = aiResponse;
-                // Add speak button after typing is complete
-                const speakBtn = document.createElement('button');
-                speakBtn.className = 'speak-btn';
-                speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-                speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
-                speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
-                botMessageElement.querySelector('.message-content').appendChild(speakBtn);
             } else {
                 // Use streaming for text messages
                 let currentTypingIndex = 0;

@@ -97,6 +97,14 @@ def chat_stream():
 
         # Get logger outside of generator to avoid context issues
         logger = current_app.logger
+        
+        # Check if PDF file was uploaded
+        pdf_path = None
+        if image_path and image_path.lower().endswith('.pdf'):
+            # If the "image" is actually a PDF, treat it as PDF
+            pdf_path = image_path
+            image_path = None
+            image_mime_type = None
 
         def generate():
             try:
@@ -104,6 +112,7 @@ def chat_stream():
                     message,
                     image_path=image_path,
                     image_mime_type=image_mime_type,
+                    pdf_path=pdf_path,
                     history=history,
                     api_key=api_key,
                     model_name=ai_model
