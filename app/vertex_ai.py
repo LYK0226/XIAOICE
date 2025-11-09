@@ -2,6 +2,7 @@ from google import genai
 from flask import current_app
 import os
 import logging
+from app.adk import get_current_time
 
 # Get logger for this module
 logger = logging.getLogger(__name__)
@@ -67,7 +68,10 @@ def generate_streaming_response(message, image_path=None, image_mime_type=None, 
             logger.warning(f"Failed to process history for context: {e}")
 
     if message:
-        contents.append(message)
+        # Add current time context to the message
+        current_time = get_current_time()
+        system_context = f"[系统信息: 当前时间是 {current_time}]\n\n"
+        contents.append(system_context + message)
     
     if image_path and image_mime_type:
         try:
