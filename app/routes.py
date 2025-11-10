@@ -601,3 +601,106 @@ def get_conversation_messages(conversation_id):
     except Exception as e:
         current_app.logger.error(f"Error fetching messages: {e}")
         return jsonify({'error': 'Failed to fetch messages'}), 500
+
+
+# ===== Quiz/Questionnaire Routes =====
+
+@bp.route('/api/quiz/generate', methods=['POST'])
+@jwt_required()
+def generate_quiz():
+    """根据 PDF 生成测验题目"""
+    from flask_jwt_extended import get_jwt_identity
+    from app.adk import PDFQuestionnaire
+    import os
+    
+    user_id = get_jwt_identity()
+    
+    try:
+        data = request.get_json()
+        pdf_path = data.get('pdf_path')
+        num_questions = data.get('num_questions', 5)
+        question_type = data.get('question_type', 'choice')
+        
+        # 如果没有提供 PDF 路径，使用最新上传的
+        if not pdf_path:
+            upload_dir = current_app.config['UPLOAD_FOLDER']
+            pdf_files = [f for f in os.listdir(upload_dir) if f.lower().endswith('.pdf')]
+            if not pdf_files:
+                return jsonify({'error': '没有找到 PDF 文件，请先上传 PDF'}), 400
+            
+            # 按时间排序，取最新的
+            pdf_files_sorted = sorted(
+                pdf_files,
+                key=lambda x: os.path.getmtime(os.path.join(upload_dir, x)),
+                reverse=True
+            )
+            pdf_path = os.path.join(upload_dir, pdf_files_sorted[0])
+        
+        # 生成问卷
+        qnr = PDFQuestionnaire(
+            pdf_path=pdf_path,
+            user_id=str(user_id),
+            max_questions=num_questions,
+            question_type=question_type
+        )
+        
+        # 返回问题
+        return jsonify({
+            'success': True,
+            'test_id': qnr.test_id,
+            'questions': qnr.questions,
+            'total_questions': len(qnr.questions),
+            'question_type': question_type
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error generating quiz: {e}")
+        return jsonify({'error': f'生成测验失败: {str(e)}'}), 500
+
+
+@bp.route('/api/quiz/submit', methods=['POST'])
+@jwt_required()
+def submit_quiz():
+    """提交测验答案"""
+    from flask_jwt_extended import get_jwt_identity
+    from app.adk import PDFQuestionnaire
+    from datetime import datetime
+    
+    user_id = get_jwt_identity()
+    
+    try:
+        data = request.get_json()
+        test_id = data.get('test_id')
+        answers = data.get('answers', [])  # [{question_index, answer, ...}]
+        
+        # 计算分数（如果是选择题）
+        correct_count = 0
+        total = len(answers)
+        
+        for ans in answers:
+            if ans.get('is_correct'):
+                correct_count += 1
+        
+        score = (correct_count / total * 100) if total > 0 else 0
+        
+        # 保存结果（可以存到数据库）
+        result = {
+            'test_id': test_id,
+            'user_id': user_id,
+            'answers': answers,
+            'score': f"{score:.1f}%",
+            'correct_count': correct_count,
+            'total_questions': total,
+            'submitted_at': datetime.now().isoformat()
+        }
+        
+        # TODO: 保存到数据库
+        
+        return jsonify({
+            'success': True,
+            'result': result
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error submitting quiz: {e}")
+        return jsonify({'error': f'提交失败: {str(e)}'}), 500

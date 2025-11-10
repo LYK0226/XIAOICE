@@ -1537,3 +1537,257 @@ function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
     
     return container;
 }
+// ===== Quiz/Questionnaire Functionality =====
+
+// Add event listener for generate quiz button
+const generateQuizBtn = document.getElementById('generateQuizBtn');
+if (generateQuizBtn) {
+    generateQuizBtn.addEventListener('click', async () => {
+        try {
+            // Show loading message
+            const loadingMsg = createMessage('🔄 正在生成測驗題目...', false);
+            messagesDiv.appendChild(loadingMsg);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            
+            // Call API to generate quiz
+            const response = await fetch('/api/quiz/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                },
+                body: JSON.stringify({
+                    num_questions: 5,
+                    question_type: 'choice'
+                })
+            });
+            
+            if (!response.ok) {
+                const errorData = await response.json();
+                throw new Error(errorData.error || '生成測驗失敗');
+            }
+            
+            const data = await response.json();
+            
+            // Remove loading message
+            messagesDiv.removeChild(loadingMsg);
+            
+            // Start interactive quiz (one question at a time)
+            startInteractiveQuiz(data);
+            
+        } catch (error) {
+            console.error('生成測驗錯誤:', error);
+            
+            // Show error message
+            const errorMsg = createMessage(`❌ ${error.message}`, false);
+            messagesDiv.appendChild(errorMsg);
+            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        }
+    });
+}
+
+// Interactive quiz: one question at a time
+function startInteractiveQuiz(quizData) {
+    const { test_id, questions, total_questions } = quizData;
+    
+    // Show quiz start message
+    const startMsg = document.createElement('div');
+    startMsg.className = 'bot-message-container';
+    startMsg.style.cssText = 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; color: white; margin: 10px 0;';
+    startMsg.innerHTML = `
+        <h3 style="margin: 0 0 10px 0; font-size: 24px;"><i class="fas fa-clipboard-question"></i> PDF 測驗開始</h3>
+        <p style="margin: 0; opacity: 0.9;">共 ${total_questions} 題選擇題</p>
+        <p style="margin: 5px 0 0 0; opacity: 0.7; font-size: 12px;">Test ID: ${test_id}</p>
+    `;
+    messagesDiv.appendChild(startMsg);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    // Quiz state
+    const quizState = {
+        test_id: test_id,
+        questions: questions,
+        currentIndex: 0,
+        userAnswers: [],
+        correctCount: 0
+    };
+    
+    // Show first question
+    setTimeout(() => showNextQuestion(quizState), 500);
+}
+
+function showNextQuestion(quizState) {
+    const { questions, currentIndex, userAnswers } = quizState;
+    
+    if (currentIndex >= questions.length) {
+        // Quiz finished - show results
+        showQuizResults(quizState);
+        return;
+    }
+    
+    const question = questions[currentIndex];
+    const questionNumber = currentIndex + 1;
+    
+    // Create question container
+    const questionContainer = document.createElement('div');
+    questionContainer.className = 'bot-message-container';
+    questionContainer.style.cssText = 'background: white; padding: 20px; border-radius: 15px; border: 2px solid #667eea; margin: 10px 0;';
+    
+    // Question header
+    const questionHeader = document.createElement('div');
+    questionHeader.style.cssText = 'font-weight: bold; font-size: 18px; color: #667eea; margin-bottom: 15px;';
+    questionHeader.innerHTML = `<i class="fas fa-question-circle"></i> 第 ${questionNumber}/${questions.length} 題`;
+    questionContainer.appendChild(questionHeader);
+    
+    // Question text
+    const questionText = document.createElement('div');
+    questionText.style.cssText = 'font-size: 16px; color: #333; margin-bottom: 20px; line-height: 1.6;';
+    questionText.textContent = question.question;
+    questionContainer.appendChild(questionText);
+    
+    // Options
+    question.options.forEach((option, optIdx) => {
+        const optionBtn = document.createElement('button');
+        optionBtn.style.cssText = `
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            background: #f5f5f5;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            text-align: left;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 15px;
+            color: #333;
+        `;
+        optionBtn.textContent = `${optIdx + 1}. ${option}`;
+        
+        optionBtn.onmouseover = () => {
+            if (!optionBtn.disabled) {
+                optionBtn.style.background = '#e8f0fe';
+                optionBtn.style.borderColor = '#667eea';
+            }
+        };
+        optionBtn.onmouseout = () => {
+            if (!optionBtn.disabled) {
+                optionBtn.style.background = '#f5f5f5';
+                optionBtn.style.borderColor = '#e0e0e0';
+            }
+        };
+        
+        optionBtn.onclick = () => {
+            const isCorrect = optIdx === question.correct_answer;
+            
+            // Record answer
+            quizState.userAnswers.push({
+                question_index: currentIndex,
+                selected_option: optIdx,
+                answer: option,
+                is_correct: isCorrect
+            });
+            
+            if (isCorrect) {
+                quizState.correctCount++;
+            }
+            
+            // Disable all buttons
+            Array.from(questionContainer.querySelectorAll('button')).forEach(btn => {
+                btn.disabled = true;
+                btn.style.cursor = 'not-allowed';
+            });
+            
+            // Show feedback
+            if (isCorrect) {
+                optionBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+                optionBtn.style.borderColor = '#11998e';
+                optionBtn.style.color = 'white';
+                optionBtn.innerHTML = `✅ ${optIdx + 1}. ${option}`;
+            } else {
+                optionBtn.style.background = 'linear-gradient(135deg, #eb3349 0%, #f45c43 100%)';
+                optionBtn.style.borderColor = '#eb3349';
+                optionBtn.style.color = 'white';
+                optionBtn.innerHTML = `❌ ${optIdx + 1}. ${option}`;
+                
+                // Highlight correct answer
+                const correctBtn = questionContainer.querySelectorAll('button')[question.correct_answer];
+                correctBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
+                correctBtn.style.borderColor = '#11998e';
+                correctBtn.style.color = 'white';
+                correctBtn.innerHTML = `✅ ${question.correct_answer + 1}. ${question.options[question.correct_answer]} (正確答案)`;
+            }
+            
+            // Show next question after delay
+            setTimeout(() => {
+                quizState.currentIndex++;
+                showNextQuestion(quizState);
+            }, 2000);
+        };
+        
+        questionContainer.appendChild(optionBtn);
+    });
+    
+    messagesDiv.appendChild(questionContainer);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+}
+
+function showQuizResults(quizState) {
+    const { test_id, questions, userAnswers, correctCount } = quizState;
+    const total = questions.length;
+    const score = ((correctCount / total) * 100).toFixed(1);
+    
+    // Display results
+    const resultContainer = document.createElement('div');
+    resultContainer.className = 'bot-message-container';
+    resultContainer.style.cssText = 'max-width: 800px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 25px; border-radius: 15px; color: white; margin: 10px 0;';
+    
+    resultContainer.innerHTML = `
+        <h3 style="margin: 0 0 20px 0; font-size: 28px; text-align: center;">
+            <i class="fas fa-trophy"></i> 測驗完成！
+        </h3>
+        <div style="font-size: 56px; font-weight: bold; text-align: center; margin: 30px 0;">
+            ${score}%
+        </div>
+        <p style="text-align: center; font-size: 20px; margin: 15px 0;">
+            答對 <strong>${correctCount}</strong> 題 / 共 <strong>${total}</strong> 題
+        </p>
+        <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px; margin-top: 25px;">
+            <p style="margin: 0 0 15px 0; font-weight: bold; font-size: 18px;">📊 詳細結果：</p>
+            ${userAnswers.map((ans, idx) => `
+                <div style="margin: 12px 0; padding: 12px; background: rgba(255,255,255,0.15); border-radius: 8px;">
+                    <div style="font-weight: bold; font-size: 16px;">
+                        Q${idx + 1}: ${ans.is_correct ? '✅ 正確' : '❌ 錯誤'}
+                    </div>
+                    <div style="font-size: 13px; margin-top: 5px; opacity: 0.9;">
+                        ${questions[idx].question}
+                    </div>
+                    ${!ans.is_correct ? `
+                        <div style="font-size: 13px; margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.2); border-radius: 5px;">
+                            <strong>您的答案:</strong> ${ans.answer}<br>
+                            <strong>正確答案:</strong> ${questions[idx].options[questions[idx].correct_answer]}
+                        </div>
+                    ` : ''}
+                </div>
+            `).join('')}
+        </div>
+        <p style="text-align: center; margin-top: 20px; opacity: 0.8; font-size: 12px;">
+            Test ID: ${test_id}
+        </p>
+    `;
+    
+    messagesDiv.appendChild(resultContainer);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    // Submit to server (optional, for record keeping)
+    fetch('/api/quiz/submit', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+        },
+        body: JSON.stringify({
+            test_id: test_id,
+            answers: userAnswers
+        })
+    }).catch(err => console.error('提交結果錯誤:', err));
+}
