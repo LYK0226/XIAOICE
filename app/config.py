@@ -16,10 +16,6 @@ class Config:
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'upload')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
 
-    # Google Cloud Storage
-    GCS_BUCKET_NAME = os.environ.get('GCS_BUCKET_NAME')
-    GCS_CREDENTIALS_PATH = os.environ.get('GCS_CREDENTIALS_PATH')
-
     # Database
     # Use DATABASE_URL environment variable if provided (Postgres, MySQL, etc.),
     # otherwise fall back to a local SQLite file at project root.
@@ -32,7 +28,7 @@ class Config:
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'jwt_default_secret_key')
 
     # JWT token handling (support both Authorization header and secure cookies)
-    JWT_TOKEN_LOCATION = ['headers', 'cookies', 'query_string']
+    JWT_TOKEN_LOCATION = ['headers', 'cookies']
     JWT_HEADER_NAME = os.environ.get('JWT_HEADER_NAME', 'Authorization')
     JWT_HEADER_TYPE = os.environ.get('JWT_HEADER_TYPE', 'Bearer')
     JWT_ACCESS_COOKIE_NAME = os.environ.get('JWT_ACCESS_COOKIE_NAME', 'access_token')
