@@ -1414,7 +1414,6 @@ function openDocumentPreviewModal(filePath, fileName) {
 function closeDocumentPreview() {
     const mainContent = document.getElementById('main-content');
     const previewPanel = document.getElementById('preview-panel');
-
     mainContent.classList.remove('preview-active');
     previewPanel.style.display = 'none';
 }
