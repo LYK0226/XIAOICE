@@ -1425,19 +1425,8 @@ function openDocumentPreviewModal(filePath, fileName) {
 function closeDocumentPreview() {
     const mainContent = document.getElementById('main-content');
     const previewPanel = document.getElementById('preview-panel');
-<<<<<<< HEAD
     mainContent.classList.remove('preview-active');
     previewPanel.style.display = 'none';
-=======
-
-    // Animate out
-    previewPanel.style.opacity = '0';
-    previewPanel.style.transform = 'translateX(20px)';
-    setTimeout(() => {
-        mainContent.classList.remove('preview-active');
-        previewPanel.style.display = 'none';
-    }, 300);
->>>>>>> parent of 8589b03 (Revert "Animations in the preview window have been made smoother")
 }
 
 function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
