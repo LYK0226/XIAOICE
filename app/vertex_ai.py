@@ -1,6 +1,7 @@
 from google import genai
 from flask import current_app
 import os
+from . import gcs_upload
 
 def init_gemini(api_key=None):
     """Initializes the Google Generative AI client."""
@@ -59,20 +60,15 @@ def generate_streaming_response(message, image_path=None, image_mime_type=None, 
     
     if image_path and image_mime_type:
         try:
-            # Read the local image file and convert to bytes
-            with open(image_path, 'rb') as f:
-                image_data = f.read()
+            # Download the image from GCS
+            image_data = gcs_upload.download_file_from_gcs(image_path)
             
             # Create a part from bytes
             image_part = genai.types.Part.from_bytes(data=image_data, mime_type=image_mime_type)
             contents.append(image_part)
             
-        except FileNotFoundError:
-            current_app.logger.error(f"Image file not found: {image_path}")
-            yield "Error: Could not read the uploaded image file."
-            return
         except Exception as e:
-            current_app.logger.error(f"Error reading image file: {e}")
+            current_app.logger.error(f"Error downloading image from GCS: {e}")
             yield "Error: Failed to process the image."
             return
 

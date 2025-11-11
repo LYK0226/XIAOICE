@@ -1,10 +1,12 @@
 from datetime import datetime
-from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, Response
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, Response, send_file
 from flask_jwt_extended import jwt_required, decode_token
 import os
 import json
 from . import vertex_ai
 from werkzeug.utils import secure_filename
+from . import gcs_upload
+import io
 
 bp = Blueprint('main', __name__)
 
@@ -30,7 +32,6 @@ def index():
 def login_page():
     """Render the login/signup page."""
     return render_template('login_signup.html')
-
 @bp.route('/forgot_password')
 def forgot_password_page():
     """Render the forgot password page."""
@@ -63,16 +64,8 @@ def chat_stream():
             if not filename:
                 return jsonify({'error': 'Invalid file name'}), 400
 
-            # Save the uploaded image to the configured static folder
-            upload_folder = current_app.config['UPLOAD_FOLDER']
-            os.makedirs(upload_folder, exist_ok=True)
-
-            name, ext = os.path.splitext(filename)
-            timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-            unique_filename = f"{name}_{timestamp}{ext}" if name else f"upload_{timestamp}{ext}"
-
-            image_path = os.path.join(upload_folder, unique_filename)
-            image_file.save(image_path)
+            # Upload to Google Cloud Storage
+            image_path = gcs_upload.upload_image_to_gcs(image_file, filename)
             image_mime_type = image_file.mimetype
 
         # Parse optional conversation history sent from client
@@ -513,21 +506,7 @@ def create_message():
     uploaded_files = []
     if request.files:
         files = request.files.getlist('files')
-        upload_folder = current_app.config['UPLOAD_FOLDER']
-        os.makedirs(upload_folder, exist_ok=True)
-        
-        for file in files:
-            if file.filename:
-                filename = secure_filename(file.filename)
-                if not filename:
-                    continue
-                name, ext = os.path.splitext(filename)
-                timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-                unique_filename = f"{name}_{timestamp}{ext}" if name else f"upload_{timestamp}{ext}"
-                file_path = os.path.join(upload_folder, unique_filename)
-                file.save(file_path)
-                relative_path = f"upload/{unique_filename}"
-                uploaded_files.append(relative_path)
+        uploaded_files = gcs_upload.upload_files_to_gcs(files)
     
     # Get data from JSON or form
     if request.is_json:
@@ -588,3 +567,24 @@ def get_conversation_messages(conversation_id):
     except Exception as e:
         current_app.logger.error(f"Error fetching messages: {e}")
         return jsonify({'error': 'Failed to fetch messages'}), 500
+
+@bp.route('/serve_file', methods=['GET'])
+@jwt_required()
+def serve_file():
+    """Serve a file from Google Cloud Storage."""
+    gcs_url = request.args.get('url')
+    if not gcs_url:
+        return jsonify({'error': 'url parameter is required'}), 400
+
+    try:
+        # Download file from GCS and get content type
+        file_data, content_type = gcs_upload.get_file_data_and_content_type(gcs_url)
+        
+        # Create a file-like object
+        file_obj = io.BytesIO(file_data)
+        file_obj.seek(0)
+        
+        return send_file(file_obj, mimetype=content_type, as_attachment=False)
+    except Exception as e:
+        current_app.logger.error(f"Error serving file from GCS: {e}")
+        return jsonify({'error': 'Failed to serve file'}), 500

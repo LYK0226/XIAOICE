@@ -1310,7 +1310,13 @@ function updateMessageWithServerFiles(messageElement, uploadedFiles) {
     
     // Add server-based file displays
     uploadedFiles.forEach(filePath => {
-        const fullPath = `/static/${filePath}`;
+        let fullPath;
+        if (filePath.startsWith('https://storage.googleapis.com/')) {
+            const token = localStorage.getItem('access_token');
+            fullPath = `/serve_file?url=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`;
+        } else {
+            fullPath = `/static/${filePath}`;
+        }
         const rawFileName = filePath.split('/').pop();
         const displayFileName = cleanFileName(rawFileName);
         
@@ -1404,6 +1410,11 @@ function openDocumentPreviewModal(filePath, fileName) {
     // Show preview panel
     mainContent.classList.add('preview-active');
     previewPanel.style.display = 'flex';
+    // Trigger animation
+    setTimeout(() => {
+        previewPanel.style.opacity = '1';
+        previewPanel.style.transform = 'translateX(0)';
+    }, 10);
 
     // Add close event listener
     closePreviewBtn.onclick = () => {
@@ -1414,8 +1425,19 @@ function openDocumentPreviewModal(filePath, fileName) {
 function closeDocumentPreview() {
     const mainContent = document.getElementById('main-content');
     const previewPanel = document.getElementById('preview-panel');
+<<<<<<< HEAD
     mainContent.classList.remove('preview-active');
     previewPanel.style.display = 'none';
+=======
+
+    // Animate out
+    previewPanel.style.opacity = '0';
+    previewPanel.style.transform = 'translateX(20px)';
+    setTimeout(() => {
+        mainContent.classList.remove('preview-active');
+        previewPanel.style.display = 'none';
+    }, 300);
+>>>>>>> parent of 8589b03 (Revert "Animations in the preview window have been made smoother")
 }
 
 function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
@@ -1445,18 +1467,23 @@ function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
         // Remove timestamp pattern: _ followed by digits before the extension
         return fileName.replace(/_(\d+)(\.\w+)$/, '$2');
     }
-    
+
     // Add uploaded files
     if (uploadedFiles && uploadedFiles.length > 0) {
         uploadedFiles.forEach(filePath => {
-            // Assuming filePath is like "upload/filename.jpg"
-            const fullPath = `/static/${filePath}`;
+            let fullPath;
+            if (filePath.startsWith('https://storage.googleapis.com/')) {
+                const token = localStorage.getItem('access_token');
+                fullPath = `/serve_file?url=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`;
+            } else {
+                fullPath = `/static/${filePath}`;
+            }
             const rawFileName = filePath.split('/').pop();
             const displayFileName = cleanFileName(rawFileName);
-            
+
             // Check if it's an image
             const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(displayFileName);
-            
+
             if (isImage) {
                 const img = document.createElement('img');
                 img.className = 'message-image';
@@ -1464,27 +1491,27 @@ function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
                 img.style.maxWidth = '100%';
                 img.style.borderRadius = '8px';
                 img.style.marginBottom = '10px';
-                
+
                 img.addEventListener('click', () => {
                     openDocumentPreviewModal(fullPath, displayFileName);
                 });
-                
+
                 messageContent.appendChild(img);
             } else {
                 // Show file name for non-image files with preview modal
                 const fileInfo = document.createElement('div');
                 fileInfo.style.cssText = 'padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 8px; cursor: pointer;';
                 fileInfo.innerHTML = `<i class="fas fa-file"></i> ${displayFileName}`;
-                
+
                 fileInfo.addEventListener('click', () => {
                     openDocumentPreviewModal(fullPath, displayFileName);
                 });
-                
+
                 messageContent.appendChild(fileInfo);
             }
         });
     }
-    
+
     // Add text if provided
     if (text) {
         const paragraph = document.createElement('p');
