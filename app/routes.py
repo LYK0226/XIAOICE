@@ -45,9 +45,16 @@ def chat_stream():
     from .models import UserProfile, UserApiKey
     
     user_id = get_jwt_identity()
+    # Ensure GCS and Google API related env vars are available for background streaming work
+    credentials_path = current_app.config.get('GCS_CREDENTIALS_PATH')
+    if credentials_path:
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
+    bucket_name = current_app.config.get('GCS_BUCKET_NAME')
+    if bucket_name:
+        os.environ['GCS_BUCKET_NAME'] = bucket_name
     
-    if 'message' not in request.form and 'image' not in request.files:
-        return jsonify({'error': 'No message or image provided'}), 400
+    if 'message' not in request.form and 'image' not in request.files and 'image_url' not in request.form:
+        return jsonify({'error': 'No message, image, or image_url provided'}), 400
 
     message = request.form.get('message', '')
     image_file = request.files.get('image')
@@ -56,7 +63,10 @@ def chat_stream():
     image_mime_type = None
 
     try:
-        if image_file:
+        if 'image_url' in request.form:
+            image_path = request.form['image_url']
+            image_mime_type = request.form.get('image_mime_type')
+        elif image_file:
             if not image_file.filename:
                  return jsonify({'error': 'No selected file'}), 400
 
@@ -65,7 +75,7 @@ def chat_stream():
                 return jsonify({'error': 'Invalid file name'}), 400
 
             # Upload to Google Cloud Storage
-            image_path = gcs_upload.upload_image_to_gcs(image_file, filename)
+            image_path = gcs_upload.upload_image_to_gcs(image_file, filename, user_id=user_id)
             image_mime_type = image_file.mimetype
 
         # Parse optional conversation history sent from client
@@ -109,16 +119,14 @@ def chat_stream():
                     
                     yield f"data: {chunk}\n\n"
             except Exception as e:
-                current_app.logger.error(f"Error in streaming endpoint: {e}")
+                print(f"Error in streaming endpoint: {e}")
                 yield f"data: Error: {str(e)}\n\n"
 
         return Response(generate(), mimetype='text/event-stream')
 
     except Exception as e:
         current_app.logger.error(f"Error in chat stream endpoint: {e}")
-        return jsonify({'error': 'An error occurred while processing your request.'}), 500
-
-# ===== API Key Management Routes =====
+        return jsonify({'error': 'An error occurred while processing your request.'}), 500# ===== API Key Management Routes =====
 
 @bp.route('/api/keys', methods=['GET'])
 @jwt_required()
@@ -475,7 +483,7 @@ def update_conversation(conversation_id):
 def delete_conversation(conversation_id):
     """Delete a conversation and its messages."""
     from flask_jwt_extended import get_jwt_identity
-    from .models import Conversation, db
+    from .models import Conversation, FileUpload, db
 
     user_id = get_jwt_identity()
 
@@ -483,6 +491,11 @@ def delete_conversation(conversation_id):
         conversation = Conversation.query.filter_by(id=conversation_id, user_id=user_id).first()
         if not conversation:
             return jsonify({'error': 'Conversation not found'}), 404
+
+        # Delete associated files from GCS before deleting the conversation
+        file_uploads = FileUpload.query.filter_by(conversation_id=conversation_id).all()
+        for file_upload in file_uploads:
+            gcs_upload.delete_file_from_gcs(file_upload.file_path)
 
         db.session.delete(conversation)
         db.session.commit()
@@ -506,7 +519,10 @@ def create_message():
     uploaded_files = []
     if request.files:
         files = request.files.getlist('files')
-        uploaded_files = gcs_upload.upload_files_to_gcs(files)
+        # Get conversation_id from request data for file association
+        temp_data = request.form.to_dict() if not request.is_json else (request.get_json(silent=True) or {})
+        conv_id = temp_data.get('conversation_id')
+        uploaded_files = gcs_upload.upload_files_to_gcs(files, user_id=user_id, conversation_id=conv_id)
     
     # Get data from JSON or form
     if request.is_json:
@@ -540,6 +556,19 @@ def create_message():
 
         db.session.add(message)
         db.session.commit()
+
+        # Update FileUpload records with message_id if files were uploaded
+        if uploaded_files:
+            from .models import FileUpload
+            for gcs_url in uploaded_files:
+                file_upload = FileUpload.query.filter_by(
+                    user_id=user_id,
+                    file_path=gcs_url,
+                    conversation_id=conversation.id
+                ).first()
+                if file_upload and not file_upload.message_id:
+                    file_upload.message_id = message.id
+            db.session.commit()
 
         return jsonify({'message': message.to_dict(), 'conversation': conversation.to_dict()}), 201
     except Exception as e:
@@ -588,3 +617,33 @@ def serve_file():
     except Exception as e:
         current_app.logger.error(f"Error serving file from GCS: {e}")
         return jsonify({'error': 'Failed to serve file'}), 500
+
+@bp.route('/api/files', methods=['GET'])
+@jwt_required()
+def get_user_files():
+    """Get all files uploaded by the current user."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import FileUpload
+
+    user_id = get_jwt_identity()
+    
+    try:
+        # Get query parameters for filtering
+        conversation_id = request.args.get('conversation_id', type=int)
+        limit = request.args.get('limit', 50, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        query = FileUpload.query.filter_by(user_id=user_id)
+        
+        if conversation_id:
+            query = query.filter_by(conversation_id=conversation_id)
+        
+        files = query.order_by(FileUpload.uploaded_at.desc()).limit(limit).offset(offset).all()
+        
+        return jsonify({
+            'files': [file.to_dict() for file in files],
+            'total': query.count()
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error getting user files: {e}")
+        return jsonify({'error': 'Failed to retrieve files'}), 500

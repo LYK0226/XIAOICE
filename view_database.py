@@ -7,6 +7,7 @@ View all users and user profiles stored in the database.
 from app import create_app
 from app.models import db, User, UserProfile
 from datetime import datetime
+from sqlalchemy import inspect
 
 def print_separator(char='=', length=80):
     """Print a separator line."""
@@ -132,32 +133,52 @@ def get_database_stats():
     
     print()
 
-def delete_user(user_id):
-    """Delete a user by ID (use with caution!)."""
-    user = User.query.get(user_id)
+def view_table(table_name=None):
+    """Display a specific table or allow selection of a table."""
+    inspector = inspect(db.engine)
+    tables = inspector.get_table_names()
     
-    if not user:
-        print(f"\n❌ User with ID {user_id} not found.\n")
+    if table_name is None:
+        print_separator()
+        print("  AVAILABLE TABLES")
+        print_separator()
+        print("\nAvailable tables:")
+        for i, t in enumerate(tables, 1):
+            print(f"  {i}. {t}")
+        print()
+        
+        choice = input("Enter table number or name: ").strip()
+        if choice.isdigit() and 1 <= int(choice) <= len(tables):
+            table_name = tables[int(choice) - 1]
+        else:
+            table_name = choice
+    
+    if table_name not in tables:
+        print(f"\n❌ Table '{table_name}' not found in database.\n")
         return
     
-    print(f"\n⚠️  WARNING: About to delete user:")
-    print(f"  ID:       {user.id}")
-    print(f"  Username: {user.username}")
-    print(f"  Email:    {user.email}")
+    print_separator()
+    print(f"  TABLE: {table_name}")
+    print_separator()
     
-    confirm = input("\nType 'DELETE' to confirm: ")
+    table = db.Table(table_name, db.metadata, autoload_with=db.engine)
+    rows = db.session.query(table).all()
     
-    if confirm == 'DELETE':
-        # Delete profile first (foreign key constraint)
-        profile = UserProfile.query.filter_by(user_id=user_id).first()
-        if profile:
-            db.session.delete(profile)
-        
-        db.session.delete(user)
-        db.session.commit()
-        print(f"\n✅ User {user.username} deleted successfully.\n")
-    else:
-        print("\n❌ Deletion cancelled.\n")
+    if not rows:
+        print("No rows in this table.\n")
+        return
+    
+    print(f"Total rows: {len(rows)}")
+    columns = list(table.columns.keys())
+    print(f"Columns: {', '.join(columns)}\n")
+    
+    # Display all rows (since user chose specific table)
+    for i, row in enumerate(rows):
+        print(f"Row {i+1}:")
+        for col in columns:
+            value = getattr(row, col)
+            print(f"  {col}: {value}")
+        print()
 
 def interactive_menu():
     """Display interactive menu for database operations."""
@@ -171,6 +192,7 @@ def interactive_menu():
         print("  3. Search for user")
         print("  4. Database statistics")
         print("  5. Delete user (admin)")
+        print("  6. View a specific table")
         print("  0. Exit")
         print()
         
@@ -193,6 +215,8 @@ def interactive_menu():
                 delete_user(int(user_id))
             else:
                 print("❌ Invalid user ID.\n")
+        elif choice == '6':
+            view_table()
         elif choice == '0':
             print("Goodbye!\n")
             break
@@ -223,6 +247,9 @@ def main():
             elif command == 'delete' and len(sys.argv) > 2:
                 if sys.argv[2].isdigit():
                     delete_user(int(sys.argv[2]))
+            elif command == 'tables':
+                table_name = sys.argv[2] if len(sys.argv) > 2 else None
+                view_table(table_name)
             else:
                 print("Usage:")
                 print("  python view_database.py              # Interactive menu")
@@ -231,6 +258,7 @@ def main():
                 print("  python view_database.py stats        # Database statistics")
                 print("  python view_database.py search <term> # Search users")
                 print("  python view_database.py delete <id>  # Delete user by ID")
+                print("  python view_database.py tables [table_name]  # View specific table or list tables")
         else:
             # Interactive mode
             interactive_menu()

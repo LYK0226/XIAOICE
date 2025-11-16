@@ -1,13 +1,16 @@
 from google import genai
-from flask import current_app
 import os
+import traceback
 from . import gcs_upload
 
 def init_gemini(api_key=None):
-    """Initializes the Google Generative AI client."""
+    """Initializes the Google Generative AI client without depending on Flask app context.
+
+    The API key can be passed explicitly; if not provided, the function checks
+    the `GOOGLE_API_KEY` environment variable.
+    """
     if api_key is None:
-        # Fallback to config for backward compatibility
-        api_key = current_app.config.get('GOOGLE_API_KEY')
+        api_key = os.environ.get('GOOGLE_API_KEY')
 
     if not api_key:
         raise ValueError("API key is required but not provided")
@@ -20,9 +23,9 @@ def generate_streaming_response(message, image_path=None, image_mime_type=None, 
     """
     client = init_gemini(api_key)
     
-    # Use provided model_name or fall back to config default
+    # Use provided model_name or fall back to environment variable default
     if model_name is None:
-        model_name = current_app.config['GEMINI_MODEL']
+        model_name = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
 
     contents = []
 
@@ -53,23 +56,41 @@ def generate_streaming_response(message, image_path=None, image_mime_type=None, 
             context_text = "\n".join(convo_lines)
             contents.append(context_text)
         except Exception as e:
-            current_app.logger.warning(f"Failed to process history for context: {e}")
+            print(f"Failed to process history for context: {e}")
 
     if message:
         contents.append(message)
     
     if image_path and image_mime_type:
+        print(f"Processing image: path={image_path}, mime_type={image_mime_type}")
+        # Check if the image format is supported
+        supported_mime_types = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+        if image_mime_type not in supported_mime_types:
+            print(f"Unsupported image format: {image_mime_type}")
+            yield f"Error: Unsupported image format '{image_mime_type}'. Supported formats: JPEG, PNG, WebP, HEIC, HEIF."
+            return
+        
         try:
             # Download the image from GCS
             image_data = gcs_upload.download_file_from_gcs(image_path)
+            print(f"Downloaded image: size={len(image_data)} bytes")
+            
+            # Check image size (4MB limit for Gemini)
+            max_size = 4 * 1024 * 1024  # 4MB
+            if len(image_data) > max_size:
+                print(f"Image too large: {len(image_data)} bytes")
+                yield f"Error: Image is too large ({len(image_data)} bytes). Maximum size is 4MB."
+                return
             
             # Create a part from bytes
             image_part = genai.types.Part.from_bytes(data=image_data, mime_type=image_mime_type)
             contents.append(image_part)
+            print("Image part added to contents")
             
         except Exception as e:
-            current_app.logger.error(f"Error downloading image from GCS: {e}")
-            yield "Error: Failed to process the image."
+            print(f"Error downloading image from GCS: {e}")
+            traceback.print_exc()
+            yield f"Error: Failed to download image from storage: {str(e)}"
             return
 
     if not contents:
@@ -115,7 +136,8 @@ def generate_streaming_response(message, image_path=None, image_mime_type=None, 
                 yield text_chunk
                 
     except Exception as e:
-        current_app.logger.error(f"Error generating streaming response: {e}")
+        print(f"Error generating streaming response: {e}")
+        traceback.print_exc()
 
         # Handle specific Google API errors with user-friendly messages
         error_str = str(e).lower()
