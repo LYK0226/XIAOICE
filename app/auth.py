@@ -165,13 +165,45 @@ def update_avatar():
         if not user:
             return jsonify({'error': 'User not found'}), 404
         
-        # Check if a file was uploaded
+        # Ensure GCS env vars are configured from app config (if present)
+        import os
+        credentials_path = current_app.config.get('GCS_CREDENTIALS_PATH')
+        if credentials_path:
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
+        bucket_name = current_app.config.get('GCS_BUCKET_NAME')
+        if bucket_name:
+            os.environ['GCS_BUCKET_NAME'] = bucket_name
+
+        # If 'avatar' not in request.files, treat as a request to clear avatar
         if 'avatar' not in request.files:
-            return jsonify({'error': 'No avatar file provided'}), 400
-        
+            # clear avatar
+            from . import gcs_upload
+            existing = user.avatar
+            # If avatar is a GCS URL, delete
+            if existing and isinstance(existing, str) and existing.startswith('https://storage.googleapis.com/'):
+                try:
+                    gcs_upload.delete_file_from_gcs(existing)
+                except Exception:
+                    current_app.logger.warning('Failed to delete existing avatar from GCS')
+            else:
+                # If local file, delete from UPLOAD_FOLDER
+                try:
+                    upload_folder = current_app.config.get('UPLOAD_FOLDER')
+                    if existing and upload_folder:
+                        import os
+                        local_path = os.path.join(upload_folder, os.path.basename(existing))
+                        if os.path.exists(local_path):
+                            os.remove(local_path)
+                except Exception:
+                    current_app.logger.warning('Failed to delete existing local avatar')
+
+            user.avatar = None
+            user.updated_at = datetime.utcnow()
+            db.session.commit()
+            return jsonify({'message': 'Avatar cleared successfully', 'avatar_path': None}), 200
+
         file = request.files['avatar']
-        
-        if file.filename == '':
+        if not file or file.filename == '':
             return jsonify({'error': 'No selected file'}), 400
         
         # Validate file type
@@ -179,36 +211,49 @@ def update_avatar():
         if not file.filename.lower().split('.')[-1] in allowed_extensions:
             return jsonify({'error': 'Invalid file type. Only PNG, JPG, JPEG, and GIF are allowed'}), 400
         
-        # Generate unique filename
+        # Generate secure filename
         from werkzeug.utils import secure_filename
         import os
         from datetime import datetime
-        
         filename = secure_filename(file.filename)
+
+        # If user already had an avatar stored in GCS, try to delete it first
+        from . import gcs_upload
+        existing = user.avatar
+        try:
+            if existing and isinstance(existing, str) and existing.startswith('https://storage.googleapis.com/'):
+                gcs_upload.delete_file_from_gcs(existing)
+            else:
+                # if existing was stored locally, remove it
+                upload_folder = current_app.config.get('UPLOAD_FOLDER')
+                if existing and upload_folder:
+                    local_path = os.path.join(upload_folder, os.path.basename(existing))
+                    if os.path.exists(local_path):
+                        os.remove(local_path)
+        except Exception:
+            current_app.logger.warning('Failed to delete previous avatar')
+
+        # Upload new file to GCS and store the GCS URL
+        # Upload new file to GCS and store the GCS URL
+        gcs_url = None
+        # Provide a base filename for uniqueness
         name, ext = os.path.splitext(filename)
         timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-        unique_filename = f"{name}_{timestamp}{ext}"
-        
-        # Save file to upload folder
-        upload_folder = current_app.config['UPLOAD_FOLDER']
-        os.makedirs(upload_folder, exist_ok=True)
-        file_path = os.path.join(upload_folder, unique_filename)
-        file.save(file_path)
-        
-        # Store relative path in database
-        relative_path = f"upload/{unique_filename}"
-        user.avatar = relative_path
+        base_filename = f"{name}_{timestamp}{ext}"
+        gcs_url = gcs_upload.upload_image_to_gcs(file, base_filename, user_id=user_id)
+        user.avatar = gcs_url
         user.updated_at = datetime.utcnow()
         
         db.session.commit()
         
         return jsonify({
             'message': 'Avatar updated successfully',
-            'avatar_path': relative_path,
+            'avatar_path': gcs_url,
             'user': user.to_dict()
         }), 200
         
     except Exception as e:
+        current_app.logger.error(f"Error updating avatar for user {user_id}: {e}")
         db.session.rollback()
         return jsonify({'error': f'Update failed: {str(e)}'}), 500
 

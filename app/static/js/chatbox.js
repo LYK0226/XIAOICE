@@ -715,11 +715,13 @@ function updateFilePreview() {
     filePreviewContainer.innerHTML = '';
     
     selectedFiles.forEach((file, index) => {
-        const previewItem = document.createElement('div');
-        previewItem.className = 'file-preview-item';
+        let previewItem;
         
         if (file.type.startsWith('image/')) {
-            // Image preview
+            // Image preview with square container
+            previewItem = document.createElement('div');
+            previewItem.className = 'file-preview-item';
+            
             const img = document.createElement('img');
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -732,25 +734,15 @@ function updateFilePreview() {
             reader.readAsDataURL(file);
             previewItem.appendChild(img);
         } else {
-            // File icon
-            const fileIcon = document.createElement('div');
-            fileIcon.className = 'file-icon';
-            const iconMap = {
-                'pdf': 'fa-file-pdf',
-                'doc': 'fa-file-word',
-                'docx': 'fa-file-word',
-                'txt': 'fa-file-alt'
-            };
-            const ext = file.name.split('.').pop().toLowerCase();
-            const iconClass = iconMap[ext] || 'fa-file';
-            fileIcon.innerHTML = `<i class="fas ${iconClass}"></i>`;
+            // File name only - simplified without square container
+            previewItem = document.createElement('div');
+            previewItem.className = 'file-preview-simple';
             
             const fileName = document.createElement('div');
-            fileName.className = 'file-name';
+            fileName.className = 'file-name-simple';
             fileName.textContent = file.name;
             fileName.title = file.name;
             
-            previewItem.appendChild(fileIcon);
             previewItem.appendChild(fileName);
         }
         

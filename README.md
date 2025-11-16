@@ -10,6 +10,10 @@ SECRET_KEY="your_very_secret_key_here"
 FLASK_APP="run.py"
 FLASK_ENV="development"
 
+# Database
+DATABASE_URL=postgresql://xiaoice_user:xiaoice_password@localhost:5432/xiaoice
+CREATE_DB_ON_STARTUP=true
+
 # Encryption key for API keys (generate a secure random key)
 # DO NOT COMMIT: Replace "your_32_byte_encryption_key_here" with your actual Fernet key
 ENCRYPTION_KEY="your_32_byte_encryption_key_here"

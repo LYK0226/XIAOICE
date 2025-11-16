@@ -616,6 +616,9 @@ def serve_file():
         return send_file(file_obj, mimetype=content_type, as_attachment=False)
     except Exception as e:
         current_app.logger.error(f"Error serving file from GCS: {e}")
+        # Check if it's a 404 error (file not found)
+        if '404' in str(e) or 'No such object' in str(e):
+            return jsonify({'error': 'File not found in storage'}), 404
         return jsonify({'error': 'Failed to serve file'}), 500
 
 @bp.route('/api/files', methods=['GET'])

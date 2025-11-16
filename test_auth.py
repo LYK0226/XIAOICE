@@ -138,6 +138,19 @@ def main():
     
     # Test 7: Try accessing protected route after logout
     test_access_after_logout(tokens)
+
+    # Test 8: Upload avatar image
+    try:
+        print('\n=== Testing Avatar Upload ===')
+        # Create a small 1x1 PNG file bytes
+        png_bytes = b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89\x00\x00\x00\x0bIDATx\x9cc```\x00\x00\x00\x02\x00\x01\xe2!\xbc\x33\x00\x00\x00\x00IEND\xaeB`\x82"
+        files = {'avatar': ('avatar.png', png_bytes, 'image/png')}
+        headers = {'Authorization': f"Bearer {tokens['access_token']}"}
+        response = requests.post(f"{BASE_URL}/auth/update-avatar", headers=headers, files=files)
+        print(f"Status Code: {response.status_code}")
+        print(f"Response: {json.dumps(response.json(), indent=2)}")
+    except Exception as e:
+        print(f"Avatar upload test error: {e}")
     
     print("\n" + "=" * 60)
     print("✅ All tests completed!")

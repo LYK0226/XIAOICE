@@ -428,7 +428,16 @@ async function loadUserProfile() {
             
             // Load user avatar if available
             if (user.avatar) {
-                userAvatar = `/static/${user.avatar}`;
+                const token = localStorage.getItem('access_token');
+                // If it's a GCS (or absolute) URL, use the serve_file endpoint to proxy with token
+                if (user.avatar.startsWith('https://storage.googleapis.com/') || user.avatar.startsWith('gs://')) {
+                    userAvatar = `/serve_file?url=${encodeURIComponent(user.avatar)}&token=${encodeURIComponent(token)}`;
+                } else if (user.avatar.startsWith('/')) {
+                    userAvatar = user.avatar;
+                } else {
+                    userAvatar = `/static/${user.avatar}`;
+                }
+
                 userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
                 userAvatarPreview.style.backgroundSize = 'cover';
                 userAvatarPreview.style.backgroundPosition = 'center';
@@ -1386,7 +1395,15 @@ async function saveAvatarToServer(file) {
             console.log('Avatar saved to server successfully');
             // Update the user avatar path for display
             if (result.avatar_path) {
-                userAvatar = `/static/${result.avatar_path}`;
+                const avatarPath = result.avatar_path;
+                const token = localStorage.getItem('access_token');
+                if (avatarPath.startsWith('https://storage.googleapis.com/') || avatarPath.startsWith('gs://')) {
+                    userAvatar = `/serve_file?url=${encodeURIComponent(avatarPath)}&token=${encodeURIComponent(token)}`;
+                } else if (avatarPath.startsWith('/')) {
+                    userAvatar = avatarPath;
+                } else {
+                    userAvatar = `/static/${avatarPath}`;
+                }
                 userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
                 userAvatarPreview.style.backgroundSize = 'cover';
                 userAvatarPreview.style.backgroundPosition = 'center';
@@ -1394,6 +1411,14 @@ async function saveAvatarToServer(file) {
                 // Update global userAvatar for chatbox.js
                 if (window.userAvatar !== undefined) {
                     window.userAvatar = userAvatar;
+                }
+            } else {
+                // If avatar_path is null, it's cleared
+                userAvatar = null;
+                userAvatarPreview.style.backgroundImage = 'none';
+                userAvatarPreview.innerHTML = '<i class="fas fa-user"></i>';
+                if (window.userAvatar !== undefined) {
+                    window.userAvatar = null;
                 }
             }
         } else {
