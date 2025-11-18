@@ -1,7 +1,7 @@
 from google import genai
 import os
 import traceback
-from . import gcs_upload
+from . import gcp_bucket
 
 def init_gemini(api_key=None):
     """Initializes the Google Generative AI client without depending on Flask app context.
@@ -16,7 +16,7 @@ def init_gemini(api_key=None):
         raise ValueError("API key is required but not provided")
     return genai.Client(api_key=api_key)
 
-def generate_streaming_response(message, image_path=None, image_mime_type=None, history=None, api_key=None, model_name=None):
+def generate_streaming_response(message, image_path=None, image_mime_type=None, image_paths=None, image_mime_types=None, history=None, api_key=None, model_name=None):
     """
     Generates a streaming response from the Gemini model.
     Yields chunks of text as they are generated.
@@ -61,37 +61,41 @@ def generate_streaming_response(message, image_path=None, image_mime_type=None, 
     if message:
         contents.append(message)
     
-    if image_path and image_mime_type:
-        print(f"Processing image: path={image_path}, mime_type={image_mime_type}")
-        # Check if the image format is supported
+    # Normalize to list format for multiple images
+    if image_path and image_mime_type and not image_paths:
+        image_paths = [image_path]
+        image_mime_types = [image_mime_type]
+
+    if image_paths:
         supported_mime_types = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
-        if image_mime_type not in supported_mime_types:
-            print(f"Unsupported image format: {image_mime_type}")
-            yield f"Error: Unsupported image format '{image_mime_type}'. Supported formats: JPEG, PNG, WebP, HEIC, HEIF."
-            return
-        
-        try:
-            # Download the image from GCS
-            image_data = gcs_upload.download_file_from_gcs(image_path)
-            print(f"Downloaded image: size={len(image_data)} bytes")
-            
-            # Check image size (4MB limit for Gemini)
-            max_size = 4 * 1024 * 1024  # 4MB
-            if len(image_data) > max_size:
-                print(f"Image too large: {len(image_data)} bytes")
-                yield f"Error: Image is too large ({len(image_data)} bytes). Maximum size is 4MB."
+        for i, img_path in enumerate(image_paths):
+            mime = None
+            if image_mime_types and i < len(image_mime_types):
+                mime = image_mime_types[i]
+            # If mime wasn't provided, attempt to guess by URL extension or default to jpeg
+            if not mime:
+                mime = gcp_bucket.get_content_type_from_url(img_path)
+            print(f"Processing image: path={img_path}, mime_type={mime}")
+            if mime not in supported_mime_types:
+                print(f"Unsupported image format: {mime}")
+                yield f"Error: Unsupported image format '{mime}'. Supported formats: JPEG, PNG, WebP, HEIC, HEIF."
                 return
-            
-            # Create a part from bytes
-            image_part = genai.types.Part.from_bytes(data=image_data, mime_type=image_mime_type)
-            contents.append(image_part)
-            print("Image part added to contents")
-            
-        except Exception as e:
-            print(f"Error downloading image from GCS: {e}")
-            traceback.print_exc()
-            yield f"Error: Failed to download image from storage: {str(e)}"
-            return
+            try:
+                image_data = gcp_bucket.download_file_from_gcs(img_path)
+                print(f"Downloaded image: size={len(image_data)} bytes")
+                max_size = 4 * 1024 * 1024  # 4MB
+                if len(image_data) > max_size:
+                    print(f"Image too large: {len(image_data)} bytes")
+                    yield f"Error: Image is too large ({len(image_data)} bytes). Maximum size is 4MB."
+                    return
+                image_part = genai.types.Part.from_bytes(data=image_data, mime_type=mime)
+                contents.append(image_part)
+                print("Image part added to contents")
+            except Exception as e:
+                print(f"Error downloading image from GCS: {e}")
+                traceback.print_exc()
+                yield f"Error: Failed to download image from storage: {str(e)}"
+                return
 
     if not contents:
         yield "Please provide a message or an image."

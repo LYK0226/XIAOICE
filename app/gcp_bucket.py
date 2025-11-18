@@ -188,6 +188,14 @@ def upload_files_to_gcs(files, user_id=None, conversation_id=None, message_id=No
             name, ext = os.path.splitext(filename)
             timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
             unique_filename = f"{name}_{timestamp}{ext}" if name else f"upload_{timestamp}{ext}"
+            # Validate file type: allow images and videos freely; documents must be PDF
+            content_type = (getattr(file, 'content_type', None) or '')
+            is_image = content_type.startswith('image/')
+            is_video = content_type.startswith('video/')
+            is_pdf = (ext.lower() == '.pdf') or (content_type == 'application/pdf')
+            if not (is_image or is_video or is_pdf):
+                # Raise to indicate a validation error to the caller
+                raise ValueError('Only PDF documents are allowed for document uploads. Images and videos are allowed.')
 
             # Upload to Google Cloud Storage
             gcs_url = upload_file_to_gcs(file, unique_filename)

@@ -73,6 +73,19 @@ const botResponses = {
         "I can help you with that. Let me provide some information...",
         "That's a good point. Have you considered...",
         "I'm processing your request. Here's my response..."
+    ],
+    'ja':[
+        "お手伝いさせていただきます！ どのようなことをお聞きになりたいですか？",
+        "興味深いご質問ですね。ちょっと考えさせてください…",
+        "おっしゃる意味は理解できました。ご説明いたします…",
+        "いい質問ですね！ お話いただいた内容に基づいて…",
+        "この問題の解決をお手伝いできます。いくつか情報を提供させてください…",
+        "それは良い指摘ですね。ご検討いただけましたか…",
+        "ご要望を処理中です。こちらが返信です…",
+        "こんにちは！ スマートアシスタントです。喜んでお手伝いさせていただきます。",
+        "承知しました。詳しく説明させていただきます。",
+        "興味深いご質問ですね。一緒に話し合いましょう。"
+
     ]
 };
 
@@ -105,6 +118,7 @@ const translations = {
         renameError: '重新命名失敗，請稍後再試。',
         deleteConfirm: '確定要刪除此對話嗎？刪除後無法恢復。',
         deleteError: '刪除對話失敗，請稍後再試。',
+        fileTypeNotAllowed: '僅允許 PDF 文件上傳，圖像和影片不受限制。',
         pinError: '更新置頂狀態失敗，請稍後再試。'
     },
     'en': {
@@ -135,6 +149,7 @@ const translations = {
         deleteConfirm: 'Delete this conversation? This action cannot be undone.',
         deleteError: 'Unable to delete the conversation. Please try again.',
         pinError: 'Unable to update pin status. Please try again.'
+        ,fileTypeNotAllowed: 'Only PDF documents are allowed for document uploads. Images and videos are allowed.'
     },
     'ja': {
         chatbox: 'チャットボックス',
@@ -164,6 +179,7 @@ const translations = {
         deleteConfirm: 'この会話を削除しますか？削除すると元に戻せません。',
         deleteError: '会話を削除できませんでした。後でもう一度お試しください。',
         pinError: 'ピン留め状態を更新できませんでした。後でもう一度お試しください。'
+        ,fileTypeNotAllowed: 'ドキュメントアップロードはPDFのみ許可されています。画像と動画は制限されません。'
     }
 };
 
@@ -443,171 +459,13 @@ function createTypingIndicator(text) {
     return indicator;
 }
 
-// Simulated test paper detection and question extraction
-function detectTestPaper(imageData) {
-    // In a real application, this would use OCR (like Tesseract.js) and AI to detect questions
-    // For now, we'll simulate detecting a test paper with questions
-    
-    // Randomly determine if it's a test paper (for demo purposes, let's say 70% chance)
-    const isTestPaper = Math.random() > 0.3;
-    
-    if (!isTestPaper) {
-        return null; // Not a test paper, use regular image analysis
-    }
-    
-    // Simulate extracted questions based on language
-    const sampleQuestions = {
-        'zh-TW': [
-            {
-                number: 1,
-                question: "下列哪個選項正確描述了光合作用的過程？",
-                options: ["A. 植物吸收二氧化碳釋放氧氣", "B. 植物吸收氧氣釋放二氧化碳", "C. 植物不需要光照", "D. 以上都不對"]
-            },
-            {
-                number: 2,
-                question: "計算: 25 × 4 + 16 ÷ 2 = ?",
-                options: null
-            },
-            {
-                number: 3,
-                question: "請解釋「水循環」的基本過程。",
-                options: null
-            }
-        ],
-        'en': [
-            {
-                number: 1,
-                question: "Which of the following correctly describes the process of photosynthesis?",
-                options: ["A. Plants absorb CO2 and release O2", "B. Plants absorb O2 and release CO2", "C. Plants don't need light", "D. None of the above"]
-            },
-            {
-                number: 2,
-                question: "Calculate: 25 × 4 + 16 ÷ 2 = ?",
-                options: null
-            },
-            {
-                number: 3,
-                question: "Explain the basic process of the water cycle.",
-                options: null
-            }
-        ]
-    };
-    
-    return sampleQuestions[currentLanguage] || sampleQuestions['en'];
-}
 
-// Generate answers for questions
-function generateAnswer(question, questionNumber) {
-    const answers = {
-        'zh-TW': {
-            1: "正確答案是 A。光合作用是植物利用光能，將二氧化碳和水轉化為葡萄糖和氧氣的過程。這個過程主要發生在葉綠體中，是植物生存和地球生態系統的基礎。",
-            2: "讓我們一步步計算：\n1. 首先計算乘法：25 × 4 = 100\n2. 然後計算除法：16 ÷ 2 = 8\n3. 最後相加：100 + 8 = 108\n\n答案是 108。",
-            3: "水循環的基本過程包括：\n1. 蒸發：太陽加熱地表水，使其變成水蒸氣\n2. 凝結：水蒸氣上升冷卻，形成雲\n3. 降水：雲中的水滴聚集變重，以雨、雪等形式降落\n4. 徑流：降水流入河流、湖泊或滲入地下\n5. 重複循環"
-        },
-        'en': {
-            1: "The correct answer is A. Photosynthesis is the process by which plants use light energy to convert carbon dioxide and water into glucose and oxygen. This process mainly occurs in chloroplasts and is fundamental to plant survival and Earth's ecosystem.",
-            2: "Let's calculate step by step:\n1. First, multiply: 25 × 4 = 100\n2. Then, divide: 16 ÷ 2 = 8\n3. Finally, add: 100 + 8 = 108\n\nThe answer is 108.",
-            3: "The basic process of the water cycle includes:\n1. Evaporation: Sun heats surface water, turning it into vapor\n2. Condensation: Water vapor rises and cools, forming clouds\n3. Precipitation: Water droplets in clouds gather and fall as rain, snow, etc.\n4. Runoff: Precipitation flows into rivers, lakes, or seeps underground\n5. The cycle repeats"
-        }
-    };
-    
-    return answers[currentLanguage][questionNumber];
-}
 
-// Simulated image recognition function
-function analyzeImage(imageData) {
-    // In a real application, this would call an AI API like Google Vision, Azure Computer Vision, or OpenAI Vision
-    // For now, we'll simulate the response
-    
-    const responses = {
-        'zh-TW': [
-            "這是一張很有趣的圖片！我看到了一些色彩豐富的元素。圖片中似乎包含了多個物體或場景。",
-            "根據我的分析，這張圖片展示了一個清晰的場景。我可以識別出其中的主要元素和構圖。",
-            "圖片質量很好！我能夠看到圖片中的細節。這看起來像是一張精心拍攝的照片。"
-        ],
-        'en': [
-            "This is an interesting image! I can see some colorful elements. The image seems to contain multiple objects or scenes.",
-            "Based on my analysis, this image shows a clear scene. I can identify the main elements and composition.",
-            "Great image quality! I can see the details in the picture. This looks like a carefully captured photo."
-        ]
-    };
-    
-    const languageResponses = responses[currentLanguage];
-    return languageResponses[Math.floor(Math.random() * languageResponses.length)];
-}
 
-// Process test paper questions one by one
-function processTestPaperQuestions(questions, imageData) {
-    const t = translations[currentLanguage];
-    
-    // First, show detection message
-    const detectionMessages = {
-        'zh-TW': `我檢測到這是一張試卷或測試題！我發現了 ${questions.length} 道題目。讓我逐個為您解答。`,
-        'en': `I detected this is a test paper! I found ${questions.length} questions. Let me answer them one by one.`
-    };
-    
-    const detectionMsg = createMessage(detectionMessages[currentLanguage], false);
-    messagesDiv.appendChild(detectionMsg);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    
-    // Process each question with a delay
-    questions.forEach((q, index) => {
-        setTimeout(() => {
-            // Show the question
-            let questionText = `\n📝 **${t.question || '问题'} ${q.number}:**\n${q.question}`;
-            
-            if (q.options) {
-                questionText += '\n\n' + q.options.join('\n');
-            }
-            
-            const questionMsg = createMessage(questionText, false);
-            messagesDiv.appendChild(questionMsg);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            
-            // Show thinking indicator
-            setTimeout(() => {
-                const thinkingTexts = {
-                    'zh-TW': '正在思考答案...',
-                    'en': 'Thinking about the answer...'
-                };
-                
-                const thinkingIndicator = createTypingIndicator();
-                messagesDiv.appendChild(thinkingIndicator);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                
-                // Show answer after delay
-                setTimeout(() => {
-                    messagesDiv.removeChild(thinkingIndicator);
-                    
-                    const answer = generateAnswer(q, q.number);
-                    const answerHeaders = {
-                        'zh-TW': `💡 **答案 ${q.number}:**\n\n`,
-                        'en': `💡 **Answer ${q.number}:**\n\n`
-                    };
-                    
-                    const fullAnswer = answerHeaders[currentLanguage] + answer;
-                    const answerMsg = createMessage(fullAnswer, false);
-                    messagesDiv.appendChild(answerMsg);
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                    
-                    // If this is the last question, show completion message
-                    if (index === questions.length - 1) {
-                        setTimeout(() => {
-                            const completionMessages = {
-                                'zh-TW': '✅ 所有題目已解答完畢！如果您還有其他問題，請隨時告訴我。',
-                                'en': '✅ All questions have been answered! If you have any other questions, feel free to ask.'
-                            };
-                            
-                            const completionMsg = createMessage(completionMessages[currentLanguage], false);
-                            messagesDiv.appendChild(completionMsg);
-                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                        }, 1000);
-                    }
-                }, 2000);
-            }, 500);
-        }, (index * 6000) + 1000); // Stagger each question by 6 seconds
-    });
-}
+
+
+
+
 
 translations['zh-TW'].readMessage = '朗讀訊息';
 translations['zh-TW'].stopReading = '停止朗讀';
@@ -697,6 +555,16 @@ fileUploadBtn.addEventListener('click', () => {
 fileInput.addEventListener('change', (e) => {
     const files = Array.from(e.target.files);
     files.forEach(file => {
+        // Allow images and videos; if not image/video, require PDF
+        const isImage = file.type && file.type.startsWith('image/');
+        const isVideo = file.type && file.type.startsWith('video/');
+        const isPDF = /\.pdf$/i.test(file.name) || file.type === 'application/pdf';
+        if (!isImage && !isVideo && !isPDF) {
+            const t = translations[currentLanguage];
+            alert(t.fileTypeNotAllowed || 'Only PDF documents are allowed for document uploads. Images and videos are allowed.');
+            return; // Skip adding this file
+        }
+
         if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
             selectedFiles.push(file);
         }
@@ -1073,7 +941,7 @@ async function sendMessageWithFiles() {
             updateMessageWithServerFiles(userMessageElement, userMessageResponse.message.uploaded_files);
         }
 
-        const imageFile = attachmentsSnapshot.find((file) => file.type.startsWith('image/'));
+        const imageFile = attachmentsSnapshot.find((file) => file.type && file.type.startsWith('image/'));
         
         // Create bot message element with typing indicator
         const botMessageElement = createMessage('', false);
@@ -1082,27 +950,38 @@ async function sendMessageWithFiles() {
         botMessageContent.textContent = t.typing || 'Typing...';
         messagesDiv.appendChild(botMessageElement);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
-        
-        let fullResponse = '';
-        
-        if (imageFile) {
-            // For images, use the uploaded URL
-            const imageUrl = userMessageResponse.message.uploaded_files[0]; // Assuming single image
-            const imageMimeType = imageFile.type;
 
-            let currentTypingIndex = 0;
-            let pendingText = '';
-            
+        let fullResponse = '';
+
+        // Build mapping of uploaded URLs to attachmentsSnapshot by index
+        const uploadedUrls = userMessageResponse.message.uploaded_files || [];
+        const imageUrls = [];
+        const imageMimeTypes = [];
+        uploadedUrls.forEach((url, idx) => {
+            const file = attachmentsSnapshot[idx];
+            if (!file) return;
+            const isImage = file.type && file.type.startsWith('image/');
+            if (isImage) {
+                imageUrls.push(url);
+                imageMimeTypes.push(file.type || 'image/jpeg');
+            }
+        });
+
+        let currentTypingIndex = 0;
+        let pendingText = '';
+
+        // Call streaming API depending on whether image URLs are present
+        if (imageUrls.length > 0) {
             await chatAPI.streamChatMessage(
                 messageText || t.analyzeImage,
                 null,
-                imageUrl,
-                imageMimeType,
+                imageUrls,
+                imageMimeTypes,
                 currentLanguage,
                 conversationHistory,
+                // onChunk
                 (chunk) => {
                     pendingText += chunk;
-                    
                     const typePendingText = () => {
                         if (currentTypingIndex < pendingText.length) {
                             botMessageContent.textContent = pendingText.slice(0, currentTypingIndex + 1);
@@ -1111,11 +990,12 @@ async function sendMessageWithFiles() {
                             setTimeout(typePendingText, 30);
                         }
                     };
-                    
+
                     if (currentTypingIndex < pendingText.length) {
                         typePendingText();
                     }
                 },
+                // onComplete
                 () => {
                     fullResponse = pendingText;
                     botMessageElement.classList.remove('typing-indicator');
@@ -1126,6 +1006,7 @@ async function sendMessageWithFiles() {
                     speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
                     botMessageElement.querySelector('.message-content').appendChild(speakBtn);
                 },
+                // onError
                 (error) => {
                     console.error('Streaming error:', error);
                     botMessageElement.classList.remove('typing-indicator');
@@ -1141,9 +1022,6 @@ async function sendMessageWithFiles() {
             );
         } else {
             // Use streaming for text messages
-            let currentTypingIndex = 0;
-            let pendingText = '';
-            
             await chatAPI.streamChatMessage(
                 messageText || placeholderText,
                 null,
@@ -1153,7 +1031,6 @@ async function sendMessageWithFiles() {
                 conversationHistory,
                 (chunk) => {
                     pendingText += chunk;
-                    
                     const typePendingText = () => {
                         if (currentTypingIndex < pendingText.length) {
                             botMessageContent.textContent = pendingText.slice(0, currentTypingIndex + 1);
@@ -1162,7 +1039,6 @@ async function sendMessageWithFiles() {
                             setTimeout(typePendingText, 30);
                         }
                     };
-                    
                     if (currentTypingIndex < pendingText.length) {
                         typePendingText();
                     }
@@ -1191,6 +1067,7 @@ async function sendMessageWithFiles() {
                 }
             );
         }
+        
         
         // Ensure fullResponse has content
         if (!fullResponse.trim()) {
@@ -1302,7 +1179,9 @@ function updateMessageWithServerFiles(messageElement, uploadedFiles) {
     });
     
     // Add server-based file displays
-    uploadedFiles.forEach(filePath => {
+    const imageEls = Array.from(messageContent.querySelectorAll('img.message-image'));
+    let imageIndex = 0;
+    uploadedFiles.forEach((filePath) => {
         let fullPath;
         if (filePath.startsWith('https://storage.googleapis.com/')) {
             const token = localStorage.getItem('access_token');
@@ -1317,10 +1196,9 @@ function updateMessageWithServerFiles(messageElement, uploadedFiles) {
         const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(displayFileName);
         
         if (isImage) {
-            // For images, we could update the src, but since we already have the image displayed from local file,
-            // and the server URL should work the same, we might not need to change it.
-            // But to ensure consistency, let's update it
-            const existingImg = messageContent.querySelector('img.message-image');
+            // Use the corresponding image element by index to avoid overwriting images when mixed file types are present
+            const existingImg = imageEls[imageIndex] || messageContent.querySelector('img.message-image');
+            imageIndex += 1;
             if (existingImg) {
                 existingImg.src = fullPath;
                 // Update the modal click handler to use server URL

@@ -47,17 +47,25 @@ class ChatAPI {
      * @param {function} onError - 錯誤時的回調函數
      * @returns {Promise} - 可取消的 Promise
      */
-    async streamChatMessage(userMessage, imageFile = null, imageUrl = null, imageMimeType = null, currentLanguage = 'zh-TW', history = null, onChunk, onComplete, onError) {
+    async streamChatMessage(userMessage, imageFiles = null, imageUrls = null, imageMimeTypes = null, currentLanguage = 'zh-TW', history = null, onChunk, onComplete, onError) {
         const formData = new FormData();
         formData.append('message', userMessage);
         
-        if (imageUrl) {
-            formData.append('image_url', imageUrl);
-            if (imageMimeType) {
-                formData.append('image_mime_type', imageMimeType);
+        // Support multiple image URLs (imageUrls) and multiple image file uploads (imageFiles)
+        if (imageUrls && Array.isArray(imageUrls)) {
+            imageUrls.forEach((url) => {
+                formData.append('image_url', url);
+            });
+            if (imageMimeTypes && Array.isArray(imageMimeTypes)) {
+                imageMimeTypes.forEach((mt) => formData.append('image_mime_type', mt));
             }
-        } else if (imageFile) {
-            formData.append('image', imageFile);
+        }
+        
+        if (imageFiles && Array.isArray(imageFiles)) {
+            imageFiles.forEach((file) => formData.append('image', file));
+        } else if (imageFiles && imageFiles instanceof File) {
+            // Backwards compatibility: single File object
+            formData.append('image', imageFiles);
         }
 
         if (history) {
@@ -306,6 +314,8 @@ class ChatAPI {
             this.streamChatMessage(
                 message,
                 null, // no image file
+                null, // no image URLs
+                null, // no image mime types
                 language,
                 history,
                 (chunk) => {
@@ -340,8 +350,8 @@ class ChatAPI {
             this.streamChatMessage(
                 message,
                 null, // no imageFile
-                imageUrl,
-                imageMimeType,
+                imageUrl ? [imageUrl] : null,
+                imageMimeType ? [imageMimeType] : null,
                 language,
                 history,
                 (chunk) => {
@@ -354,6 +364,30 @@ class ChatAPI {
                 },
                 (error) => {
                     // On error, reject with the error
+                    reject(error);
+                }
+            );
+        });
+    }
+
+    async sendImagesMessage(message, imageUrls = null, imageMimeTypes = null, language = 'zh-TW', history = null) {
+        return new Promise((resolve, reject) => {
+            let fullResponse = '';
+
+            this.streamChatMessage(
+                message,
+                null,
+                imageUrls,
+                imageMimeTypes,
+                language,
+                history,
+                (chunk) => {
+                    fullResponse += chunk;
+                },
+                () => {
+                    resolve(fullResponse);
+                },
+                (error) => {
                     reject(error);
                 }
             );

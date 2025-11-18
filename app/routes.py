@@ -5,7 +5,7 @@ import os
 import json
 from . import vertex_ai
 from werkzeug.utils import secure_filename
-from . import gcs_upload
+from . import gcp_bucket
 import io
 
 bp = Blueprint('main', __name__)
@@ -57,26 +57,44 @@ def chat_stream():
         return jsonify({'error': 'No message, image, or image_url provided'}), 400
 
     message = request.form.get('message', '')
-    image_file = request.files.get('image')
-    
-    image_path = None
-    image_mime_type = None
+    # Allow multiple image files and multiple image URLs
+    image_files = request.files.getlist('image') if request.files else []
+    image_urls = request.form.getlist('image_url') if request.form else []
+    image_mime_types_form = request.form.getlist('image_mime_type') if request.form else []
+
+    image_paths = []
+    image_mime_types = []
 
     try:
-        if 'image_url' in request.form:
-            image_path = request.form['image_url']
-            image_mime_type = request.form.get('image_mime_type')
-        elif image_file:
-            if not image_file.filename:
-                 return jsonify({'error': 'No selected file'}), 400
-
-            filename = secure_filename(image_file.filename)
-            if not filename:
-                return jsonify({'error': 'Invalid file name'}), 400
-
-            # Upload to Google Cloud Storage
-            image_path = gcs_upload.upload_image_to_gcs(image_file, filename, user_id=user_id)
-            image_mime_type = image_file.mimetype
+        # Handle image urls provided directly
+        if image_urls:
+            for i, url in enumerate(image_urls):
+                if url:
+                    image_paths.append(url)
+                    mt = image_mime_types_form[i] if i < len(image_mime_types_form) else None
+                    image_mime_types.append(mt)
+        
+        # Handle image files
+        if image_files:
+            for f in image_files:
+                if not f or not f.filename:
+                    continue
+                filename = secure_filename(f.filename)
+                if not filename:
+                    continue
+                gcs_url = gcp_bucket.upload_image_to_gcs(f, filename, user_id=user_id)
+                image_paths.append(gcs_url)
+                image_mime_types.append(f.mimetype)
+        
+        # If previously there was single 'image' param (compat), fallback
+        if not image_paths and 'image' in request.files:
+            image_file = request.files.get('image')
+            if image_file and image_file.filename:
+                filename = secure_filename(image_file.filename)
+                image_path_single = gcp_bucket.upload_image_to_gcs(image_file, filename, user_id=user_id)
+                image_paths.append(image_path_single)
+                image_mime_types.append(image_file.mimetype)
+            # Legacy compatibility: single `image` handling above already uploaded file
 
         # Parse optional conversation history sent from client
         history = None
@@ -102,8 +120,8 @@ def chat_stream():
             try:
                 for chunk in vertex_ai.generate_streaming_response(
                     message,
-                    image_path=image_path,
-                    image_mime_type=image_mime_type,
+                    image_paths=image_paths if image_paths else None,
+                    image_mime_types=image_mime_types if image_mime_types else None,
                     history=history,
                     api_key=api_key,
                     model_name=ai_model
@@ -495,7 +513,7 @@ def delete_conversation(conversation_id):
         # Delete associated files from GCS before deleting the conversation
         file_uploads = FileUpload.query.filter_by(conversation_id=conversation_id).all()
         for file_upload in file_uploads:
-            gcs_upload.delete_file_from_gcs(file_upload.file_path)
+            gcp_bucket.delete_file_from_gcs(file_upload.file_path)
 
         db.session.delete(conversation)
         db.session.commit()
@@ -522,7 +540,10 @@ def create_message():
         # Get conversation_id from request data for file association
         temp_data = request.form.to_dict() if not request.is_json else (request.get_json(silent=True) or {})
         conv_id = temp_data.get('conversation_id')
-        uploaded_files = gcs_upload.upload_files_to_gcs(files, user_id=user_id, conversation_id=conv_id)
+        try:
+            uploaded_files = gcp_bucket.upload_files_to_gcs(files, user_id=user_id, conversation_id=conv_id)
+        except ValueError as ve:
+            return jsonify({'error': str(ve)}), 400
     
     # Get data from JSON or form
     if request.is_json:
@@ -607,7 +628,7 @@ def serve_file():
 
     try:
         # Download file from GCS and get content type
-        file_data, content_type = gcs_upload.get_file_data_and_content_type(gcs_url)
+        file_data, content_type = gcp_bucket.get_file_data_and_content_type(gcs_url)
         
         # Create a file-like object
         file_obj = io.BytesIO(file_data)
