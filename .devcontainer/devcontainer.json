@@ -1,8 +1,8 @@
 {
     "name": "XiaoIce Dev Environment",
-    "image": "mcr.microsoft.com/devcontainers/python:3.12",
+    "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
     "features": {
-        "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+        "ghcr.io/devcontainers/features/docker-in-docker": {}
     },
     "postCreateCommand": "python -m venv .venv && .venv/bin/pip install -r requirements.txt && echo 'source .venv/bin/activate' >> ~/.bashrc",
     "postStartCommand": "docker compose -f .devcontainer/docker-compose.yml up -d",
