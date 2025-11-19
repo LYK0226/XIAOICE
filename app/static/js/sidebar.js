@@ -215,7 +215,7 @@ async function openConversation(conversationId, options = {}) {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
     } catch (error) {
         console.error('Failed to load conversation messages', error);
-        alert(translations[currentLanguage].conversationLoadError);
+        showCustomAlert(translations[currentLanguage].conversationLoadError);
     } finally {
         isLoadingConversation = false;
     }
@@ -227,25 +227,26 @@ async function renameConversation(conversationId) {
     const conversation = conversationsCache.find((item) => Number(item.id) === Number(conversationId));
     const currentTitle = conversation?.title || '';
 
-    const result = prompt(t.renamePrompt, currentTitle);
-    if (result === null) {
-        return;
-    }
-
-    const newTitle = result.trim();
-    if (!newTitle || newTitle === currentTitle) {
-        return;
-    }
-
-    try {
-        const response = await chatAPI.updateConversation(conversationId, { title: newTitle });
-        if (response?.conversation) {
-            upsertConversation(response.conversation);
+    showCustomPrompt(t.renamePrompt, currentTitle, async (result) => {
+        if (result === null) {
+            return;
         }
-    } catch (error) {
-        console.error('Failed to rename conversation', error);
-        alert(t.renameError);
-    }
+
+        const newTitle = result.trim();
+        if (!newTitle || newTitle === currentTitle) {
+            return;
+        }
+
+        try {
+            const response = await chatAPI.updateConversation(conversationId, { title: newTitle });
+            if (response?.conversation) {
+                upsertConversation(response.conversation);
+            }
+        } catch (error) {
+            console.error('Failed to rename conversation', error);
+            showCustomAlert(t.renameError);
+        }
+    });
 }
 
 // Function to toggle pin status of a conversation
@@ -265,7 +266,7 @@ async function togglePinConversation(conversationId) {
         }
     } catch (error) {
         console.error('Failed to toggle pin', error);
-        alert(t.pinError);
+        showCustomAlert(t.pinError);
     }
 }
 
@@ -273,36 +274,38 @@ async function togglePinConversation(conversationId) {
 async function deleteConversationById(conversationId) {
     const t = translations[currentLanguage];
 
-    if (!confirm(t.deleteConfirm)) {
-        return;
-    }
-
-    try {
-        await chatAPI.deleteConversation(conversationId);
-        const wasActive = Number(activeConversationId) === Number(conversationId);
-
-        conversationsCache = conversationsCache.filter((item) => Number(item.id) !== Number(conversationId));
-        conversationsCache = sortConversations(conversationsCache);
-        renderConversationList(conversationsCache);
-
-        if (!conversationsCache.length) {
-            activeConversationId = null;
-            conversationHistory = [];
-            renderWelcomeMessage();
+    showCustomConfirm(t.deleteConfirm, async (confirmed) => {
+        if (!confirmed) {
             return;
         }
 
-        if (wasActive) {
-            activeConversationId = null;
-            const nextConversation = conversationsCache[0];
-            if (nextConversation) {
-                await openConversation(nextConversation.id, { force: true });
+        try {
+            await chatAPI.deleteConversation(conversationId);
+            const wasActive = Number(activeConversationId) === Number(conversationId);
+
+            conversationsCache = conversationsCache.filter((item) => Number(item.id) !== Number(conversationId));
+            conversationsCache = sortConversations(conversationsCache);
+            renderConversationList(conversationsCache);
+
+            if (!conversationsCache.length) {
+                activeConversationId = null;
+                conversationHistory = [];
+                renderWelcomeMessage();
+                return;
             }
+
+            if (wasActive) {
+                activeConversationId = null;
+                const nextConversation = conversationsCache[0];
+                if (nextConversation) {
+                    await openConversation(nextConversation.id, { force: true });
+                }
+            }
+        } catch (error) {
+            console.error('Failed to delete conversation', error);
+            showCustomAlert(t.deleteError);
         }
-    } catch (error) {
-        console.error('Failed to delete conversation', error);
-        alert(t.deleteError);
-    }
+    });
 }
 
 // Close conversation menus when clicking outside

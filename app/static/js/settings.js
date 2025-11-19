@@ -322,9 +322,68 @@ function showCustomConfirm(message, callback) {
     }
 }
 
-// Make functions global
-window.showCustomAlert = showCustomAlert;
-window.showCustomConfirm = showCustomConfirm;
+// Custom prompt function using modal instead of browser prompt
+function showCustomPrompt(message, defaultValue, callback) {
+    const modal = document.getElementById('customPromptModal');
+    const messageElement = document.getElementById('customPromptMessage');
+    const inputElement = document.getElementById('customPromptInput');
+    const okBtn = document.getElementById('customPromptOkBtn');
+    const cancelBtn = document.getElementById('customPromptCancelBtn');
+
+    if (modal && messageElement && inputElement && okBtn && cancelBtn) {
+        messageElement.textContent = message;
+        inputElement.value = defaultValue || '';
+        modal.style.display = 'block';
+        inputElement.focus();
+        
+        // Update language for the modal
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        updateSettingsLanguage(langToUse);
+        
+        const cleanup = () => {
+            modal.style.display = 'none';
+            okBtn.removeEventListener('click', okHandler);
+            cancelBtn.removeEventListener('click', cancelHandler);
+            window.removeEventListener('click', outsideClickHandler);
+            inputElement.removeEventListener('keypress', enterHandler);
+        };
+
+        const okHandler = () => {
+            const value = inputElement.value;
+            cleanup();
+            if (typeof callback === 'function') callback(value);
+        };
+
+        const cancelHandler = () => {
+            cleanup();
+            if (typeof callback === 'function') callback(null);
+        };
+
+        const outsideClickHandler = (e) => {
+            if (e.target === modal) {
+                cancelHandler();
+            }
+        };
+        
+        const enterHandler = (e) => {
+            if (e.key === 'Enter') {
+                okHandler();
+            }
+        };
+
+        okBtn.addEventListener('click', okHandler);
+        cancelBtn.addEventListener('click', cancelHandler);
+        window.addEventListener('click', outsideClickHandler);
+        inputElement.addEventListener('keypress', enterHandler);
+    } else {
+        const result = prompt(message, defaultValue);
+        if (typeof callback === 'function') callback(result);
+    }
+}
+
+window.showCustomPrompt = showCustomPrompt;
 
 // ===== Avatar Settings =====
 

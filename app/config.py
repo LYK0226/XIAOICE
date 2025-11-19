@@ -14,7 +14,7 @@ class Config:
 
     # Uploads
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'upload')
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
+    MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500 MB
 
     # Google Cloud Storage
     GCS_BUCKET_NAME = os.environ.get('GCS_BUCKET_NAME')

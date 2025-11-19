@@ -62,35 +62,39 @@ def generate_streaming_response(message, image_path=None, image_mime_type=None, 
         contents.append(message)
     
     if image_path and image_mime_type:
-        print(f"Processing image: path={image_path}, mime_type={image_mime_type}")
-        # Check if the image format is supported
-        supported_mime_types = ['image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif']
+        print(f"Processing file: path={image_path}, mime_type={image_mime_type}")
+        # Check if the format is supported (images and videos)
+        supported_mime_types = [
+            'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif',
+            'video/mp4', 'video/mpeg', 'video/mov', 'video/avi', 'video/x-flv', 'video/mpg', 'video/webm', 'video/wmv', 'video/3gpp'
+        ]
+        
         if image_mime_type not in supported_mime_types:
-            print(f"Unsupported image format: {image_mime_type}")
-            yield f"Error: Unsupported image format '{image_mime_type}'. Supported formats: JPEG, PNG, WebP, HEIC, HEIF."
+            print(f"Unsupported file format: {image_mime_type}")
+            yield f"Error: Unsupported file format '{image_mime_type}'. Supported formats: Images (JPEG, PNG, WebP, HEIC, HEIF) and Videos (MP4, MPEG, MOV, AVI, FLV, MPG, WEBM, WMV, 3GPP)."
             return
         
         try:
-            # Download the image from GCS
-            image_data = gcs_upload.download_file_from_gcs(image_path)
-            print(f"Downloaded image: size={len(image_data)} bytes")
+            # Download the file from GCS
+            file_data = gcs_upload.download_file_from_gcs(image_path)
+            print(f"Downloaded file: size={len(file_data)} bytes")
             
-            # Check image size (4MB limit for Gemini)
-            max_size = 4 * 1024 * 1024  # 4MB
-            if len(image_data) > max_size:
-                print(f"Image too large: {len(image_data)} bytes")
-                yield f"Error: Image is too large ({len(image_data)} bytes). Maximum size is 4MB."
+            # Check file size (500MB limit)
+            max_size = 500 * 1024 * 1024  # 500MB
+            if len(file_data) > max_size:
+                print(f"File too large: {len(file_data)} bytes")
+                yield f"Error: File is too large ({len(file_data)} bytes). Maximum size is 500MB."
                 return
             
             # Create a part from bytes
-            image_part = genai.types.Part.from_bytes(data=image_data, mime_type=image_mime_type)
-            contents.append(image_part)
-            print("Image part added to contents")
+            file_part = genai.types.Part.from_bytes(data=file_data, mime_type=image_mime_type)
+            contents.append(file_part)
+            print("File part added to contents")
             
         except Exception as e:
-            print(f"Error downloading image from GCS: {e}")
+            print(f"Error downloading file from GCS: {e}")
             traceback.print_exc()
-            yield f"Error: Failed to download image from storage: {str(e)}"
+            yield f"Error: Failed to download file from storage: {str(e)}"
             return
 
     if not contents:

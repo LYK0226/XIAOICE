@@ -112,6 +112,14 @@ def get_content_type_from_url(url):
         return 'image/png'
     elif url_lower.endswith('.gif'):
         return 'image/gif'
+    elif url_lower.endswith('.mp4'):
+        return 'video/mp4'
+    elif url_lower.endswith('.webm'):
+        return 'video/webm'
+    elif url_lower.endswith('.ogg'):
+        return 'video/ogg'
+    elif url_lower.endswith('.mov'):
+        return 'video/quicktime'
     else:
         return 'application/octet-stream'
 

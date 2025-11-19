@@ -87,6 +87,7 @@ const translations = {
         typing: '正在輸入...',
         analyzing: '正在分析圖片...',
         analyzeImage: '請分析這張圖片',
+        analyzeVideo: '請分析這段影片',
         welcomeMsg: '您好！我是您的智能助手。我可以通過回答您的問題來幫助您。您也可以問我任何問題。',
         settingsComingSoon: '設定面板即將推出！',
         langSwitched: '語言已切換為繁體中文',
@@ -116,6 +117,7 @@ const translations = {
         typing: 'Typing...',
         analyzing: 'Analyzing image...',
         analyzeImage: 'Please analyze this image',
+        analyzeVideo: 'Please analyze this video',
         welcomeMsg: 'Hello! I am your smart assistant. I can help you by answering your questions. You can also ask me anything.',
         settingsComingSoon: 'Settings panel coming soon!',
         langSwitched: 'Language switched to English',
@@ -145,6 +147,7 @@ const translations = {
         typing: '入力中...',
         analyzing: '画像を分析中...',
         analyzeImage: 'この画像を分析してください',
+        analyzeVideo: 'この動画を分析してください',
         welcomeMsg: 'こんにちは！私はあなたのスマートアシスタントです。質問にお答えすることで、お手伝いできます。',
         settingsComingSoon: '設定パネルは近日公開！',
         langSwitched: '言語が日本語に切り替わりました',
@@ -376,21 +379,16 @@ function createImageMessage(imageData, text, isUser = true) {
     
     // Add image
     const img = document.createElement('img');
-    img.src = imageData;
+    img.src = imageData; // Set the source of the image
     img.className = 'message-image';
-    img.style.maxWidth = '100%';
-    img.style.borderRadius = '8px';
-    img.style.marginBottom = '10px';
     
     // Add click to view full image
     img.addEventListener('click', () => {
         const modal = document.createElement('div');
         modal.className = 'image-modal';
-        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; align-items: center; justify-content: center; cursor: pointer;';
         
         const fullImg = document.createElement('img');
         fullImg.src = imageData;
-        fullImg.style.cssText = 'max-width: 90%; max-height: 90%; border-radius: 8px;';
         
         modal.appendChild(fullImg);
         document.body.appendChild(modal);
@@ -443,172 +441,6 @@ function createTypingIndicator(text) {
     return indicator;
 }
 
-// Simulated test paper detection and question extraction
-function detectTestPaper(imageData) {
-    // In a real application, this would use OCR (like Tesseract.js) and AI to detect questions
-    // For now, we'll simulate detecting a test paper with questions
-    
-    // Randomly determine if it's a test paper (for demo purposes, let's say 70% chance)
-    const isTestPaper = Math.random() > 0.3;
-    
-    if (!isTestPaper) {
-        return null; // Not a test paper, use regular image analysis
-    }
-    
-    // Simulate extracted questions based on language
-    const sampleQuestions = {
-        'zh-TW': [
-            {
-                number: 1,
-                question: "下列哪個選項正確描述了光合作用的過程？",
-                options: ["A. 植物吸收二氧化碳釋放氧氣", "B. 植物吸收氧氣釋放二氧化碳", "C. 植物不需要光照", "D. 以上都不對"]
-            },
-            {
-                number: 2,
-                question: "計算: 25 × 4 + 16 ÷ 2 = ?",
-                options: null
-            },
-            {
-                number: 3,
-                question: "請解釋「水循環」的基本過程。",
-                options: null
-            }
-        ],
-        'en': [
-            {
-                number: 1,
-                question: "Which of the following correctly describes the process of photosynthesis?",
-                options: ["A. Plants absorb CO2 and release O2", "B. Plants absorb O2 and release CO2", "C. Plants don't need light", "D. None of the above"]
-            },
-            {
-                number: 2,
-                question: "Calculate: 25 × 4 + 16 ÷ 2 = ?",
-                options: null
-            },
-            {
-                number: 3,
-                question: "Explain the basic process of the water cycle.",
-                options: null
-            }
-        ]
-    };
-    
-    return sampleQuestions[currentLanguage] || sampleQuestions['en'];
-}
-
-// Generate answers for questions
-function generateAnswer(question, questionNumber) {
-    const answers = {
-        'zh-TW': {
-            1: "正確答案是 A。光合作用是植物利用光能，將二氧化碳和水轉化為葡萄糖和氧氣的過程。這個過程主要發生在葉綠體中，是植物生存和地球生態系統的基礎。",
-            2: "讓我們一步步計算：\n1. 首先計算乘法：25 × 4 = 100\n2. 然後計算除法：16 ÷ 2 = 8\n3. 最後相加：100 + 8 = 108\n\n答案是 108。",
-            3: "水循環的基本過程包括：\n1. 蒸發：太陽加熱地表水，使其變成水蒸氣\n2. 凝結：水蒸氣上升冷卻，形成雲\n3. 降水：雲中的水滴聚集變重，以雨、雪等形式降落\n4. 徑流：降水流入河流、湖泊或滲入地下\n5. 重複循環"
-        },
-        'en': {
-            1: "The correct answer is A. Photosynthesis is the process by which plants use light energy to convert carbon dioxide and water into glucose and oxygen. This process mainly occurs in chloroplasts and is fundamental to plant survival and Earth's ecosystem.",
-            2: "Let's calculate step by step:\n1. First, multiply: 25 × 4 = 100\n2. Then, divide: 16 ÷ 2 = 8\n3. Finally, add: 100 + 8 = 108\n\nThe answer is 108.",
-            3: "The basic process of the water cycle includes:\n1. Evaporation: Sun heats surface water, turning it into vapor\n2. Condensation: Water vapor rises and cools, forming clouds\n3. Precipitation: Water droplets in clouds gather and fall as rain, snow, etc.\n4. Runoff: Precipitation flows into rivers, lakes, or seeps underground\n5. The cycle repeats"
-        }
-    };
-    
-    return answers[currentLanguage][questionNumber];
-}
-
-// Simulated image recognition function
-function analyzeImage(imageData) {
-    // In a real application, this would call an AI API like Google Vision, Azure Computer Vision, or OpenAI Vision
-    // For now, we'll simulate the response
-    
-    const responses = {
-        'zh-TW': [
-            "這是一張很有趣的圖片！我看到了一些色彩豐富的元素。圖片中似乎包含了多個物體或場景。",
-            "根據我的分析，這張圖片展示了一個清晰的場景。我可以識別出其中的主要元素和構圖。",
-            "圖片質量很好！我能夠看到圖片中的細節。這看起來像是一張精心拍攝的照片。"
-        ],
-        'en': [
-            "This is an interesting image! I can see some colorful elements. The image seems to contain multiple objects or scenes.",
-            "Based on my analysis, this image shows a clear scene. I can identify the main elements and composition.",
-            "Great image quality! I can see the details in the picture. This looks like a carefully captured photo."
-        ]
-    };
-    
-    const languageResponses = responses[currentLanguage];
-    return languageResponses[Math.floor(Math.random() * languageResponses.length)];
-}
-
-// Process test paper questions one by one
-function processTestPaperQuestions(questions, imageData) {
-    const t = translations[currentLanguage];
-    
-    // First, show detection message
-    const detectionMessages = {
-        'zh-TW': `我檢測到這是一張試卷或測試題！我發現了 ${questions.length} 道題目。讓我逐個為您解答。`,
-        'en': `I detected this is a test paper! I found ${questions.length} questions. Let me answer them one by one.`
-    };
-    
-    const detectionMsg = createMessage(detectionMessages[currentLanguage], false);
-    messagesDiv.appendChild(detectionMsg);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    
-    // Process each question with a delay
-    questions.forEach((q, index) => {
-        setTimeout(() => {
-            // Show the question
-            let questionText = `\n📝 **${t.question || '问题'} ${q.number}:**\n${q.question}`;
-            
-            if (q.options) {
-                questionText += '\n\n' + q.options.join('\n');
-            }
-            
-            const questionMsg = createMessage(questionText, false);
-            messagesDiv.appendChild(questionMsg);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            
-            // Show thinking indicator
-            setTimeout(() => {
-                const thinkingTexts = {
-                    'zh-TW': '正在思考答案...',
-                    'en': 'Thinking about the answer...'
-                };
-                
-                const thinkingIndicator = createTypingIndicator();
-                messagesDiv.appendChild(thinkingIndicator);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                
-                // Show answer after delay
-                setTimeout(() => {
-                    messagesDiv.removeChild(thinkingIndicator);
-                    
-                    const answer = generateAnswer(q, q.number);
-                    const answerHeaders = {
-                        'zh-TW': `💡 **答案 ${q.number}:**\n\n`,
-                        'en': `💡 **Answer ${q.number}:**\n\n`
-                    };
-                    
-                    const fullAnswer = answerHeaders[currentLanguage] + answer;
-                    const answerMsg = createMessage(fullAnswer, false);
-                    messagesDiv.appendChild(answerMsg);
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                    
-                    // If this is the last question, show completion message
-                    if (index === questions.length - 1) {
-                        setTimeout(() => {
-                            const completionMessages = {
-                                'zh-TW': '✅ 所有題目已解答完畢！如果您還有其他問題，請隨時告訴我。',
-                                'en': '✅ All questions have been answered! If you have any other questions, feel free to ask.'
-                            };
-                            
-                            const completionMsg = createMessage(completionMessages[currentLanguage], false);
-                            messagesDiv.appendChild(completionMsg);
-                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                        }, 1000);
-                    }
-                }, 2000);
-            }, 500);
-        }, (index * 6000) + 1000); // Stagger each question by 6 seconds
-    });
-}
-
 translations['zh-TW'].readMessage = '朗讀訊息';
 translations['zh-TW'].stopReading = '停止朗讀';
 
@@ -624,21 +456,18 @@ translations['zh-TW'].untitledConversation = '未命名對話';
 translations['zh-TW'].conversationLoadError = '載入對話失敗，請稍後再試。';
 translations['zh-TW'].conversationCreateError = '建立對話失敗，請稍後再試。';
 translations['zh-TW'].messageSaveError = '儲存訊息失敗。';
-translations['zh-TW'].attachmentPlaceholder = '[附件]';
 
 translations['en'].noConversations = 'No conversations yet';
 translations['en'].untitledConversation = 'Untitled conversation';
 translations['en'].conversationLoadError = 'Unable to load the conversation. Please try again.';
 translations['en'].conversationCreateError = 'Unable to start a new conversation right now.';
 translations['en'].messageSaveError = 'Unable to save the message.';
-translations['en'].attachmentPlaceholder = '[attachment]';
 
 translations['ja'].noConversations = '会話はまだありません';
 translations['ja'].untitledConversation = '名称未設定の会話';
 translations['ja'].conversationLoadError = '会話を読み込めませんでした。後でもう一度お試しください。';
 translations['ja'].conversationCreateError = '新しい会話を開始できませんでした。';
 translations['ja'].messageSaveError = 'メッセージを保存できませんでした。';
-translations['ja'].attachmentPlaceholder = '[添付]';
 
 // Load saved language preference on page load
 window.addEventListener('DOMContentLoaded', () => {
@@ -696,7 +525,24 @@ fileUploadBtn.addEventListener('click', () => {
 
 fileInput.addEventListener('change', (e) => {
     const files = Array.from(e.target.files);
+    const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
+
     files.forEach(file => {
+        // Check for allowed file types (Image, Video, PDF)
+        const fileName = file.name.toLowerCase();
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+        const isPDF = file.type === 'application/pdf' || fileName.endsWith('.pdf');
+        
+        if (!isImage && !isVideo && !isPDF) {
+            showCustomAlert(`File "${file.name}" is not supported. Please upload PDF documents, Images, or Videos.`);
+            return;
+        }
+
+        if (file.size > MAX_FILE_SIZE) {
+            showCustomAlert(`File "${file.name}" is too large. Maximum size is 500MB.`);
+            return;
+        }
         if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
             selectedFiles.push(file);
         }
@@ -733,6 +579,27 @@ function updateFilePreview() {
             };
             reader.readAsDataURL(file);
             previewItem.appendChild(img);
+        } else if (file.type.startsWith('video/')) {
+            // Video preview with square container
+            previewItem = document.createElement('div');
+            previewItem.className = 'file-preview-item';
+            
+            const video = document.createElement('video');
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.objectFit = 'cover';
+            video.style.borderRadius = '8px';
+            video.muted = true; // Mute by default
+            
+            const videoUrl = URL.createObjectURL(file);
+            video.src = videoUrl;
+            
+            // Add click handler to open preview modal
+            video.addEventListener('click', () => {
+                openDocumentPreviewModal(videoUrl, file.name);
+            });
+            
+            previewItem.appendChild(video);
         } else {
             // File name only - simplified without square container
             previewItem = document.createElement('div');
@@ -864,7 +731,7 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         messageInput.placeholder = t.placeholder;
         
         if (event.error === 'not-allowed') {
-            alert(t.micPermissionDenied || '麦克风权限被拒绝');
+            showCustomAlert(t.micPermissionDenied || '麦克风权限被拒绝');
         }
     };
     
@@ -879,7 +746,7 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
 voiceInputBtn.addEventListener('click', () => {
     if (!recognition) {
         const t = translations[currentLanguage];
-        alert(t.voiceNotSupported || '您的浏览器不支持语音识别');
+        showCustomAlert(t.voiceNotSupported || '您的浏览器不支持语音识别');
         return;
     }
     
@@ -918,7 +785,7 @@ webcamBtn.addEventListener('click', async () => {
     } catch (error) {
         console.error('Webcam error:', error);
         const t = translations[currentLanguage];
-        alert(t.webcamPermissionDenied || '无法访问摄像头');
+        showCustomAlert(t.webcamPermissionDenied || '无法访问摄像头');
         closeWebcamModal();
     }
 });
@@ -987,7 +854,7 @@ retakeBtn.addEventListener('click', async () => {
     } catch (error) {
         console.error('Webcam error:', error);
         const t = translations[currentLanguage];
-        alert(t.webcamPermissionDenied || '无法访问摄像头');
+        showCustomAlert(t.webcamPermissionDenied || '无法访问摄像头');
         closeWebcamModal();
     }
 });
@@ -1020,8 +887,6 @@ async function sendMessageWithFiles() {
     selectedFiles = [];
     updateFilePreview();
 
-    const placeholderText = messageText || (hasFiles ? t.attachmentPlaceholder : '');
-
     const userMessageElement = createMessageWithFiles(messageText, attachmentsSnapshot, true);
 
     messagesDiv.appendChild(userMessageElement);
@@ -1030,7 +895,7 @@ async function sendMessageWithFiles() {
 
     conversationHistory.push({
         role: 'user',
-        content: placeholderText || t.attachmentPlaceholder,
+        content: messageText,
         time: Date.now()
     });
 
@@ -1058,7 +923,7 @@ async function sendMessageWithFiles() {
 
         const userMessageResponse = await chatAPI.addMessage(
             conversationId,
-            placeholderText || t.attachmentPlaceholder,
+            messageText,
             'user',
             attachmentsMetadata ? { attachments: attachmentsMetadata } : null,
             attachmentsSnapshot
@@ -1073,7 +938,7 @@ async function sendMessageWithFiles() {
             updateMessageWithServerFiles(userMessageElement, userMessageResponse.message.uploaded_files);
         }
 
-        const imageFile = attachmentsSnapshot.find((file) => file.type.startsWith('image/'));
+        const mediaFile = attachmentsSnapshot.find((file) => file.type.startsWith('image/') || file.type.startsWith('video/'));
         
         // Create bot message element with typing indicator
         const botMessageElement = createMessage('', false);
@@ -1085,19 +950,21 @@ async function sendMessageWithFiles() {
         
         let fullResponse = '';
         
-        if (imageFile) {
-            // For images, use the uploaded URL
-            const imageUrl = userMessageResponse.message.uploaded_files[0]; // Assuming single image
-            const imageMimeType = imageFile.type;
+        if (mediaFile) {
+            // For images/videos, use the uploaded URL
+            // Find the index to get the correct URL from uploaded_files
+            const mediaIndex = attachmentsSnapshot.indexOf(mediaFile);
+            const mediaUrl = userMessageResponse.message.uploaded_files[mediaIndex];
+            const mediaMimeType = mediaFile.type;
 
             let currentTypingIndex = 0;
             let pendingText = '';
             
             await chatAPI.streamChatMessage(
-                messageText || t.analyzeImage,
+                messageText || (mediaFile.type.startsWith('video/') ? (t.analyzeVideo || 'Please analyze this video') : t.analyzeImage),
                 null,
-                imageUrl,
-                imageMimeType,
+                mediaUrl,
+                mediaMimeType,
                 currentLanguage,
                 conversationHistory,
                 (chunk) => {
@@ -1145,7 +1012,7 @@ async function sendMessageWithFiles() {
             let pendingText = '';
             
             await chatAPI.streamChatMessage(
-                messageText || placeholderText,
+                messageText,
                 null,
                 null,
                 null,
@@ -1258,10 +1125,38 @@ function createMessageWithFiles(text, files, isUser = true) {
                     // For local files, open the preview panel with data URL
                     openDocumentPreviewModal(img.src, file.name);
                 });
+            } else if (file.type.startsWith('video/')) {
+                const videoContainer = document.createElement('div');
+                videoContainer.className = 'video-preview-container';
+                
+                const video = document.createElement('video');
+                video.className = 'message-video-thumb';
+                const videoUrl = URL.createObjectURL(file);
+                video.src = videoUrl;
+                video.muted = true;
+                video.preload = 'metadata';
+                
+                // Try to show a frame
+                video.addEventListener('loadeddata', () => {
+                    video.currentTime = 0.1;
+                });
+
+                const playIcon = document.createElement('div');
+                playIcon.className = 'play-overlay';
+                playIcon.innerHTML = '<i class="fas fa-play-circle"></i>';
+
+                videoContainer.appendChild(video);
+                videoContainer.appendChild(playIcon);
+                
+                videoContainer.addEventListener('click', () => {
+                    openDocumentPreviewModal(videoUrl, file.name);
+                });
+                
+                messageContent.appendChild(videoContainer);
             } else {
                 // Show file name for non-image files
                 const fileInfo = document.createElement('div');
-                fileInfo.style.cssText = 'padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 8px;';
+                fileInfo.className = 'message-file-info';
                 fileInfo.innerHTML = `<i class="fas fa-file"></i> ${file.name}`;
                 messageContent.appendChild(fileInfo);
             }
@@ -1293,13 +1188,26 @@ function updateMessageWithServerFiles(messageElement, uploadedFiles) {
         return fileName.replace(/_(\d+)(\.\w+)$/, '$2');
     }
     
-    // Remove existing file displays
+    // Remove existing file displays (local preview elements)
     const existingFileInfos = messageContent.querySelectorAll('div[style*="background"]');
     existingFileInfos.forEach(info => {
-        if (info.innerHTML.includes('fas fa-file')) {
+        if (info.innerHTML.includes('fas fa-file') || info.innerHTML.includes('fas fa-video')) {
             info.remove();
         }
     });
+    
+    // Remove existing images to replace with server URLs
+    const existingImages = messageContent.querySelectorAll('img.message-image');
+    existingImages.forEach(img => img.remove());
+    
+    // Remove existing video elements (local previews)
+    const existingVideos = messageContent.querySelectorAll('video.message-video-thumb');
+    existingVideos.forEach(video => video.remove());
+    const existingVideoContainers = messageContent.querySelectorAll('.video-preview-container');
+    existingVideoContainers.forEach(container => container.remove());
+    
+    // Get the text paragraph to insert media before it
+    const textParagraph = messageContent.querySelector('p');
     
     // Add server-based file displays
     uploadedFiles.forEach(filePath => {
@@ -1315,23 +1223,58 @@ function updateMessageWithServerFiles(messageElement, uploadedFiles) {
         
         // Check if it's an image
         const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(displayFileName);
+        const isVideo = /\.(mp4|webm|ogg|mov)$/i.test(displayFileName);
         
         if (isImage) {
-            // For images, we could update the src, but since we already have the image displayed from local file,
-            // and the server URL should work the same, we might not need to change it.
-            // But to ensure consistency, let's update it
-            const existingImg = messageContent.querySelector('img.message-image');
-            if (existingImg) {
-                existingImg.src = fullPath;
-                // Update the modal click handler to use server URL
-                existingImg.onclick = () => {
-                    openDocumentPreviewModal(fullPath, displayFileName);
-                };
+            const img = document.createElement('img');
+            img.className = 'message-image';
+            img.src = fullPath;
+            img.addEventListener('click', () => {
+                openDocumentPreviewModal(fullPath, displayFileName);
+            });
+            
+            // Insert before the text paragraph to keep text at the bottom
+            if (textParagraph) {
+                messageContent.insertBefore(img, textParagraph);
+            } else {
+                messageContent.appendChild(img);
+            }
+        } else if (isVideo) {
+            const videoContainer = document.createElement('div');
+            videoContainer.className = 'video-preview-container';
+            
+            const video = document.createElement('video');
+            video.className = 'message-video-thumb';
+            video.src = fullPath;
+            video.muted = true;
+            video.preload = 'metadata';
+            
+            // Try to show a frame
+            video.addEventListener('loadeddata', () => {
+                video.currentTime = 0.1;
+            });
+
+            const playIcon = document.createElement('div');
+            playIcon.className = 'play-overlay';
+            playIcon.innerHTML = '<i class="fas fa-play-circle"></i>';
+
+            videoContainer.appendChild(video);
+            videoContainer.appendChild(playIcon);
+            
+            videoContainer.addEventListener('click', () => {
+                openDocumentPreviewModal(fullPath, displayFileName);
+            });
+            
+            // Insert before the text paragraph to keep text at the bottom
+            if (textParagraph) {
+                messageContent.insertBefore(videoContainer, textParagraph);
+            } else {
+                messageContent.appendChild(videoContainer);
             }
         } else {
-            // For non-image files, replace the plain text with a clickable link
+            // For non-image/video files, show clickable file info
             const fileInfo = document.createElement('div');
-            fileInfo.style.cssText = 'padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 8px; cursor: pointer;';
+            fileInfo.className = 'message-file-info';
             fileInfo.innerHTML = `<i class="fas fa-file"></i> ${displayFileName}`;
             
             fileInfo.addEventListener('click', () => {
@@ -1339,7 +1282,6 @@ function updateMessageWithServerFiles(messageElement, uploadedFiles) {
             });
             
             // Insert before the text paragraph to keep text at the bottom
-            const textParagraph = messageContent.querySelector('p');
             if (textParagraph) {
                 messageContent.insertBefore(fileInfo, textParagraph);
             } else {
@@ -1365,38 +1307,25 @@ function openDocumentPreviewModal(filePath, fileName) {
     // Determine file type and create appropriate preview
     const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileName);
     const isPDF = /\.pdf$/i.test(fileName);
+    const isVideo = /\.(mp4|webm|ogg|mov)$/i.test(fileName);
 
     if (isImage) {
         const img = document.createElement('img');
         img.src = filePath;
-        img.style.cssText = `
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-            border-radius: 8px;
-        `;
         previewContent.appendChild(img);
+    } else if (isVideo) {
+        const video = document.createElement('video');
+        video.src = filePath;
+        video.controls = true;
+        previewContent.appendChild(video);
     } else if (isPDF) {
         const iframe = document.createElement('iframe');
         iframe.src = filePath;
-        iframe.style.cssText = `
-            width: 100%;
-            height: 100%;
-            border: none;
-            border-radius: 8px;
-        `;
         previewContent.appendChild(iframe);
     } else {
         // For other document types, try to display in iframe or show download link
         const iframe = document.createElement('iframe');
         iframe.src = filePath;
-        iframe.style.cssText = `
-            width: 100%;
-            height: 100%;
-            border: none;
-            border-radius: 8px;
-        `;
         previewContent.appendChild(iframe);
     }
 
@@ -1465,24 +1394,49 @@ function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
 
             // Check if it's an image
             const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(displayFileName);
+            const isVideo = /\.(mp4|webm|ogg|mov)$/i.test(displayFileName);
 
             if (isImage) {
                 const img = document.createElement('img');
                 img.className = 'message-image';
                 img.src = fullPath;
-                img.style.maxWidth = '100%';
-                img.style.borderRadius = '8px';
-                img.style.marginBottom = '10px';
 
                 img.addEventListener('click', () => {
                     openDocumentPreviewModal(fullPath, displayFileName);
                 });
 
                 messageContent.appendChild(img);
+            } else if (isVideo) {
+                const videoContainer = document.createElement('div');
+                videoContainer.className = 'video-preview-container';
+                
+                const video = document.createElement('video');
+                video.className = 'message-video-thumb';
+                video.src = fullPath;
+                video.muted = true;
+                video.preload = 'metadata';
+                
+                // Try to show a frame
+                video.addEventListener('loadeddata', () => {
+                    video.currentTime = 0.1;
+                });
+
+                const playIcon = document.createElement('div');
+                playIcon.className = 'play-overlay';
+                playIcon.innerHTML = '<i class="fas fa-play-circle"></i>';
+
+                videoContainer.appendChild(video);
+                videoContainer.appendChild(playIcon);
+                
+                videoContainer.addEventListener('click', () => {
+                    openDocumentPreviewModal(fullPath, displayFileName);
+                });
+
+                messageContent.appendChild(videoContainer);
             } else {
                 // Show file name for non-image files with preview modal
                 const fileInfo = document.createElement('div');
-                fileInfo.style.cssText = 'padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 8px; cursor: pointer;';
+                fileInfo.className = 'message-file-info';
                 fileInfo.innerHTML = `<i class="fas fa-file"></i> ${displayFileName}`;
 
                 fileInfo.addEventListener('click', () => {
