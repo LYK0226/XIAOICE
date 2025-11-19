@@ -18,20 +18,16 @@ CREATE_DB_ON_STARTUP=true
 # DO NOT COMMIT: Replace "your_32_byte_encryption_key_here" with your actual Fernet key
 ENCRYPTION_KEY="your_32_byte_encryption_key_here"
 
+GCS_BUCKET_NAME="your_gcs_bucket_name_here"
+GCS_CREDENTIALS_PATH="your_gcs_credentials_path_here"
 ```
-# API 設定
-
-### 取得您的加密金鑰 (填入 .env -> ENCRYPTION_KEY="your_32_byte_encryption_key_here")
-python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-
-設定 -> 高級 ->填入你的 API Key
-
-
 ### 安裝依賴並啟動應用
 
 ```bash
 # 建立並啟動虛擬環境
 python -m venv .venv && source .venv/bin/activate
+# windows
+python -m venv .venv; .\.venv\Scripts\Activate
 
 # 安裝 Python 依賴
 pip install -r requirements.txt
