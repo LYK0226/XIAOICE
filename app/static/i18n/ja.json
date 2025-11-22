@@ -78,5 +78,11 @@
   "placeholder.editEmail": "新しいメールアドレスを入力",
   "placeholder.oldPassword": "現在のパスワードを入力",
   "placeholder.newPassword": "新しいパスワードを入力",
-  "placeholder.confirmPassword": "新しいパスワードを確認"
+  "placeholder.confirmPassword": "新しいパスワードを確認",
+  "stopReading": "読み上げを停止",
+  "noConversations": "会話はまだありません",
+  "untitledConversation": "名称未設定の会話",
+  "conversationLoadError": "会話を読み込めませんでした。後でもう一度お試しください。",
+  "conversationCreateError": "新しい会話を開始できませんでした。",
+  "messageSaveError": "メッセージを保存できませんでした。"
 }

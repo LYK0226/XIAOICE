@@ -389,34 +389,6 @@ function createTypingIndicator(text) {
     return indicator;
 }
 
-translations['zh-TW'].readMessage = '朗讀訊息';
-translations['zh-TW'].stopReading = '停止朗讀';
-
-translations['en'].readMessage = 'Read message';
-translations['en'].stopReading = 'Stop reading';
-
-translations['ja'].readMessage = 'メッセージを読み上げる';
-translations['ja'].stopReading = '読み上げを停止';
-
-// Conversation management translations
-translations['zh-TW'].noConversations = '暫無對話';
-translations['zh-TW'].untitledConversation = '未命名對話';
-translations['zh-TW'].conversationLoadError = '載入對話失敗，請稍後再試。';
-translations['zh-TW'].conversationCreateError = '建立對話失敗，請稍後再試。';
-translations['zh-TW'].messageSaveError = '儲存訊息失敗。';
-
-translations['en'].noConversations = 'No conversations yet';
-translations['en'].untitledConversation = 'Untitled conversation';
-translations['en'].conversationLoadError = 'Unable to load the conversation. Please try again.';
-translations['en'].conversationCreateError = 'Unable to start a new conversation right now.';
-translations['en'].messageSaveError = 'Unable to save the message.';
-
-translations['ja'].noConversations = '会話はまだありません';
-translations['ja'].untitledConversation = '名称未設定の会話';
-translations['ja'].conversationLoadError = '会話を読み込めませんでした。後でもう一度お試しください。';
-translations['ja'].conversationCreateError = '新しい会話を開始できませんでした。';
-translations['ja'].messageSaveError = 'メッセージを保存できませんでした。';
-
 // Load saved language preference and initialize data on page load
 window.addEventListener('DOMContentLoaded', async () => {
     // Load JSON data first

@@ -35,14 +35,15 @@ function renderConversationList(conversations = []) {
         return;
     }
 
-    const t = translations[currentLanguage];
+    // Wait for translations to be loaded
+    const t = (window.translations && window.translations[currentLanguage]) || {};
     const sorted = sortConversations(conversations);
     conversationList.innerHTML = '';
 
     if (!sorted.length) {
         const emptyState = document.createElement('li');
         emptyState.className = 'empty-state';
-        emptyState.textContent = t.noConversations;
+        emptyState.textContent = t.noConversations || 'No conversations yet';
         conversationList.appendChild(emptyState);
         return;
     }
@@ -87,7 +88,7 @@ function renderConversationList(conversations = []) {
 
         const title = document.createElement('span');
         title.className = 'conversation-title';
-        const titleText = (conversation.title || '').trim() || t.untitledConversation;
+        const titleText = (conversation.title || '').trim() || t.untitledConversation || 'Untitled conversation';
         title.textContent = titleText;
         textWrapper.appendChild(title);
 

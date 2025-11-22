@@ -78,5 +78,11 @@
   "placeholder.editEmail": "輸入新的電子郵件地址",
   "placeholder.oldPassword": "輸入舊密碼",
   "placeholder.newPassword": "輸入新密碼",
-  "placeholder.confirmPassword": "再次輸入新密碼"
+  "placeholder.confirmPassword": "再次輸入新密碼",
+  "stopReading": "停止朗讀",
+  "noConversations": "暫無對話",
+  "untitledConversation": "未命名對話",
+  "conversationLoadError": "載入對話失敗，請稍後再試。",
+  "conversationCreateError": "建立對話失敗，請稍後再試。",
+  "messageSaveError": "儲存訊息失敗。"
 }

@@ -78,5 +78,11 @@
   "placeholder.editEmail": "Enter new email address",
   "placeholder.oldPassword": "Enter old password",
   "placeholder.newPassword": "Enter new password",
-  "placeholder.confirmPassword": "Confirm new password"
+  "placeholder.confirmPassword": "Confirm new password",
+  "stopReading": "Stop reading",
+  "noConversations": "No conversations yet",
+  "untitledConversation": "Untitled conversation",
+  "conversationLoadError": "Unable to load the conversation. Please try again.",
+  "conversationCreateError": "Unable to start a new conversation right now.",
+  "messageSaveError": "Unable to save the message."
 }
