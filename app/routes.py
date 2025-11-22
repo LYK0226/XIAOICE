@@ -650,3 +650,91 @@ def get_user_files():
     except Exception as e:
         current_app.logger.error(f"Error getting user files: {e}")
         return jsonify({'error': 'Failed to retrieve files'}), 500
+
+@bp.route('/api/upload_file', methods=['POST'])
+@jwt_required()
+def upload_file_websocket():
+    """
+    Upload file(s) to GCS and broadcast via WebSocket.
+    This endpoint is used for file uploads in WebSocket-based chat.
+    """
+    from flask_jwt_extended import get_jwt_identity
+    from .models import Conversation, Message, db
+    from app import socketio
+    
+    user_id = get_jwt_identity()
+    
+    try:
+        # Get conversation_id and optional message content
+        conversation_id = request.form.get('conversation_id', type=int)
+        message_content = request.form.get('message', '').strip()
+        
+        if not conversation_id:
+            return jsonify({'error': 'conversation_id is required'}), 400
+        
+        # Verify conversation exists and belongs to user
+        conversation = Conversation.query.filter_by(id=conversation_id, user_id=user_id).first()
+        if not conversation:
+            return jsonify({'error': 'Conversation not found'}), 404
+        
+        # Get uploaded files
+        files = request.files.getlist('files')
+        if not files or not files[0].filename:
+            return jsonify({'error': 'No files provided'}), 400
+        
+        # Upload files to GCS
+        uploaded_urls = gcs_upload.upload_files_to_gcs(
+            files, 
+            user_id=user_id, 
+            conversation_id=conversation_id
+        )
+        
+        if not uploaded_urls:
+            return jsonify({'error': 'Failed to upload files'}), 500
+        
+        # Create user message with file attachments
+        user_message = Message(
+            conversation_id=conversation_id,
+            role='user',
+            content=message_content or '[File attachment]',
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(user_message)
+        db.session.commit()
+        
+        # Update FileUpload records with message_id
+        from .models import FileUpload
+        for gcs_url in uploaded_urls:
+            file_upload = FileUpload.query.filter_by(
+                user_id=user_id,
+                file_path=gcs_url,
+                conversation_id=conversation_id
+            ).order_by(FileUpload.uploaded_at.desc()).first()
+            
+            if file_upload and not file_upload.message_id:
+                file_upload.message_id = user_message.id
+        
+        db.session.commit()
+        
+        # Broadcast file upload to WebSocket room
+        room = f"conversation_{conversation_id}"
+        socketio.emit('file_uploaded', {
+            'message_id': user_message.id,
+            'role': 'user',
+            'content': user_message.content,
+            'files': uploaded_urls,
+            'timestamp': user_message.timestamp.isoformat(),
+            'conversation_id': conversation_id
+        }, room=room)
+        
+        return jsonify({
+            'success': True,
+            'message_id': user_message.id,
+            'files': uploaded_urls,
+            'conversation_id': conversation_id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error uploading file: {e}")
+        return jsonify({'error': f'Failed to upload file: {str(e)}'}), 500

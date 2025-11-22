@@ -2,222 +2,48 @@
 
 // ===== Translation System for Settings =====
 
-// Translation dictionary for settings page
-const settingsTranslations = {
-    'zh-TW': {
-        'settings.personalization': '個人化',
-        'settings.advanced': '高級',
-        'settings.profile.title': '個人資料',
-        'settings.profile': '個人資料',
-        'settings.profile.description': '管理您的個人資料和帳戶設定',
-        'settings.profile.avatar': '頭像',
-        'settings.profile.username': '用戶名稱',
-        'settings.profile.email': '電子郵件',
-        'settings.profile.password': '密碼',
-        'settings.profile.save': '保存更改',
-        'settings.profile.clear': '清除',
-        'settings.profile.edit': '編輯',
-        'settings.personalization.title': '個人化設定',
-        'settings.personalization.description': '自訂您的個人化偏好設定',
-        'settings.personalization.theme': '主題模式',
-        'settings.personalization.theme.light': '淺色',
-        'settings.personalization.theme.dark': '深色',
-        'settings.personalization.theme.auto': '自動',
-        'settings.personalization.language': '界面語言',
-        'settings.advanced.title': 'API 金鑰管理',
-        'settings.advanced.description': '管理您的 Google AI API 金鑰',
-        'settings.advanced.model': 'AI 模型選擇',
-        'settings.advanced.model.flash': 'Gemini 2.5 Flash (推薦)',
-        'settings.advanced.model.pro': 'Gemini 2.5 Pro (高品質)',
-        'settings.advanced.api_key': 'API 金鑰',
-        'settings.advanced.api_key.description': '您可以添加多個 API 金鑰以分散使用量',
-        'settings.advanced.api_key.add': '添加 API 金鑰',
-        'alert.confirm': '確定',
-        'alert.cancel': '取消',
-        'api_key_modal.name_label': '金鑰名稱',
-        'api_key_modal.key_label': 'API 金鑰',
-        'api_key_modal.hint': '您的 API 金鑰將被加密存儲',
-        'api_key_modal.save': '保存',
-        'api_key_modal.cancel': '取消',
-        'api_key.in_use': '使用中',
-        'api_key.use': '使用',
-        'api_key.no_keys': '尚未添加任何 API 金鑰',
-        'api_key.no_keys_desc': '請添加您的 Google AI API 金鑰以使用聊天功能',
-        'settings.profile.edit_username': '編輯用戶名稱',
-        'settings.profile.edit_email': '編輯電子郵件',
-        'settings.profile.change_password': '變更密碼',
-        'settings.profile.old_password': '舊密碼',
-        'settings.profile.new_password': '新密碼',
-        'settings.profile.confirm_password': '確認新密碼',
-        'settings.profile.save': '保存',
-        'settings.profile.cancel': '取消'
-    },
-    'en': {
-        'settings.personalization': 'Personalization',
-        'settings.advanced': 'Advanced',
-        'settings.profile.title': 'Profile',
-        'settings.profile': 'Profile',
-        'settings.profile.description': 'Manage your profile and account settings',
-        'settings.profile.avatar': 'Avatar',
-        'settings.profile.username': 'Username',
-        'settings.profile.email': 'Email',
-        'settings.profile.password': 'Password',
-        'settings.profile.save': 'Save Changes',
-        'settings.profile.clear': 'Clear',
-        'settings.profile.edit': 'Edit',
-        'settings.profile.edit_username': 'Edit Username',
-        'settings.profile.edit_email': 'Edit Email',
-        'settings.profile.change_password': 'Change Password',
-        'settings.profile.old_password': 'Old Password',
-        'settings.profile.new_password': 'New Password',
-        'settings.profile.confirm_password': 'Confirm New Password',
-        'settings.profile.save': 'Save',
-        'settings.profile.cancel': 'Cancel',
-        'settings.personalization.title': 'Personalization Settings',
-        'settings.personalization.description': 'Customize your personalization preferences',
-        'settings.personalization.theme': 'Theme Mode',
-        'settings.personalization.theme.light': 'Light',
-        'settings.personalization.theme.dark': 'Dark',
-        'settings.personalization.theme.auto': 'Auto',
-        'settings.personalization.language': 'Interface Language',
-        'settings.advanced.title': 'API Key Management',
-        'settings.advanced.description': 'Manage your Google AI API keys',
-        'settings.advanced.model': 'AI Model Selection',
-        'settings.advanced.model.flash': 'Gemini 2.5 Flash (Recommended)',
-        'settings.advanced.model.pro': 'Gemini 2.5 Pro (High Quality)',
-        'settings.advanced.api_key': 'API Key',
-        'settings.advanced.api_key.description': 'You can add multiple API keys to distribute usage',
-        'settings.advanced.api_key.add': 'Add API Key',
-        'alert.confirm': 'OK',
-        'alert.cancel': 'Cancel',
-        'api_key_modal.name_label': 'Key Name',
-        'api_key_modal.key_label': 'API Key',
-        'api_key_modal.hint': 'Your API key will be encrypted and stored securely',
-        'api_key_modal.save': 'Save',
-        'api_key_modal.cancel': 'Cancel',
-        'api_key.in_use': 'In Use',
-        'api_key.use': 'Use',
-        'api_key.no_keys': 'No API keys added yet',
-        'api_key.no_keys_desc': 'Please add your Google AI API key to use chat features'
-    },
-    'ja': {
-        'settings.personalization': 'パーソナライズ',
-        'settings.advanced': '詳細設定',
-        'settings.profile.title': 'プロフィール',
-        'settings.profile': 'プロフィール',
-        'settings.profile.description': 'プロフィールとアカウント設定を管理',
-        'settings.profile.avatar': 'アバター',
-        'settings.profile.username': 'ユーザー名',
-        'settings.profile.email': 'メールアドレス',
-        'settings.profile.password': 'パスワード',
-        'settings.profile.save': '変更を保存',
-        'settings.profile.clear': 'クリア',
-        'settings.profile.edit': '編集',
-        'settings.profile.edit_username': 'ユーザー名を編集',
-        'settings.profile.edit_email': 'メールアドレスを編集',
-        'settings.profile.change_password': 'パスワードを変更',
-        'settings.profile.old_password': '現在のパスワード',
-        'settings.profile.new_password': '新しいパスワード',
-        'settings.profile.confirm_password': '新しいパスワードを確認',
-        'settings.profile.save': '保存',
-        'settings.profile.cancel': 'キャンセル',
-        'settings.personalization.title': 'パーソナライズ設定',
-        'settings.personalization.description': 'パーソナライズの設定をカスタマイズ',
-        'settings.personalization.theme': 'テーマモード',
-        'settings.personalization.theme.light': 'ライト',
-        'settings.personalization.theme.dark': 'ダーク',
-        'settings.personalization.theme.auto': '自動',
-        'settings.personalization.language': 'インターフェース言語',
-        'settings.advanced.title': 'APIキー管理',
-        'settings.advanced.description': 'Google AI APIキーを管理',
-        'settings.advanced.model': 'AIモデル選択',
-        'settings.advanced.model.flash': 'Gemini 2.5 Flash (推奨)',
-        'settings.advanced.model.pro': 'Gemini 2.5 Pro (高品質)',
-        'settings.advanced.api_key': 'APIキー',
-        'settings.advanced.api_key.description': '使用量を分散するために複数のAPIキーを追加できます',
-        'settings.advanced.api_key.add': 'APIキーを追加',
-        'alert.confirm': 'OK',
-        'alert.cancel': 'キャンセル',
-        'api_key_modal.name_label': 'キー名',
-        'api_key_modal.key_label': 'APIキー',
-        'api_key_modal.hint': 'APIキーは暗号化されて安全に保存されます',
-        'api_key_modal.save': '保存',
-        'api_key_modal.cancel': 'キャンセル',
-        'api_key.in_use': '使用中',
-        'api_key.use': '使用',
-        'api_key.no_keys': 'まだAPIキーが追加されていません',
-        'api_key.no_keys_desc': 'チャット機能を使用するにはGoogle AI APIキーを追加してください'
-    }
-};
-
 // Function to update settings page language
 function updateSettingsLanguage(lang) {
-    const translations = settingsTranslations[lang] || settingsTranslations['en'];
+    // Use translations from the global translations object loaded in chatbox.js
+    const t = window.translations && window.translations[lang] ? window.translations[lang] : null;
+    
+    if (!t) {
+        console.warn(`Translations for ${lang} not loaded yet`);
+        return;
+    }
     
     // Update all elements with data-i18n attributes
     document.querySelectorAll('[data-i18n]').forEach(element => {
         const key = element.getAttribute('data-i18n');
-        if (translations[key]) {
-            element.textContent = translations[key];
+        if (t[key]) {
+            element.textContent = t[key];
         }
     });
     
     // Update select options
     document.querySelectorAll('option[data-i18n]').forEach(option => {
         const key = option.getAttribute('data-i18n');
-        if (translations[key]) {
-            option.textContent = translations[key];
+        if (t[key]) {
+            option.textContent = t[key];
         }
     });
     
     // Update placeholders
-    const placeholders = {
-        'zh-TW': {
-            'apiKeyName': '例如：我的 Google API',
-            'apiKeyValue': '輸入您的 Google AI API 金鑰',
-            'editUsername': '輸入新的用戶名稱',
-            'editEmail': '輸入新的電子郵件地址',
-            'oldPassword': '輸入舊密碼',
-            'newPassword': '輸入新密碼',
-            'confirmPassword': '再次輸入新密碼'
-        },
-        'en': {
-            'apiKeyName': 'e.g., My Google API',
-            'apiKeyValue': 'Enter your Google AI API key',
-            'editUsername': 'Enter new username',
-            'editEmail': 'Enter new email address',
-            'oldPassword': 'Enter old password',
-            'newPassword': 'Enter new password',
-            'confirmPassword': 'Confirm new password'
-        },
-        'ja': {
-            'apiKeyName': '例: 私の Google API',
-            'apiKeyValue': 'Google AI APIキーを入力してください',
-            'editUsername': '新しいユーザー名を入力',
-            'editEmail': '新しいメールアドレスを入力',
-            'oldPassword': '現在のパスワードを入力',
-            'newPassword': '新しいパスワードを入力',
-            'confirmPassword': '新しいパスワードを確認'
-        }
-    };
+    const apiKeyNameInput = document.getElementById('apiKeyName');
+    const apiKeyValueInput = document.getElementById('apiKeyValue');
+    const editUsernameInput = document.getElementById('editUsernameInput');
+    const editEmailInput = document.getElementById('editEmailInput');
+    const oldPasswordInput = document.getElementById('oldPasswordInput');
+    const newPasswordInput = document.getElementById('newPasswordInput');
+    const confirmPasswordInput = document.getElementById('confirmPasswordInput');
     
-    if (placeholders[lang]) {
-        const apiKeyNameInput = document.getElementById('apiKeyName');
-        const apiKeyValueInput = document.getElementById('apiKeyValue');
-        const editUsernameInput = document.getElementById('editUsernameInput');
-        const editEmailInput = document.getElementById('editEmailInput');
-        const oldPasswordInput = document.getElementById('oldPasswordInput');
-        const newPasswordInput = document.getElementById('newPasswordInput');
-        const confirmPasswordInput = document.getElementById('confirmPasswordInput');
-        
-        if (apiKeyNameInput) apiKeyNameInput.placeholder = placeholders[lang].apiKeyName;
-        if (apiKeyValueInput) apiKeyValueInput.placeholder = placeholders[lang].apiKeyValue;
-        if (editUsernameInput) editUsernameInput.placeholder = placeholders[lang].editUsername;
-        if (editEmailInput) editEmailInput.placeholder = placeholders[lang].editEmail;
-        if (oldPasswordInput) oldPasswordInput.placeholder = placeholders[lang].oldPassword;
-        if (newPasswordInput) newPasswordInput.placeholder = placeholders[lang].newPassword;
-        if (confirmPasswordInput) confirmPasswordInput.placeholder = placeholders[lang].confirmPassword;
-    }
+    if (apiKeyNameInput && t['placeholder.apiKeyName']) apiKeyNameInput.placeholder = t['placeholder.apiKeyName'];
+    if (apiKeyValueInput && t['placeholder.apiKeyValue']) apiKeyValueInput.placeholder = t['placeholder.apiKeyValue'];
+    if (editUsernameInput && t['placeholder.editUsername']) editUsernameInput.placeholder = t['placeholder.editUsername'];
+    if (editEmailInput && t['placeholder.editEmail']) editEmailInput.placeholder = t['placeholder.editEmail'];
+    if (oldPasswordInput && t['placeholder.oldPassword']) oldPasswordInput.placeholder = t['placeholder.oldPassword'];
+    if (newPasswordInput && t['placeholder.newPassword']) newPasswordInput.placeholder = t['placeholder.newPassword'];
+    if (confirmPasswordInput && t['placeholder.confirmPassword']) confirmPasswordInput.placeholder = t['placeholder.confirmPassword'];
 }
 
 // ===== Custom Modal Functions =====
@@ -1101,7 +927,6 @@ saveApiKeyBtn.addEventListener('click', async () => {
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
         const supportedLangs = ['zh-TW', 'en', 'ja'];
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
-        const translations = settingsTranslations[langToUse] || settingsTranslations['en'];
         
         const errorMessages = {
             'zh-TW': '請填寫所有欄位',
@@ -1183,14 +1008,14 @@ function renderApiKeys(apiKeys, selectedId) {
     const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
     const supportedLangs = ['zh-TW', 'en', 'ja'];
     const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
-    const translations = settingsTranslations[langToUse] || settingsTranslations['en'];
+    const t = window.translations && window.translations[langToUse] ? window.translations[langToUse] : {};
     
     if (apiKeys.length === 0) {
         apiKeyList.innerHTML = `
             <div style="text-align: center; color: #666; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
                 <i class="fas fa-key" style="font-size: 24px; color: #ccc; margin-bottom: 10px;"></i>
-                <p style="margin: 0 0 10px 0; font-weight: 500;">${translations['api_key.no_keys']}</p>
-                <p style="margin: 0; font-size: 14px;">${translations['api_key.no_keys_desc']}</p>
+                <p style="margin: 0 0 10px 0; font-weight: 500;">${t['api_key.no_keys'] || 'No API keys added yet'}</p>
+                <p style="margin: 0; font-size: 14px;">${t['api_key.no_keys_desc'] || 'Please add your Google AI API key'}</p>
             </div>
         `;
         return;
@@ -1201,7 +1026,7 @@ function renderApiKeys(apiKeys, selectedId) {
         const keyItem = document.createElement('div');
         keyItem.className = `api-key-item ${isSelected ? 'selected' : ''}`;
         
-        const buttonText = isSelected ? translations['api_key.in_use'] : translations['api_key.use'];
+        const buttonText = isSelected ? (t['api_key.in_use'] || 'In Use') : (t['api_key.use'] || 'Use');
         
         keyItem.innerHTML = `
             <div class="api-key-info">
