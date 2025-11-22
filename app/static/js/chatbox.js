@@ -412,6 +412,56 @@ window.addEventListener('DOMContentLoaded', async () => {
             }
         });
     }
+    
+    // Initialize socket.io connection if available
+    if (typeof io !== 'undefined') {
+        const token = localStorage.getItem('access_token');
+        if (token) {
+            const socket = io({
+                auth: { token: token }
+            });
+            
+            // Listen for new_message events for optimistic UI updates
+            socket.on('new_message', (data) => {
+                console.log('Received new_message event:', data);
+                
+                // Check if this message has a temp_id
+                if (data.temp_id) {
+                    // Look for existing message with this temp_id
+                    const existingElement = document.querySelector(`[data-temp-id="${data.temp_id}"]`);
+                    
+                    if (existingElement) {
+                        // Case A: This is our own optimistically rendered message
+                        // DO NOT replace the images to prevent flickering
+                        // Just update the message status or remove temp_id marker
+                        console.log('Optimistic UI: Message already displayed with temp_id:', data.temp_id);
+                        existingElement.removeAttribute('data-temp-id'); // Mark as confirmed
+                        existingElement.setAttribute('data-message-id', data.message.id);
+                        
+                        // Optionally, update message metadata without touching images
+                        // You can add a "sent" indicator or timestamp here if needed
+                        return; // Skip re-rendering
+                    }
+                }
+                
+                // Case B: This is a new message from another user/session
+                // Render it normally using server URLs
+                if (data.message && data.conversation_id === activeConversationId) {
+                    const messageElement = createMessageWithUploadedFiles(
+                        data.message.content,
+                        data.message.uploaded_files,
+                        data.message.sender === 'user'
+                    );
+                    messageElement.setAttribute('data-message-id', data.message.id);
+                    messagesDiv.appendChild(messageElement);
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                }
+            });
+            
+            // Store socket globally for other parts of the app if needed
+            window.chatSocket = socket;
+        }
+    }
 });
 
 // Function to send a message
@@ -533,6 +583,13 @@ function updateFilePreview() {
             fileName.textContent = file.name;
             fileName.title = file.name;
             
+            // Create blob URL and add click handler for preview
+            const fileUrl = URL.createObjectURL(file);
+            fileName.addEventListener('click', () => {
+                openDocumentPreviewModal(fileUrl, file.name);
+            });
+            fileName.style.cursor = 'pointer'; // Show it's clickable
+            
             previewItem.appendChild(fileName);
         }
         
@@ -543,6 +600,12 @@ function updateFilePreview() {
         removeBtn.onclick = () => {
             selectedFiles.splice(index, 1);
             updateFilePreview();
+            
+            // Close preview panel if it's open
+            const previewPanel = document.getElementById('preview-panel');
+            if (previewPanel && previewPanel.style.display === 'flex') {
+                closeDocumentPreview();
+            }
         };
         
         previewItem.appendChild(removeBtn);
@@ -806,11 +869,14 @@ async function sendMessageWithFiles() {
 
     const attachmentsSnapshot = [...selectedFiles];
     
+    // Generate unique temp_id for optimistic UI
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     // Clear the file preview immediately after sending
     selectedFiles = [];
     updateFilePreview();
 
-    const userMessageElement = createMessageWithFiles(messageText, attachmentsSnapshot, true);
+    const userMessageElement = createMessageWithFiles(messageText, attachmentsSnapshot, true, tempId);
 
     messagesDiv.appendChild(userMessageElement);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -849,17 +915,19 @@ async function sendMessageWithFiles() {
             messageText,
             'user',
             attachmentsMetadata ? { attachments: attachmentsMetadata } : null,
-            attachmentsSnapshot
+            attachmentsSnapshot,
+            tempId
         );
 
         if (userMessageResponse.conversation) {
             upsertConversation(userMessageResponse.conversation);
         }
 
-        // Update the user message element to use server URLs for uploaded files
-        if (userMessageResponse.message && userMessageResponse.message.uploaded_files) {
-            updateMessageWithServerFiles(userMessageElement, userMessageResponse.message.uploaded_files);
-        }
+        // DO NOT update with server files to prevent flickering (Optimistic UI)
+        // The local blob URLs will remain visible to the user
+        // if (userMessageResponse.message && userMessageResponse.message.uploaded_files) {
+        //     updateMessageWithServerFiles(userMessageElement, userMessageResponse.message.uploaded_files);
+        // }
 
         const mediaFile = attachmentsSnapshot.find((file) => file.type.startsWith('image/') || file.type.startsWith('video/'));
         
@@ -1007,9 +1075,14 @@ async function sendMessageWithFiles() {
     }
 }
 
-function createMessageWithFiles(text, files, isUser = true) {
+function createMessageWithFiles(text, files, isUser = true, tempId = null) {
     const container = document.createElement('div');
     container.className = isUser ? 'user-message-container' : 'bot-message-container';
+    
+    // Add temp_id as data attribute for optimistic UI tracking
+    if (tempId) {
+        container.setAttribute('data-temp-id', tempId);
+    }
     
     const avatar = document.createElement('div');
     avatar.className = isUser ? 'avatar user-avatar' : 'avatar bot-avatar';
@@ -1077,10 +1150,19 @@ function createMessageWithFiles(text, files, isUser = true) {
                 
                 messageContent.appendChild(videoContainer);
             } else {
-                // Show file name for non-image files
+                // Show file name for non-image files (PDFs, etc.)
                 const fileInfo = document.createElement('div');
                 fileInfo.className = 'message-file-info';
                 fileInfo.innerHTML = `<i class="fas fa-file"></i> ${file.name}`;
+                
+                // Create blob URL for preview
+                const fileUrl = URL.createObjectURL(file);
+                
+                // Add click handler to open preview modal
+                fileInfo.addEventListener('click', () => {
+                    openDocumentPreviewModal(fileUrl, file.name);
+                });
+                
                 messageContent.appendChild(fileInfo);
             }
         });

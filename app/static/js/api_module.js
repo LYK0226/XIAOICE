@@ -182,7 +182,7 @@ class ChatAPI {
         return response.json();
     }
 
-    async addMessage(conversationId, content, sender, metadata = null, files = null) {
+    async addMessage(conversationId, content, sender, metadata = null, files = null, tempId = null) {
         if (files && files.length > 0) {
             // Use FormData for file uploads
             const formData = new FormData();
@@ -192,6 +192,11 @@ class ChatAPI {
             
             if (metadata) {
                 formData.append('metadata', JSON.stringify(metadata));
+            }
+            
+            // Add temp_id for optimistic UI tracking
+            if (tempId) {
+                formData.append('temp_id', tempId);
             }
             
             files.forEach((file) => {
@@ -224,6 +229,11 @@ class ChatAPI {
             
             if (metadata) {
                 payload.metadata = metadata;
+            }
+            
+            // Add temp_id for optimistic UI tracking
+            if (tempId) {
+                payload.temp_id = tempId;
             }
             
             const response = await fetch(this.endpoints.messages, {

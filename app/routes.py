@@ -534,6 +534,7 @@ def create_message():
     sender = (data.get('sender') or '').strip().lower()
     content = (data.get('content') or '').strip()
     metadata = data.get('metadata')
+    temp_id = data.get('temp_id')  # Get temp_id for optimistic UI
 
     if not conversation_id:
         return jsonify({'error': 'conversation_id is required'}), 400
@@ -570,7 +571,23 @@ def create_message():
                     file_upload.message_id = message.id
             db.session.commit()
 
-        return jsonify({'message': message.to_dict(), 'conversation': conversation.to_dict()}), 201
+        # Prepare response with temp_id if provided
+        response_data = {
+            'message': message.to_dict(),
+            'conversation': conversation.to_dict()
+        }
+        if temp_id:
+            response_data['temp_id'] = temp_id
+        
+        # Emit socket event with temp_id for real-time updates
+        from app import socketio
+        socketio.emit('new_message', {
+            'message': message.to_dict(),
+            'conversation_id': conversation.id,
+            'temp_id': temp_id
+        }, room=f"conversation_{conversation.id}")
+
+        return jsonify(response_data), 201
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error creating message: {e}")
