@@ -3,7 +3,7 @@ from flask import Blueprint, render_template, request, jsonify, current_app, red
 from flask_jwt_extended import jwt_required, decode_token
 import os
 import json
-from . import vertex_ai
+from . import agent
 from werkzeug.utils import secure_filename
 from . import gcs_upload
 import io
@@ -100,7 +100,7 @@ def chat_stream():
 
         def generate():
             try:
-                for chunk in vertex_ai.generate_streaming_response(
+                for chunk in agent.generate_streaming_response(
                     message,
                     image_path=image_path,
                     image_mime_type=image_mime_type,

@@ -1,5 +1,6 @@
 """
 WebSocket event handlers for real-time chat functionality.
+Uses Google ADK (Agent Development Kit) for AI responses.
 """
 from flask import request
 from flask_socketio import emit, join_room, leave_room, ConnectionRefusedError
@@ -8,7 +9,7 @@ from app import socketio
 from .models import db, User, Conversation, Message, UserProfile, UserApiKey
 from datetime import datetime
 import os
-from . import vertex_ai
+from .agent import chat_agent
 
 
 @socketio.on('connect')
@@ -214,18 +215,19 @@ def handle_send_message(data):
         if credentials_path:
             os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
         
-        # Generate AI response
+        # Generate AI response using ADK agent
         emit('ai_thinking', {'conversation_id': conversation_id}, room=room)
         
         ai_response_text = ""
         
         try:
-            # Stream AI response
-            for chunk in vertex_ai.generate_streaming_response(
+            # Stream AI response using ADK agent
+            for chunk in chat_agent.generate_streaming_response(
                 message_text,
                 history=history,
                 api_key=api_key,
-                model_name=ai_model
+                model_name=ai_model,
+                user_id=str(user_id)
             ):
                 chunk = chunk.strip()
                 
