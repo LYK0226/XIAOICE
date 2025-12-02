@@ -3,6 +3,7 @@ from flask import Blueprint, render_template, request, jsonify, current_app, red
 from flask_jwt_extended import jwt_required, decode_token
 import os
 import json
+import re
 from . import vertex_ai
 from werkzeug.utils import secure_filename
 
@@ -704,3 +705,864 @@ def submit_quiz():
     except Exception as e:
         current_app.logger.error(f"Error submitting quiz: {e}")
         return jsonify({'error': f'提交失败: {str(e)}'}), 500
+
+
+# ==================== Child Development Assessment Endpoints ====================
+
+@bp.route('/api/child-assessment/generate', methods=['POST'])
+@jwt_required()
+def generate_child_assessment():
+    """
+    Generate child development assessment questions from PDF
+    Based on WS/T 580—2017 Standard (0-6 years old children)
+    """
+    from flask_jwt_extended import get_jwt_identity
+    from app.child_assessment import ChildDevelopmentAssessmentWST580
+    from app.models import ChildDevelopmentAssessmentRecord, db
+    import uuid
+    
+    user_id = get_jwt_identity()
+    
+    try:
+        data = request.get_json()
+        child_name = data.get('child_name', 'Unknown')
+        child_age_months = data.get('child_age_months', 24.0)
+        pdf_path = data.get('pdf_path')  # Path to uploaded PDF
+        
+        # Validate age (0-84 months = 0-6 years)
+        if not (0 <= float(child_age_months) <= 84):
+            return jsonify({'error': '孩子年齡應在 0-84 個月之間 (0-6 歲)'}), 400
+        
+        # Create assessment object
+        assessment = ChildDevelopmentAssessmentWST580(
+            child_name=child_name,
+            child_age_months=float(child_age_months),
+            pdf_path=pdf_path
+        )
+        
+        # Generate questions based on child's age
+        questions = assessment.generate_assessment_questions()
+        
+        if not questions:
+            return jsonify({'error': '無法為該年齡生成評估項目'}), 400
+        
+        # Create assessment record in database
+        assessment_id = str(uuid.uuid4())
+        
+        record = ChildDevelopmentAssessmentRecord(
+            assessment_id=assessment_id,
+            user_id=user_id,
+            child_name=child_name,
+            child_age_months=float(child_age_months),
+            questions=questions,  # Save questions list
+            pdf_filename=pdf_path.split('/')[-1] if pdf_path else None,
+            is_completed=False
+        )
+        
+        db.session.add(record)
+        db.session.commit()
+        
+        current_app.logger.info(f"Generated assessment {assessment_id} for user {user_id}")
+        
+        return jsonify({
+            'success': True,
+            'assessment_id': assessment_id,
+            'child_name': child_name,
+            'child_age_months': child_age_months,
+            'total_questions': len(questions),
+            'questions': questions[:5]  # Return first 5 questions for display
+        }), 201
+        
+    except Exception as e:
+        current_app.logger.error(f"Error generating assessment: {e}", exc_info=True)
+        return jsonify({'error': f'生成評估失敗: {str(e)}'}), 500
+
+
+@bp.route('/api/child-assessment/<assessment_id>/submit', methods=['POST'])
+@jwt_required()
+def submit_child_assessment(assessment_id):
+    """
+    Submit child development assessment answers and calculate results
+    """
+    from flask_jwt_extended import get_jwt_identity
+    from app.child_assessment import ChildDevelopmentAssessmentWST580
+    from app.models import ChildDevelopmentAssessmentRecord, db
+    from datetime import datetime
+    
+    user_id = get_jwt_identity()
+    
+    try:
+        # Get assessment record
+        record = ChildDevelopmentAssessmentRecord.query.filter_by(
+            assessment_id=assessment_id,
+            user_id=user_id
+        ).first()
+        
+        if not record:
+            return jsonify({'error': '評估記錄不存在'}), 404
+        
+        data = request.get_json()
+        answers = data.get('answers', {})  # {item_id: passed_bool}
+        
+        # Recreate assessment object to calculate results
+        assessment = ChildDevelopmentAssessmentWST580(
+            child_name=record.child_name,
+            child_age_months=record.child_age_months,
+            pdf_path=None
+        )
+        
+        # Record all answers
+        for item_id, passed in answers.items():
+            assessment.record_answer(item_id, bool(passed))
+        
+        # Calculate results (DQ, level, recommendations)
+        results = assessment.calculate_assessment_results()
+        recommendations = assessment.generate_recommendations()
+        
+        # Update record with results
+        record.answers = answers
+        record.overall_dq = results.get('dq')
+        record.dq_level = results.get('dq_level')
+        record.total_mental_age = results.get('total_mental_age')
+        record.area_results = results.get('area_results')
+        record.recommendations = recommendations
+        record.is_completed = True
+        record.completed_at = datetime.utcnow()
+        
+        db.session.commit()
+        
+        current_app.logger.info(f"Completed assessment {assessment_id} with DQ: {results.get('dq')}")
+        
+        return jsonify({
+            'success': True,
+            'assessment_id': assessment_id,
+            'results': {
+                'dq': results.get('dq'),
+                'dq_level': results.get('dq_level'),
+                'dq_description': results.get('dq_description'),
+                'total_mental_age': results.get('total_mental_age'),
+                'area_results': results.get('area_results'),
+                'recommendations': recommendations
+            }
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error submitting assessment: {e}", exc_info=True)
+        return jsonify({'error': f'提交評估失敗: {str(e)}'}), 500
+
+
+@bp.route('/api/child-assessment/history', methods=['GET'])
+@jwt_required()
+def get_assessment_history():
+    """
+    Get all previous assessment records for the user
+    """
+    from flask_jwt_extended import get_jwt_identity
+    from app.models import ChildDevelopmentAssessmentRecord
+    
+    user_id = get_jwt_identity()
+    
+    try:
+        records = ChildDevelopmentAssessmentRecord.query.filter_by(
+            user_id=user_id
+        ).order_by(ChildDevelopmentAssessmentRecord.created_at.desc()).all()
+        
+        history = [record.to_dict() for record in records]
+        
+        return jsonify({
+            'success': True,
+            'total_assessments': len(history),
+            'assessments': history
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error fetching assessment history: {e}")
+        return jsonify({'error': f'獲取評估歷史失敗: {str(e)}'}), 500
+
+
+@bp.route('/api/child-assessment/<assessment_id>/detail', methods=['GET'])
+@jwt_required()
+def get_assessment_detail(assessment_id):
+    """
+    Get detailed assessment results including recommendations and export options
+    """
+    from flask_jwt_extended import get_jwt_identity
+    from app.models import ChildDevelopmentAssessmentRecord
+    
+    user_id = get_jwt_identity()
+    
+    try:
+        record = ChildDevelopmentAssessmentRecord.query.filter_by(
+            assessment_id=assessment_id,
+            user_id=user_id
+        ).first()
+        
+        if not record:
+            return jsonify({'error': '評估記錄不存在'}), 404
+        
+        if not record.is_completed:
+            return jsonify({'error': '評估尚未完成'}), 400
+        
+        return jsonify({
+            'success': True,
+            'assessment': record.to_dict(include_answers=True)
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error fetching assessment detail: {e}")
+        return jsonify({'error': f'獲取評估詳情失敗: {str(e)}'}), 500
+
+
+@bp.route('/api/child-assessment/<assessment_id>/export', methods=['GET'])
+@jwt_required()
+def export_assessment_report(assessment_id):
+    """
+    Export assessment results as JSON
+    """
+    from flask_jwt_extended import get_jwt_identity
+    from app.models import ChildDevelopmentAssessmentRecord
+    import json
+    
+    user_id = get_jwt_identity()
+    
+    try:
+        record = ChildDevelopmentAssessmentRecord.query.filter_by(
+            assessment_id=assessment_id,
+            user_id=user_id
+        ).first()
+        
+        if not record:
+            return jsonify({'error': '評估記錄不存在'}), 404
+        
+        if not record.is_completed:
+            return jsonify({'error': '評估尚未完成'}), 400
+        
+        # Create export data
+        export_data = {
+            'assessment_id': record.assessment_id,
+            'child_info': {
+                'name': record.child_name,
+                'age_months': record.child_age_months
+            },
+            'assessment_date': record.created_at.isoformat() if record.created_at else None,
+            'standard': record.standard,
+            'results': {
+                'dq': record.overall_dq,
+                'dq_level': record.dq_level,
+                'total_mental_age': record.total_mental_age,
+                'area_results': record.area_results
+            },
+            'recommendations': record.recommendations
+        }
+        
+        # Return as JSON file download
+        response = Response(
+            json.dumps(export_data, ensure_ascii=False, indent=2),
+            mimetype='application/json'
+        )
+        response.headers['Content-Disposition'] = f'attachment; filename=assessment_{assessment_id}.json'
+        
+        return response
+        
+    except Exception as e:
+        current_app.logger.error(f"Error exporting assessment: {e}")
+        return jsonify({'error': f'導出評估失敗: {str(e)}'}), 500
+
+
+@bp.route('/api/upload-pdf', methods=['POST'])
+@jwt_required()
+def upload_pdf_for_assessment():
+    """
+    Upload PDF file for child assessment
+    Supports PDF files up to 10MB
+    """
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': '沒有選擇文件'}), 400
+        
+        file = request.files['file']
+        
+        if file.filename == '':
+            return jsonify({'error': '沒有選擇文件'}), 400
+        
+        # Only accept PDF files
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': '只支持 PDF 文件'}), 400
+        
+        # Check file size (max 10MB)
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+        
+        max_size = 10 * 1024 * 1024  # 10MB
+        if file_size > max_size:
+            return jsonify({'error': f'文件太大，最大支持 10MB，實際大小 {file_size / 1024 / 1024:.2f}MB'}), 400
+        
+        # Save the PDF file
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        # Generate unique filename
+        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+        secure_name = secure_filename(file.filename)
+        name_without_ext = secure_name.rsplit('.', 1)[0] if '.' in secure_name else secure_name
+        unique_filename = f"{name_without_ext}_{timestamp}.pdf"
+        
+        file_path = os.path.join(upload_folder, unique_filename)
+        file.save(file_path)
+        
+        current_app.logger.info(f"PDF uploaded successfully: {unique_filename}")
+        
+        return jsonify({
+            'success': True,
+            'file_path': file_path,
+            'filename': unique_filename,
+            'file_size': file_size
+        }), 201
+        
+    except Exception as e:
+        current_app.logger.error(f"Error uploading PDF: {e}")
+        return jsonify({'error': f'PDF 上傳失敗: {str(e)}'}), 500
+
+
+# Video Management Endpoints
+@bp.route('/api/upload-video', methods=['POST'])
+@jwt_required()
+def upload_video():
+    """Upload a video file for transcription and analysis"""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import db, VideoRecord
+    import threading
+    
+    try:
+        user_id = get_jwt_identity()
+        
+        if 'video' not in request.files:
+            return jsonify({'error': 'No video file provided'}), 400
+        
+        video_file = request.files['video']
+        if not video_file.filename:
+            return jsonify({'error': 'No selected file'}), 400
+        
+        # Validate file size (max 500MB)
+        video_file.seek(0, os.SEEK_END)
+        file_size = video_file.tell()
+        video_file.seek(0)
+        
+        max_size = 500 * 1024 * 1024  # 500MB
+        if file_size > max_size:
+            return jsonify({'error': f'File too large. Max 500MB allowed'}), 400
+        
+        # Save video file
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        os.makedirs(upload_folder, exist_ok=True)
+        
+        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+        secure_name = secure_filename(video_file.filename)
+        name_without_ext = secure_name.rsplit('.', 1)[0] if '.' in secure_name else secure_name
+        unique_filename = f"{name_without_ext}_{timestamp}.mp4"
+        
+        file_path = os.path.join(upload_folder, unique_filename)
+        video_file.save(file_path)
+        
+        # Create video record in database
+        video_record = VideoRecord(
+            user_id=user_id,
+            filename=unique_filename,
+            original_filename=video_file.filename,
+            file_path=file_path,
+            file_size=file_size,
+            transcription_status='pending',
+            analysis_status='pending'
+        )
+        
+        db.session.add(video_record)
+        db.session.commit()
+        
+        # Start transcription in background thread
+        def transcribe_video():
+            try:
+                with current_app.app_context():
+                    from moviepy.editor import VideoFileClip
+                    
+                    # Extract audio from video
+                    video_clip = VideoFileClip(file_path)
+                    duration = video_clip.duration
+                    
+                    # Update video record with duration
+                    video_record.duration = duration
+                    db.session.commit()
+                    
+                    # Save audio
+                    audio_path = file_path.replace('.mp4', '.wav')
+                    video_clip.audio.write_audiofile(audio_path, verbose=False, logger=None)
+                    video_clip.close()
+                    
+                    # Transcribe audio
+                    video_record.transcription_status = 'processing'
+                    db.session.commit()
+                    
+                    transcription_result = vertex_ai.generate_text_from_audio(audio_path)
+                    
+                    if transcription_result['success']:
+                        video_record.full_transcription = transcription_result['text']
+                        video_record.transcription_status = 'completed'
+                        
+                        # Create timestamps for each segment
+                        from .models import VideoTimestamp
+                        for segment in transcription_result.get('segments', []):
+                            start_time = segment['start']
+                            end_time = segment['end']
+                            minutes = int(start_time // 60)
+                            seconds = int(start_time % 60)
+                            formatted_time = f"{minutes:02d}:{seconds:02d}:00"
+                            
+                            ts = VideoTimestamp(
+                                video_id=video_record.id,
+                                start_time=start_time,
+                                end_time=end_time,
+                                text=segment['text'],
+                                formatted_time=formatted_time
+                            )
+                            db.session.add(ts)
+                        
+                        db.session.commit()
+                    else:
+                        video_record.transcription_status = 'failed'
+                        db.session.commit()
+                    
+                    # Clean up audio file
+                    if os.path.exists(audio_path):
+                        os.remove(audio_path)
+                        
+            except Exception as e:
+                current_app.logger.error(f"Error transcribing video: {e}")
+                video_record.transcription_status = 'failed'
+                db.session.commit()
+        
+        thread = threading.Thread(target=transcribe_video)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'video_id': video_record.id,
+            'message': 'Video uploaded. Transcription processing...'
+        }), 201
+        
+    except Exception as e:
+        current_app.logger.error(f"Error uploading video: {e}")
+        return jsonify({'error': f'Video upload failed: {str(e)}'}), 500
+
+
+@bp.route('/api/videos', methods=['GET'])
+@jwt_required()
+def get_videos():
+    """Get user's uploaded videos"""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import VideoRecord
+    
+    try:
+        user_id = get_jwt_identity()
+        videos = VideoRecord.query.filter_by(user_id=user_id).order_by(VideoRecord.created_at.desc()).all()
+        
+        return jsonify({
+            'success': True,
+            'videos': [video.to_dict() for video in videos]
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error fetching videos: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/video/<int:video_id>', methods=['GET'])
+@jwt_required()
+def get_video(video_id):
+    """Get video details"""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import VideoRecord
+    
+    try:
+        user_id = get_jwt_identity()
+        video = VideoRecord.query.filter_by(id=video_id, user_id=user_id).first()
+        
+        if not video:
+            return jsonify({'error': 'Video not found'}), 404
+        
+        return jsonify({
+            'success': True,
+            'video': video.to_dict(include_timestamps=True)
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error fetching video: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/video/<int:video_id>/analyze', methods=['POST'])
+@jwt_required()
+def analyze_video(video_id):
+    """Analyze video content"""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import db, VideoRecord, UserProfile, UserApiKey
+    import threading
+    
+    try:
+        user_id = get_jwt_identity()
+        video = VideoRecord.query.filter_by(id=video_id, user_id=user_id).first()
+        
+        if not video:
+            return jsonify({'error': 'Video not found'}), 404
+        
+        if not video.full_transcription:
+            return jsonify({'error': 'Transcription not yet completed'}), 400
+        
+        # Start analysis in background thread
+        def analyze():
+            try:
+                with current_app.app_context():
+                    video.analysis_status = 'processing'
+                    db.session.commit()
+                    
+                    # Get user's API key
+                    user_profile = UserProfile.query.filter_by(user_id=user_id).first()
+                    api_key = None
+                    if user_profile and user_profile.selected_api_key:
+                        api_key = user_profile.selected_api_key.get_decrypted_key()
+                    
+                    # Analyze content
+                    analysis_result = vertex_ai.analyze_video_content(
+                        video.full_transcription,
+                        api_key=api_key
+                    )
+                    
+                    if analysis_result['success']:
+                        video.analysis_report = analysis_result['analysis']
+                        video.analysis_status = 'completed'
+                    else:
+                        video.analysis_status = 'failed'
+                    
+                    db.session.commit()
+                    
+            except Exception as e:
+                current_app.logger.error(f"Error analyzing video: {e}")
+                video.analysis_status = 'failed'
+                db.session.commit()
+        
+        thread = threading.Thread(target=analyze)
+        thread.daemon = True
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Analysis started'
+        }), 202
+        
+    except Exception as e:
+        current_app.logger.error(f"Error starting analysis: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/video/<int:video_id>', methods=['DELETE'])
+@jwt_required()
+def delete_video(video_id):
+    """Delete video and associated files"""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import db, VideoRecord
+    
+    try:
+        user_id = int(get_jwt_identity())
+        video = VideoRecord.query.filter_by(id=video_id, user_id=user_id).first()
+        
+        if not video:
+            return jsonify({'error': 'Video not found'}), 404
+        
+        # Delete file
+        if os.path.exists(video.file_path):
+            os.remove(video.file_path)
+        
+        # Delete database record
+        db.session.delete(video)
+        db.session.commit()
+        
+        return jsonify({'success': True, 'message': 'Video deleted'}), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error deleting video: {e}")
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/videos/clear-all', methods=['POST'])
+@jwt_required()
+def clear_all_videos():
+    """Clear all user videos"""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import db, VideoRecord
+    
+    try:
+        user_id = int(get_jwt_identity())
+        videos = VideoRecord.query.filter_by(user_id=user_id).all()
+        
+        deleted_count = 0
+        for video in videos:
+            # Delete file
+            if os.path.exists(video.file_path):
+                try:
+                    os.remove(video.file_path)
+                except Exception as e:
+                    current_app.logger.warning(f"Failed to delete file {video.file_path}: {e}")
+            
+            # Delete database record
+            db.session.delete(video)
+            deleted_count += 1
+        
+        db.session.commit()
+        
+        return jsonify({
+            'success': True, 
+            'message': f'已清除 {deleted_count} 個影片',
+            'deleted_count': deleted_count
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error clearing videos: {e}")
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/video-file/<filename>')
+@jwt_required()
+def serve_video(filename):
+    """Serve video files from upload folder with proper streaming"""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import VideoRecord
+    
+    try:
+        user_id = get_jwt_identity()
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        file_path = os.path.join(upload_folder, filename)
+        
+        # Security check: ensure file exists and belongs to user
+        video = VideoRecord.query.filter_by(
+            user_id=user_id,
+            filename=filename
+        ).first()
+        
+        if not video:
+            return jsonify({'error': 'Video not found'}), 404
+        
+        if not os.path.exists(file_path):
+            current_app.logger.error(f"Video file not found: {file_path}")
+            return jsonify({'error': 'File not found on server'}), 404
+        
+        # Get file size
+        file_size = os.path.getsize(file_path)
+        
+        # Handle Range requests (for video seeking)
+        range_header = request.headers.get('Range', None)
+        
+        if range_header:
+            # Parse range header
+            try:
+                range_match = re.match(r'bytes=(\d+)-(\d*)', range_header)
+                if range_match:
+                    start = int(range_match.group(1))
+                    end = int(range_match.group(2)) if range_match.group(2) else file_size - 1
+                    
+                    if start >= file_size or end >= file_size or start > end:
+                        return 'Requested Range Not Satisfiable', 416
+                    
+                    # Stream the requested byte range
+                    from flask import send_file
+                    with open(file_path, 'rb') as f:
+                        f.seek(start)
+                        data = f.read(end - start + 1)
+                    
+                    response = Response(data, status=206, mimetype='video/mp4')
+                    response.headers.add('Content-Range', f'bytes {start}-{end}/{file_size}')
+                    response.headers.add('Content-Length', len(data))
+                    response.headers.add('Accept-Ranges', 'bytes')
+                    return response
+            except:
+                pass
+        
+        # Serve entire file
+        from flask import send_file
+        return send_file(
+            file_path,
+            mimetype='video/mp4',
+            as_attachment=False,
+            conditional=True
+        )
+    
+    except Exception as e:
+        current_app.logger.error(f"Error serving video: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/video/analyze', methods=['POST'])
+@jwt_required()
+def analyze_video_upload():
+    """Analyze uploaded video and extract frames for AI analysis."""
+    from flask_jwt_extended import get_jwt_identity
+    from .video_processor import VideoProcessor
+    from .models import UserProfile
+    
+    user_id = int(get_jwt_identity())
+    
+    try:
+        video_processor = VideoProcessor(current_app.config['UPLOAD_FOLDER'])
+        video_path = None
+        video_info = {}
+        
+        # Check if it's a file upload
+        if 'video' in request.files:
+            video_file = request.files['video']
+            if not video_file.filename:
+                return jsonify({'error': '沒有選擇文件'}), 400
+            
+            filename = secure_filename(video_file.filename)
+            if not filename:
+                return jsonify({'error': '無效的文件名'}), 400
+            
+            # Check file extension
+            ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+            if ext not in current_app.config.get('ALLOWED_VIDEO_EXTENSIONS', {'mp4', 'avi', 'mov', 'mkv', 'webm'}):
+                return jsonify({'error': f'不支援的影片格式。允許的格式: MP4, AVI, MOV, MKV, WebM'}), 400
+            
+            # Save the uploaded video
+            upload_folder = current_app.config['UPLOAD_FOLDER']
+            os.makedirs(upload_folder, exist_ok=True)
+            
+            timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+            unique_filename = f"video_{timestamp}.{ext}"
+            video_path = os.path.join(upload_folder, unique_filename)
+            video_file.save(video_path)
+            
+            current_app.logger.info(f"Saved uploaded video: {video_path}")
+        
+        else:
+            return jsonify({'error': '請上傳影片文件'}), 400
+        
+        # Get video information
+        if not video_info:
+            video_info = video_processor.get_video_info(video_path)
+        
+        # Extract frames for analysis
+        interval = current_app.config.get('VIDEO_FRAME_INTERVAL', 5)
+        max_frames = current_app.config.get('VIDEO_MAX_FRAMES', 20)
+        frames = video_processor.extract_frames(video_path, interval, max_frames)
+        
+        current_app.logger.info(f"Extracted {len(frames)} frames from video")
+        
+        # Get video URL for playback
+        video_filename = os.path.basename(video_path)
+        video_url = f"/static/upload/{video_filename}"
+        
+        return jsonify({
+            'success': True,
+            'video_info': video_info,
+            'video_url': video_url,
+            'video_path': video_path,
+            'frames': frames,
+            'is_youtube': False,
+            'message': f'成功提取 {len(frames)} 個關鍵幀進行分析'
+        }), 200
+        
+    except Exception as e:
+        current_app.logger.error(f"Error analyzing video: {e}")
+        return jsonify({'error': f'影片分析失敗: {str(e)}'}), 500
+
+
+@bp.route('/video/stream-analysis', methods=['POST'])
+@jwt_required()
+def stream_video_analysis():
+    """Stream AI analysis of video frames."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import UserProfile, UserApiKey
+    import json
+    
+    user_id = int(get_jwt_identity())
+    
+    try:
+        data = request.get_json()
+        frames = data.get('frames', [])
+        prompt = data.get('prompt', '請描述這個影片中發生了什麼事情，人物在做什麼動作。')
+        video_info = data.get('video_info', {})
+        
+        if not frames:
+            return jsonify({'error': '沒有提供影片幀數據'}), 400
+        
+        # Get user's API key and model
+        user_profile = UserProfile.query.filter_by(user_id=user_id).first()
+        api_key = None
+        if user_profile and user_profile.selected_api_key:
+            api_key = user_profile.selected_api_key.get_decrypted_key()
+        
+        ai_model = 'gemini-2.5-flash'
+        if user_profile and user_profile.ai_model:
+            ai_model = user_profile.ai_model
+        
+        # Build prompt with video context
+        video_title = video_info.get('title', '影片')
+        video_duration = video_info.get('duration', 0)
+        
+        full_prompt = f"""# 影片分析任務
+
+影片標題: {video_title}
+影片長度: {video_duration} 秒
+提取的關鍵幀數量: {len(frames)}
+
+用戶問題: {prompt}
+
+請根據提供的關鍵幀圖片，按時間順序分析影片內容，描述：
+1. 影片中的人物在做什麼
+2. 場景和環境
+3. 動作和行為的變化
+4. 任何重要的細節
+
+請用繁體中文回答。"""
+        
+        # Prepare content for Gemini API (text + multiple images)
+        parts = [{"text": full_prompt}]
+        
+        # Add all frames as images
+        for frame in frames:
+            timestamp = frame.get('timestamp', 0)
+            frame_data = frame.get('data', '')
+            
+            parts.append({
+                "text": f"\n\n[時間點 {timestamp}秒]"
+            })
+            parts.append({
+                "inline_data": {
+                    "mime_type": "image/jpeg",
+                    "data": frame_data
+                }
+            })
+        
+        # Stream the response
+        def generate():
+            try:
+                for chunk in vertex_ai.stream_generate_content(
+                    parts=parts,
+                    api_key=api_key,
+                    model=ai_model
+                ):
+                    if chunk:
+                        yield f"data: {json.dumps({'content': chunk})}\n\n"
+                
+                yield "data: {\"done\": true}\n\n"
+                
+            except Exception as e:
+                current_app.logger.error(f"Error in video analysis stream: {e}")
+                yield f"data: {json.dumps({'error': str(e)})}\n\n"
+        
+        return Response(generate(), mimetype='text/event-stream')
+        
+    except Exception as e:
+        current_app.logger.error(f"Error in video analysis: {e}")
+        return jsonify({'error': f'影片分析失敗: {str(e)}'}), 500
+

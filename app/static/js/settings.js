@@ -1489,3 +1489,268 @@ document.getElementById('settings').addEventListener('click', () => {
         loadUserProfileSettings();
     }, 100);
 });
+
+// ===== Preset Avatar Selector Functionality =====
+
+// Toggle preset avatar selector
+const selectPresetAvatarBtn = document.getElementById('selectPresetAvatarBtn');
+const presetAvatarSelector = document.getElementById('presetAvatarSelector');
+const closePresetSelector = document.getElementById('closePresetSelector');
+
+if (selectPresetAvatarBtn) {
+    selectPresetAvatarBtn.addEventListener('click', () => {
+        presetAvatarSelector.style.display = 
+            presetAvatarSelector.style.display === 'none' ? 'block' : 'none';
+    });
+}
+
+if (closePresetSelector) {
+    closePresetSelector.addEventListener('click', () => {
+        presetAvatarSelector.style.display = 'none';
+    });
+}
+
+// Handle preset avatar selection
+const presetAvatarOptions = document.querySelectorAll('.preset-avatar-option');
+presetAvatarOptions.forEach(option => {
+    option.addEventListener('click', function() {
+        // Remove selected class from all options
+        presetAvatarOptions.forEach(opt => opt.classList.remove('selected'));
+        
+        // Add selected class to clicked option
+        this.classList.add('selected');
+        
+        // Get the emoji avatar
+        const avatar = this.getAttribute('data-avatar');
+        
+        // Update the preview
+        const preview = document.getElementById('userAvatarPreview');
+        preview.innerHTML = `<div style="font-size: 32px;">${avatar}</div>`;
+        preview.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        
+        // Save to localStorage
+        localStorage.setItem('userAvatar', avatar);
+        localStorage.setItem('userAvatarType', 'emoji');
+        
+        // Update globally
+        window.userAvatar = avatar;
+        window.userAvatarType = 'emoji';
+        
+        // Hide selector after selection
+        setTimeout(() => {
+            presetAvatarSelector.style.display = 'none';
+        }, 500);
+        
+        // Show success message
+        showNotification('✅ 頭像已更新！', 'success');
+    });
+});
+
+// Load saved avatar on page load
+function loadSavedAvatar() {
+    const savedAvatar = localStorage.getItem('userAvatar');
+    const avatarType = localStorage.getItem('userAvatarType');
+    const preview = document.getElementById('userAvatarPreview');
+    
+    if (savedAvatar && preview) {
+        if (avatarType === 'emoji') {
+            preview.innerHTML = `<div style="font-size: 32px;">${savedAvatar}</div>`;
+            preview.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            window.userAvatar = savedAvatar;
+            window.userAvatarType = 'emoji';
+            
+            // Highlight the selected emoji
+            presetAvatarOptions.forEach(opt => {
+                if (opt.getAttribute('data-avatar') === savedAvatar) {
+                    opt.classList.add('selected');
+                }
+            });
+        } else if (avatarType === 'image') {
+            preview.style.backgroundImage = `url(${savedAvatar})`;
+            preview.style.backgroundSize = 'cover';
+            preview.style.backgroundPosition = 'center';
+            preview.innerHTML = '';
+            window.userAvatar = savedAvatar;
+            window.userAvatarType = 'image';
+        }
+    }
+}
+
+// Call on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadSavedAvatar);
+} else {
+    loadSavedAvatar();
+}
+
+// Simple notification function
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        padding: 15px 25px;
+        background: ${type === 'success' ? '#4CAF50' : '#2196F3'};
+        color: white;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        animation: slideInRight 0.3s ease;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease';
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Add animation styles
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+    
+    @keyframes slideOutRight {
+        from {
+            transform: translateX(0);
+            opacity: 1;
+        }
+        to {
+            transform: translateX(400px);
+            opacity: 0;
+        }
+    }
+`;
+document.head.appendChild(style);
+
+console.log('✅ Preset avatar selector initialized');
+
+// ===== Bot Avatar Selector Functionality =====
+
+// Toggle bot avatar selector
+const selectBotAvatarBtn = document.getElementById('selectBotAvatarBtn');
+const botAvatarSelector = document.getElementById('botAvatarSelector');
+const closeBotSelector = document.getElementById('closeBotSelector');
+const clearBotAvatarBtn = document.getElementById('clearBotAvatar');
+
+if (selectBotAvatarBtn) {
+    selectBotAvatarBtn.addEventListener('click', () => {
+        botAvatarSelector.style.display = 
+            botAvatarSelector.style.display === 'none' ? 'block' : 'none';
+    });
+}
+
+if (closeBotSelector) {
+    closeBotSelector.addEventListener('click', () => {
+        botAvatarSelector.style.display = 'none';
+    });
+}
+
+if (clearBotAvatarBtn) {
+    clearBotAvatarBtn.addEventListener('click', () => {
+        // Clear bot avatar
+        localStorage.removeItem('botAvatar');
+        localStorage.removeItem('botAvatarType');
+        window.botAvatar = null;
+        window.botAvatarType = null;
+        
+        // Reset preview to default
+        const preview = document.getElementById('botAvatarPreview');
+        preview.innerHTML = '<i class="fas fa-robot"></i>';
+        preview.style.backgroundImage = '';
+        preview.style.background = '';
+        
+        // Remove selected class from all bot options
+        const botOptions = botAvatarSelector.querySelectorAll('.preset-avatar-option');
+        botOptions.forEach(opt => opt.classList.remove('selected'));
+        
+        showNotification('✅ 已恢復預設機器人頭像', 'success');
+    });
+}
+
+// Handle bot avatar selection
+const botAvatarOptions = botAvatarSelector ? botAvatarSelector.querySelectorAll('.preset-avatar-option') : [];
+botAvatarOptions.forEach(option => {
+    option.addEventListener('click', function() {
+        // Remove selected class from all options
+        botAvatarOptions.forEach(opt => opt.classList.remove('selected'));
+        
+        // Add selected class to clicked option
+        this.classList.add('selected');
+        
+        // Get the emoji avatar
+        const avatar = this.getAttribute('data-avatar');
+        
+        // Update the preview
+        const preview = document.getElementById('botAvatarPreview');
+        preview.innerHTML = `<div style="font-size: 32px;">${avatar}</div>`;
+        preview.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        
+        // Save to localStorage
+        localStorage.setItem('botAvatar', avatar);
+        localStorage.setItem('botAvatarType', 'emoji');
+        
+        // Update globally in chatbox
+        if (window.botAvatar !== undefined) {
+            window.botAvatar = avatar;
+            window.botAvatarType = 'emoji';
+        }
+        
+        // Hide selector after selection
+        setTimeout(() => {
+            botAvatarSelector.style.display = 'none';
+        }, 500);
+        
+        // Show success message
+        showNotification('✅ 機器人頭像已更新！', 'success');
+    });
+});
+
+// Load saved bot avatar on page load
+function loadSavedBotAvatar() {
+    const savedAvatar = localStorage.getItem('botAvatar');
+    const avatarType = localStorage.getItem('botAvatarType');
+    const preview = document.getElementById('botAvatarPreview');
+    
+    if (savedAvatar && preview) {
+        if (avatarType === 'emoji') {
+            preview.innerHTML = `<div style="font-size: 32px;">${savedAvatar}</div>`;
+            preview.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            
+            // Update globally in chatbox
+            if (window.botAvatar !== undefined) {
+                window.botAvatar = savedAvatar;
+                window.botAvatarType = 'emoji';
+            }
+            
+            // Highlight the selected emoji
+            botAvatarOptions.forEach(opt => {
+                if (opt.getAttribute('data-avatar') === savedAvatar) {
+                    opt.classList.add('selected');
+                }
+            });
+        }
+    }
+}
+
+// Call on page load
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', loadSavedBotAvatar);
+} else {
+    loadSavedBotAvatar();
+}
+
+console.log('✅ Bot avatar selector initialized');

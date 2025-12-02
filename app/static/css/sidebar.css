@@ -1,13 +1,24 @@
-/* Sidebar Styles - Conversation list and sidebar navigation */
+/* Sidebar Styles - Conversation list and sidebar navigation (Child-friendly) */
+
+/* Animations */
+@keyframes slideInLeftSmooth {
+    from { opacity: 0; transform: translateX(-50px); }
+    to { opacity: 1; transform: translateX(0); }
+}
+
+@keyframes hoverBounce {
+    0%, 100% { transform: translateX(0); }
+    50% { transform: translateX(5px); }
+}
 
 /* Sidebar container */
 #sidebar {
     width: 240px;
     flex: 0 0 240px;
-    background: #f8f9fa;
+    background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
     display: flex;
     flex-direction: column;
-    border-right: 1px solid #e0e0e0;
+    border-right: 3px solid #667eea;
     overflow-y: auto;
     transition: margin-left 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.4s ease;
     margin-left: 0;
@@ -15,8 +26,8 @@
 }
 
 body.dark-theme #sidebar {
-    background: #1a1a1a;
-    border-right: 1px solid #444;
+    background: linear-gradient(180deg, #1a1a1a 0%, #2a2a2a 100%);
+    border-right: 3px solid #667eea;
 }
 
 #sidebar.hidden {
@@ -29,26 +40,28 @@ body.dark-theme #sidebar {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 14.5px 20px;
-    border-bottom: 1px solid #e0e0e0;
-    background: white;
+    padding: 15px 20px;
+    border-bottom: 2px solid #667eea;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    animation: slideInLeftSmooth 0.5s ease;
+}
+
+.sidebar-header h2 {
+    color: white;
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.sidebar-header i {
+    font-size: 24px;
+    color: white;
+    animation: bounce 1s infinite;
 }
 
 body.dark-theme .sidebar-header {
-    background: #2a2a2a;
-    border-bottom: 1px solid #444;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-bottom: 2px solid #667eea;
 }
-
-body.dark-theme .sidebar-header h2 {
-    color: #e0e0e0;
-}
-
-body.dark-theme .sidebar-toggle,
-body.dark-theme .sidebar-show-btn {
-    color: #b0b0b0;
-}
-
-body.dark-theme .sidebar-toggle:hover,
 body.dark-theme .sidebar-show-btn:hover {
     background: #3a3a3a;
 }

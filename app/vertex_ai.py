@@ -180,3 +180,155 @@ def generate_streaming_response(message, image_path=None, image_mime_type=None, 
         else:
             yield f"Error: Failed to generate response. {str(e)}"
 
+
+def generate_text_from_audio(audio_path):
+    """
+    Generate text from audio using Whisper model
+    Transcribes with 1-minute segments for better control
+    
+    Args:
+        audio_path: Path to audio file
+    
+    Returns:
+        dict with keys: success, text, segments (with timestamps), error
+    """
+    try:
+        import whisper
+        logger.info(f"Starting transcription of: {audio_path}")
+        
+        # Load model with language specified
+        model = whisper.load_model("base", in_memory=True)
+        logger.info("Whisper model loaded successfully")
+        
+        # Transcribe audio with Chinese language specified
+        result = model.transcribe(
+            audio_path, 
+            language="zh",  # Chinese
+            fp16=False,     # Better compatibility
+            verbose=False   # Suppress debug output
+        )
+        
+        # Extract full text
+        full_text = result.get("text", "")
+        logger.info(f"Transcription completed. Text length: {len(full_text)}")
+        
+        # Extract segments with timestamps
+        segments = []
+        if "segments" in result:
+            for segment in result["segments"]:
+                segment_data = {
+                    'start': float(segment.get('start', 0)),
+                    'end': float(segment.get('end', 0)),
+                    'text': segment.get('text', '').strip()
+                }
+                if segment_data['text']:  # Only include non-empty segments
+                    segments.append(segment_data)
+                    logger.debug(f"Segment {len(segments)}: {segment_data['start']:.2f}s - {segment_data['end']:.2f}s")
+        
+        logger.info(f"Total segments: {len(segments)}")
+        
+        return {
+            'success': True,
+            'text': full_text,
+            'segments': segments
+        }
+        
+    except Exception as e:
+        logger.error(f"Error transcribing audio: {e}", exc_info=True)
+        return {
+            'success': False,
+            'text': '',
+            'segments': [],
+            'error': str(e)
+        }
+
+
+def analyze_video_content(transcription_text, api_key=None, model_name=None):
+    """
+    Analyze video content using Gemini AI
+    
+    Args:
+        transcription_text: Full transcription text
+        api_key: Google AI API key
+        model_name: Model name to use
+    
+    Returns:
+        dict with analysis results
+    """
+    try:
+        import json
+        
+        if not transcription_text or len(transcription_text.strip()) == 0:
+            return {
+                'success': False,
+                'analysis': {},
+                'error': 'Empty transcription text'
+            }
+        
+        if model_name is None:
+            try:
+                model_name = current_app.config.get('GEMINI_MODEL', 'gemini-2.5-flash')
+            except RuntimeError:
+                model_name = 'gemini-2.5-flash'
+        
+        logger.info(f"Starting analysis with model: {model_name}")
+        client = init_gemini(api_key)
+        
+        analysis_prompt = f"""請分析以下轉錄文本，並以JSON格式提供結果。
+
+轉錄文本：
+{transcription_text[:3000]}  # Limit to first 3000 chars to avoid token limit
+
+請提供以下信息（必須是有效的JSON格式）：
+{{
+    "summary": "內容的簡短摘要（2-3句）",
+    "key_points": ["主要觀點1", "主要觀點2", "主要觀點3"],
+    "sentiment": "positive或neutral或negative",
+    "topics": ["主題1", "主題2", "主題3"],
+    "suggestions": ["建議1", "建議2", "建議3"]
+}}
+
+只回覆JSON，不要包含其他文字。"""
+        
+        logger.info("Sending analysis request to Gemini")
+        response = client.models.generate_content(
+            model=model_name,
+            contents=analysis_prompt
+        )
+        
+        response_text = response.text.strip()
+        logger.debug(f"Gemini response: {response_text[:200]}")
+        
+        # Try to parse JSON
+        try:
+            # Find JSON in response
+            import re
+            json_match = re.search(r'\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}', response_text, re.DOTALL)
+            if json_match:
+                analysis_data = json.loads(json_match.group())
+                logger.info("Analysis JSON parsed successfully")
+            else:
+                analysis_data = json.loads(response_text)
+                logger.info("Analysis text parsed as JSON directly")
+        except json.JSONDecodeError as e:
+            logger.error(f"JSON parse error: {e}")
+            analysis_data = {
+                'summary': response_text[:500],
+                'key_points': [],
+                'sentiment': 'neutral',
+                'topics': [],
+                'suggestions': []
+            }
+        
+        return {
+            'success': True,
+            'analysis': analysis_data
+        }
+        
+    except Exception as e:
+        logger.error(f"Error analyzing content: {e}", exc_info=True)
+        return {
+            'success': False,
+            'analysis': {},
+            'error': str(e)
+        }

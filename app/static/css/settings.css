@@ -910,3 +910,169 @@ body.dark-theme .form-hint {
         opacity: 0;
     }
 }
+
+/* Preset Avatar Selector Styles */
+.preset-avatar-selector {
+    margin-top: 20px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 15px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+    animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.preset-avatar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid rgba(255, 255, 255, 0.5);
+}
+
+.preset-avatar-header h4 {
+    margin: 0;
+    font-size: 20px;
+    font-weight: 600;
+    color: #333;
+}
+
+.close-preset-btn {
+    background: none;
+    border: none;
+    font-size: 28px;
+    color: #666;
+    cursor: pointer;
+    transition: all 0.3s;
+    width: 35px;
+    height: 35px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.close-preset-btn:hover {
+    background: rgba(255, 255, 255, 0.5);
+    color: #333;
+    transform: rotate(90deg);
+}
+
+.preset-avatar-grid {
+    max-height: 400px;
+    overflow-y: auto;
+    padding-right: 10px;
+}
+
+.preset-avatar-grid::-webkit-scrollbar {
+    width: 8px;
+}
+
+.preset-avatar-grid::-webkit-scrollbar-track {
+    background: rgba(255, 255, 255, 0.3);
+    border-radius: 10px;
+}
+
+.preset-avatar-grid::-webkit-scrollbar-thumb {
+    background: rgba(102, 126, 234, 0.5);
+    border-radius: 10px;
+}
+
+.preset-avatar-grid::-webkit-scrollbar-thumb:hover {
+    background: rgba(102, 126, 234, 0.8);
+}
+
+.avatar-category {
+    margin-bottom: 25px;
+}
+
+.avatar-category h5 {
+    margin: 0 0 15px 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #555;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.avatar-options {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+    gap: 12px;
+}
+
+.preset-avatar-option {
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 32px;
+    background: white;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: all 0.3s;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.preset-avatar-option:hover {
+    transform: scale(1.15) rotate(5deg);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.preset-avatar-option:active {
+    transform: scale(0.95);
+}
+
+.preset-avatar-option.selected {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    box-shadow: 0 4px 20px rgba(102, 126, 234, 0.5);
+    transform: scale(1.1);
+}
+
+/* Dark theme for preset avatar selector */
+body.dark-theme .preset-avatar-selector {
+    background: linear-gradient(135deg, #2a2a2a 0%, #1a1a1a 100%);
+}
+
+body.dark-theme .preset-avatar-header h4 {
+    color: #e0e0e0;
+}
+
+body.dark-theme .avatar-category h5 {
+    color: #b0b0b0;
+}
+
+body.dark-theme .preset-avatar-option {
+    background: #3a3a3a;
+}
+
+body.dark-theme .preset-avatar-option:hover {
+    background: #4a4a4a;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .avatar-options {
+        grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+        gap: 10px;
+    }
+    
+    .preset-avatar-option {
+        width: 50px;
+        height: 50px;
+        font-size: 28px;
+    }
+}

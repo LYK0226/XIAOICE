@@ -51,22 +51,63 @@
             
             <div id="messages">
                 <div class="bot-message-container">
-                    <div class="avatar bot-avatar">
-                        <i class="fas fa-robot"></i>
+                    <div class="avatar bot-avatar" id="botDogAvatar">
+                        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+                            <!-- Left Ear (Orange with pink inner) -->
+                            <g class="dog-left-ear">
+                                <ellipse cx="25" cy="15" rx="10" ry="18" fill="#E8A76D" stroke="#1a1a1a" stroke-width="1.5"/>
+                                <ellipse cx="25" cy="17" rx="6" ry="14" fill="#FFB3A8" stroke="none"/>
+                            </g>
+                            
+                            <!-- Right Ear (Orange with pink inner) -->
+                            <g class="dog-right-ear">
+                                <ellipse cx="75" cy="15" rx="10" ry="18" fill="#E8A76D" stroke="#1a1a1a" stroke-width="1.5"/>
+                                <ellipse cx="75" cy="17" rx="6" ry="14" fill="#FFB3A8" stroke="none"/>
+                            </g>
+                            
+                            <!-- Head (White) -->
+                            <circle cx="50" cy="50" r="32" fill="#FFFFFF" stroke="#1a1a1a" stroke-width="1.5"/>
+                            
+                            <!-- Orange patches (side of head) -->
+                            <ellipse cx="28" cy="45" rx="12" ry="14" fill="#E8A76D" stroke="none"/>
+                            <ellipse cx="72" cy="45" rx="12" ry="14" fill="#E8A76D" stroke="none"/>
+                            
+                            <!-- Eyes (Large black with white highlight) -->
+                            <circle class="dog-eyes" cx="36" cy="44" r="6" fill="#1a1a1a" stroke="#000" stroke-width="0.5"/>
+                            <circle cx="37" cy="42" r="2" fill="#FFF"/>
+                            
+                            <circle class="dog-eyes" cx="64" cy="44" r="6" fill="#1a1a1a" stroke="#000" stroke-width="0.5"/>
+                            <circle cx="65" cy="42" r="2" fill="#FFF"/>
+                            
+                            <!-- Black nose -->
+                            <ellipse cx="50" cy="58" rx="5" ry="6" fill="#1a1a1a" stroke="#000" stroke-width="0.5"/>
+                            
+                            <!-- Mouth area (smile) -->
+                            <path class="dog-mouth" d="M 50 60 Q 45 68 40 66" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+                            <path class="dog-mouth" d="M 50 60 Q 55 68 60 66" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+                            
+                            <!-- Tongue (pink, out when talking) -->
+                            <ellipse class="dog-mouth" cx="50" cy="72" rx="4" ry="5" fill="#FFB3A8" stroke="#FF8FA3" stroke-width="0.5"/>
+                            
+                            <!-- Paw pads (cute detail) -->
+                            <circle cx="20" cy="80" r="2.5" fill="#FFB3A8" stroke="#1a1a1a" stroke-width="0.5"/>
+                            <circle cx="80" cy="80" r="2.5" fill="#FFB3A8" stroke="#1a1a1a" stroke-width="0.5"/>
+                        </svg>
                     </div>
                     <div class="message-content">
-                        <p>您好！我是您的智能助理。我可以透過回答您的問題來幫助您。您也可以問我任何問題。</p>
+                        <p>汪汪！我是您的狗狗助理！我很高興認識您。我可以回答您的問題，幫助您學習。有什麼我可以幫助您的嗎？</p>
                     </div>
                 </div>
             </div>
             
             <div id="input-container">
                 <div class="input-toolbar">
-                    <button class="toolbar-btn" id="fileUploadBtn" title="附加文件/圖像"><i class="fas fa-paperclip"></i></button>
-                    <button class="toolbar-btn" id="generateQuizBtn" title="生成測驗" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;"><i class="fas fa-clipboard-question"></i></button>
-                    <button class="toolbar-btn" id="emojiBtn" title="表情符號"><i class="fas fa-smile"></i></button>
-                    <button class="toolbar-btn" id="voiceInputBtn" title="語音輸入"><i class="fas fa-microphone"></i></button>
-                    <button class="toolbar-btn" id="webcamBtn" title="攝影機"><i class="fas fa-camera"></i></button>
+                    <button class="toolbar-btn" id="fileUploadBtn" title="附加文件/圖像" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);"><i class="fas fa-paperclip"></i></button>
+                    <button class="toolbar-btn" id="assessmentBtn" title="開始評估" style="background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);"><i class="fas fa-clipboard-list"></i></button>
+                    <button class="toolbar-btn" id="videoUploadBtn" title="上載影片" style="background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);"><i class="fas fa-video"></i></button>
+                    <button class="toolbar-btn" id="emojiBtn" title="表情符號" style="background: linear-gradient(135deg, #ffd89b 0%, #ff6b6b 100%);"><i class="fas fa-smile"></i></button>
+                    <button class="toolbar-btn" id="voiceInputBtn" title="語音輸入" style="background: linear-gradient(135deg, #a8edea 0%, #fed6e3 100%);"><i class="fas fa-microphone"></i></button>
+                    <button class="toolbar-btn" id="webcamBtn" title="攝影機" style="background: linear-gradient(135deg, #ff9a56 0%, #ff6a88 100%);"><i class="fas fa-camera"></i></button>
                 </div>
                 <div class="input-wrapper">
                     <input type="text" id="messageInput" placeholder="在這裡輸入您的問題...">
@@ -123,6 +164,140 @@
                 <!-- Preview content will be inserted here -->
             </div>
         </div>
+
+        <!-- Video Management Modal -->
+        <div id="videoModal" class="video-modal" style="display: none;">
+            <div class="video-modal-content">
+                <div class="video-modal-header">
+                    <h2>影片上載與分析</h2>
+                    <button class="close-video-modal" id="closeVideoModal">&times;</button>
+                </div>
+                
+                <div class="video-modal-body">
+                    <!-- Upload Section -->
+                    <div class="video-upload-section">
+                        <h3>上載影片</h3>
+                        <div class="video-upload-zone" id="videoUploadZone">
+                            <i class="fas fa-video"></i>
+                            <p>拖放影片到此處或點擊上傳</p>
+                            <small>支援格式: MP4, AVI, MOV, MKV, WebM, FLV, WMV (最大 500MB)</small>
+                        </div>
+                        <input type="file" id="videoInput" accept="video/*,audio/*" style="display: none;">
+                        
+                        <div id="uploadProgress" style="display: none; margin-top: 15px;">
+                            <div class="progress-bar">
+                                <div class="progress-fill"></div>
+                            </div>
+                            <p id="uploadStatus">上載中...</p>
+                        </div>
+                    </div>
+
+                    <!-- Video List Section -->
+                    <div class="video-list-section" style="margin-top: 30px;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px;">
+                            <h3 style="margin: 0;">已上載的影片</h3>
+                            <button id="clearAllVideosBtn" class="btn btn-danger" style="padding: 8px 15px; background: #dc3545; color: white; border: none; border-radius: 6px; cursor: pointer; display: none;">
+                                <i class="fas fa-trash-alt"></i> 清除所有影片
+                            </button>
+                        </div>
+                        <div id="videoList" class="video-list">
+                            <p class="empty-state">尚無影片</p>
+                        </div>
+                    </div>
+
+                    <!-- Video Details Section -->
+                    <div id="videoDetails" class="video-details-section" style="display: none; margin-top: 30px;">
+                        <h3>影片詳情</h3>
+                        
+                        <!-- Video Player -->
+                        <div class="video-player-section" style="margin-bottom: 25px;">
+                            <video id="videoPlayer" class="video-player" controls style="width: 100%; max-height: 500px; border-radius: 12px; background: #000;">
+                                <source id="videoSource" type="video/mp4">
+                                您的瀏覽器不支援視頻播放
+                            </video>
+                        </div>
+                        
+                        <div class="video-detail-container">
+                            <div class="detail-row">
+                                <span class="detail-label">檔名:</span>
+                                <span class="detail-value" id="detailFileName"></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">檔案大小:</span>
+                                <span class="detail-value" id="detailFileSize"></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">時長:</span>
+                                <span class="detail-value" id="detailDuration"></span>
+                            </div>
+                            <div class="detail-row">
+                                <span class="detail-label">轉錄狀態:</span>
+                                <span class="detail-value" id="detailTranscriptionStatus">
+                                    <span id="transcriptionStatusBadge" class="status-badge">等待中</span>
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Real-time Transcription Progress -->
+                        <div style="margin-top: 25px; padding: 15px; background: #f0f4ff; border-radius: 10px; border-left: 4px solid #667eea;">
+                            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 10px;">
+                                <i class="fas fa-microphone" style="color: #667eea; font-size: 18px;"></i>
+                                <h4 style="margin: 0; color: #667eea;">轉錄進度</h4>
+                                <span id="transcriptionPercentage" style="color: #667eea; font-weight: bold; margin-left: auto;">0%</span>
+                            </div>
+                            <div class="transcription-progress-bar">
+                                <div id="transcriptionProgressFill" class="transcription-progress-fill" style="width: 0%;"></div>
+                            </div>
+                            <p id="transcriptionProgressText" style="margin: 8px 0 0 0; color: #667eea; font-size: 13px;">等待開始轉錄...</p>
+                        </div>
+
+                        <!-- Transcription -->
+                        <div style="margin-top: 25px;">
+                            <h4>
+                                <i class="fas fa-file-alt" style="margin-right: 8px; color: #667eea;"></i>
+                                轉錄文本
+                                <span id="wordCount" style="font-size: 12px; color: #999; font-weight: normal; margin-left: 10px;">0 字</span>
+                            </h4>
+                            <div id="transcriptionContainer" class="transcription-container">
+                                <p id="transcriptionText" style="color: #999;">尚未轉錄</p>
+                            </div>
+                        </div>
+
+                        <!-- Timestamps -->
+                        <div style="margin-top: 25px;">
+                            <h4>
+                                <i class="fas fa-list" style="margin-right: 8px; color: #667eea;"></i>
+                                時間戳記 (每分鐘分段)
+                            </h4>
+                            <div id="timestampsContainer" class="timestamps-container">
+                                <p>未有時間戳記</p>
+                            </div>
+                        </div>
+
+                        <!-- Analysis Report -->
+                        <div style="margin-top: 25px;">
+                            <h4>
+                                <i class="fas fa-brain" style="margin-right: 8px; color: #667eea;"></i>
+                                AI 分析報告
+                            </h4>
+                            <div id="analysisContainer" class="analysis-container">
+                                <p>未有分析</p>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="video-action-buttons" style="margin-top: 30px;">
+                            <button id="analyzeVideoBtn" class="btn btn-primary"><i class="fas fa-brain"></i> 開始分析</button>
+                            <button id="pauseAnalysisBtn" class="btn btn-warning" style="display: none;"><i class="fas fa-pause"></i> 暫停分析</button>
+                            <button id="resumeAnalysisBtn" class="btn btn-info" style="display: none;"><i class="fas fa-play"></i> 繼續分析</button>
+                            <button id="downloadReportBtn" class="btn btn-secondary"><i class="fas fa-download"></i> 下載報告</button>
+                            <button id="deleteVideoBtn" class="btn btn-danger"><i class="fas fa-trash"></i> 刪除影片</button>
+                            <button id="backToListBtn" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> 返回列表</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
     
     <!-- Settings Modal (included from separate file) -->
@@ -147,6 +322,8 @@
     <script src="../static/js/sidebar.js"></script>
     <!-- 然後載入主要腳本 -->
     <script src="../static/js/chatbox.js"></script>
+    <!-- 載入視頻管理模塊 -->
+    <script src="../static/js/video_management.js"></script>
     <!-- 最後載入設定功能 -->
     <script src="../static/js/settings.js"></script>
 </body>

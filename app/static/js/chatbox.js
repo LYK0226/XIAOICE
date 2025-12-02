@@ -39,6 +39,55 @@ let isRecording = false;
 let conversationHistory = [];
 let activeConversationId = null;
 
+// ============================================
+// CUTE DOG SVG GENERATOR
+// ============================================
+function getDogSVG() {
+    return `
+        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
+            <!-- Left Ear (Orange with pink inner) -->
+            <g class="dog-left-ear">
+                <ellipse cx="25" cy="15" rx="10" ry="18" fill="#E8A76D" stroke="#1a1a1a" stroke-width="1.5"/>
+                <ellipse cx="25" cy="17" rx="6" ry="14" fill="#FFB3A8" stroke="none"/>
+            </g>
+            
+            <!-- Right Ear (Orange with pink inner) -->
+            <g class="dog-right-ear">
+                <ellipse cx="75" cy="15" rx="10" ry="18" fill="#E8A76D" stroke="#1a1a1a" stroke-width="1.5"/>
+                <ellipse cx="75" cy="17" rx="6" ry="14" fill="#FFB3A8" stroke="none"/>
+            </g>
+            
+            <!-- Head (White) -->
+            <circle cx="50" cy="50" r="32" fill="#FFFFFF" stroke="#1a1a1a" stroke-width="1.5"/>
+            
+            <!-- Orange patches (side of head) -->
+            <ellipse cx="28" cy="45" rx="12" ry="14" fill="#E8A76D" stroke="none"/>
+            <ellipse cx="72" cy="45" rx="12" ry="14" fill="#E8A76D" stroke="none"/>
+            
+            <!-- Eyes (Large black with white highlight) -->
+            <circle class="dog-eyes" cx="36" cy="44" r="6" fill="#1a1a1a" stroke="#000" stroke-width="0.5"/>
+            <circle cx="37" cy="42" r="2" fill="#FFF"/>
+            
+            <circle class="dog-eyes" cx="64" cy="44" r="6" fill="#1a1a1a" stroke="#000" stroke-width="0.5"/>
+            <circle cx="65" cy="42" r="2" fill="#FFF"/>
+            
+            <!-- Black nose -->
+            <ellipse cx="50" cy="58" rx="5" ry="6" fill="#1a1a1a" stroke="#000" stroke-width="0.5"/>
+            
+            <!-- Mouth area (smile) -->
+            <path class="dog-mouth" d="M 50 60 Q 45 68 40 66" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+            <path class="dog-mouth" d="M 50 60 Q 55 68 60 66" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
+            
+            <!-- Tongue (pink, out when talking) -->
+            <ellipse class="dog-mouth" cx="50" cy="72" rx="4" ry="5" fill="#FFB3A8" stroke="#FF8FA3" stroke-width="0.5"/>
+            
+            <!-- Paw pads (cute detail) -->
+            <circle cx="20" cy="80" r="2.5" fill="#FFB3A8" stroke="#1a1a1a" stroke-width="0.5"/>
+            <circle cx="80" cy="80" r="2.5" fill="#FFB3A8" stroke="#1a1a1a" stroke-width="0.5"/>
+        </svg>
+    `;
+}
+
 // Emoji categories
 const emojiCategories = {
     smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐'],
@@ -262,7 +311,7 @@ function createMessage(text, isUser = false) {
     const avatar = document.createElement('div');
     avatar.className = isUser ? 'avatar user-avatar' : 'avatar bot-avatar';
     
-    // Use custom avatar if available, otherwise use default icon
+    // Use custom avatar if available, otherwise use default
     if (isUser && window.userAvatar) {
         avatar.style.backgroundImage = `url(${window.userAvatar})`;
         avatar.style.backgroundSize = 'cover';
@@ -271,8 +320,11 @@ function createMessage(text, isUser = false) {
         avatar.style.backgroundImage = `url(${botAvatar})`;
         avatar.style.backgroundSize = 'cover';
         avatar.style.backgroundPosition = 'center';
+    } else if (!isUser) {
+        // Create cute Corgi-style dog SVG for bot
+        avatar.innerHTML = getDogSVG();
     } else {
-        avatar.innerHTML = isUser ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+        avatar.innerHTML = '<i class="fas fa-user"></i>';
     }
     
     const messageContent = document.createElement('div');
@@ -316,6 +368,14 @@ function speakMessage(text, buttonElement = null) {
     utterance.onstart = () => {
         if (buttonElement) {
             updateSpeakButtonState(buttonElement, true);
+            // Add talking animation to the dog avatar in the same message
+            const messageContainer = buttonElement.closest('.bot-message-container');
+            if (messageContainer) {
+                const avatar = messageContainer.querySelector('.avatar');
+                if (avatar) {
+                    avatar.classList.add('talking');
+                }
+            }
         }
     };
 
@@ -323,6 +383,14 @@ function speakMessage(text, buttonElement = null) {
     utterance.onend = () => {
         if (buttonElement) {
             updateSpeakButtonState(buttonElement, false);
+            // Remove talking animation
+            const messageContainer = buttonElement.closest('.bot-message-container');
+            if (messageContainer) {
+                const avatar = messageContainer.querySelector('.avatar');
+                if (avatar) {
+                    avatar.classList.remove('talking');
+                }
+            }
         }
     };
 
@@ -330,6 +398,14 @@ function speakMessage(text, buttonElement = null) {
     utterance.onerror = () => {
         if (buttonElement) {
             updateSpeakButtonState(buttonElement, false);
+            // Remove talking animation
+            const messageContainer = buttonElement.closest('.bot-message-container');
+            if (messageContainer) {
+                const avatar = messageContainer.querySelector('.avatar');
+                if (avatar) {
+                    avatar.classList.remove('talking');
+                }
+            }
         }
     };
 
@@ -367,8 +443,11 @@ function createImageMessage(imageData, text, isUser = true) {
         avatar.style.backgroundImage = `url(${botAvatar})`;
         avatar.style.backgroundSize = 'cover';
         avatar.style.backgroundPosition = 'center';
+    } else if (!isUser) {
+        // Create Corgi-style dog SVG
+        avatar.innerHTML = getDogSVG();
     } else {
-        avatar.innerHTML = isUser ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+        avatar.innerHTML = '<i class="fas fa-user"></i>';
     }
     
     const messageContent = document.createElement('div');
@@ -422,13 +501,15 @@ function createTypingIndicator(text) {
     const indicatorText = text || translations[currentLanguage].typing;
     
     const botAvatarEl = document.createElement('div');
-    botAvatarEl.className = 'avatar bot-avatar';
+    botAvatarEl.className = 'avatar bot-avatar talking';
+    
     if (botAvatar) {
         botAvatarEl.style.backgroundImage = `url(${botAvatar})`;
         botAvatarEl.style.backgroundSize = 'cover';
         botAvatarEl.style.backgroundPosition = 'center';
     } else {
-        botAvatarEl.innerHTML = '<i class="fas fa-robot"></i>';
+        // Create Corgi-style dog SVG for typing indicator
+        botAvatarEl.innerHTML = getDogSVG();
     }
 
     indicator.appendChild(botAvatarEl);
@@ -1278,8 +1359,11 @@ function createMessageWithFiles(text, files, isUser = true) {
         avatar.style.backgroundImage = `url(${botAvatar})`;
         avatar.style.backgroundSize = 'cover';
         avatar.style.backgroundPosition = 'center';
+    } else if (!isUser) {
+        // Create Corgi-style dog SVG
+        avatar.innerHTML = getDogSVG();
     } else {
-        avatar.innerHTML = isUser ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+        avatar.innerHTML = '<i class="fas fa-user"></i>';
     }
     
     const messageContent = document.createElement('div');
@@ -1473,8 +1557,11 @@ function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
         avatar.style.backgroundImage = `url(${botAvatar})`;
         avatar.style.backgroundSize = 'cover';
         avatar.style.backgroundPosition = 'center';
+    } else if (!isUser) {
+        // Create Corgi-style dog SVG
+        avatar.innerHTML = getDogSVG();
     } else {
-        avatar.innerHTML = isUser ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
+        avatar.innerHTML = '<i class="fas fa-user"></i>';
     }
     
     const messageContent = document.createElement('div');
@@ -1537,51 +1624,54 @@ function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
     
     return container;
 }
-// ===== Quiz/Questionnaire Functionality =====
+// ===== Child Assessment Functionality =====
 
-// Add event listener for generate quiz button
-const generateQuizBtn = document.getElementById('generateQuizBtn');
-if (generateQuizBtn) {
-    generateQuizBtn.addEventListener('click', async () => {
+// Add event listener for assessment button
+const assessmentBtn = document.getElementById('assessmentBtn');
+if (assessmentBtn) {
+    assessmentBtn.addEventListener('click', () => {
         try {
-            // Show loading message
-            const loadingMsg = createMessage('🔄 正在生成測驗題目...', false);
-            messagesDiv.appendChild(loadingMsg);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            
-            // Call API to generate quiz
-            const response = await fetch('/api/quiz/generate', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                },
-                body: JSON.stringify({
-                    num_questions: 5,
-                    question_type: 'choice'
-                })
-            });
-            
-            if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || '生成測驗失敗');
+            // Import and initialize child assessment module
+            if (typeof ChildDevelopmentAssessment !== 'undefined') {
+                ChildDevelopmentAssessment.showAssessmentSetup();
+            } else {
+                alert('兒童發育評估系統正在加載...');
+                // Dynamically load the assessment module
+                const script = document.createElement('script');
+                script.src = '../static/js/child_assessment.js';
+                script.onload = () => {
+                    ChildDevelopmentAssessment.showAssessmentSetup();
+                };
+                document.head.appendChild(script);
             }
-            
-            const data = await response.json();
-            
-            // Remove loading message
-            messagesDiv.removeChild(loadingMsg);
-            
-            // Start interactive quiz (one question at a time)
-            startInteractiveQuiz(data);
-            
         } catch (error) {
-            console.error('生成測驗錯誤:', error);
-            
-            // Show error message
-            const errorMsg = createMessage(`❌ ${error.message}`, false);
-            messagesDiv.appendChild(errorMsg);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+            console.error('開啟評估系統錯誤:', error);
+            alert('無法開啟評估系統，請稍後重試');
+        }
+    });
+}
+
+// History button event listener
+const historyBtn = document.getElementById('historyBtn');
+if (historyBtn) {
+    historyBtn.addEventListener('click', () => {
+        try {
+            // Import and initialize assessment history viewer
+            if (typeof ChildDevelopmentAssessment !== 'undefined') {
+                ChildDevelopmentAssessment.showAssessmentHistory();
+            } else {
+                alert('歷史紀錄系統正在加載...');
+                // Dynamically load the assessment module
+                const script = document.createElement('script');
+                script.src = '../static/js/child_assessment.js';
+                script.onload = () => {
+                    ChildDevelopmentAssessment.showAssessmentHistory();
+                };
+                document.head.appendChild(script);
+            }
+        } catch (error) {
+            console.error('開啟歷史紀錄系統錯誤:', error);
+            alert('無法開啟歷史紀錄，請稍後重試');
         }
     });
 }
@@ -1791,3 +1881,595 @@ function showQuizResults(quizState) {
         })
     }).catch(err => console.error('提交結果錯誤:', err));
 }
+
+// ===== 影片分析功能 Video Analysis Functions =====
+
+
+// Video upload zone handler
+const videoUploadZone = document.getElementById('videoUploadZone');
+const videoInput = document.getElementById('videoInput');
+
+if (videoUploadZone && videoInput) {
+    videoUploadZone.addEventListener('click', () => {
+        videoInput.click();
+    });
+    
+    videoInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            await analyzeVideoFile(file);
+            videoInput.value = ''; // Reset input
+        }
+    });
+    
+    // Drag and drop support
+    videoUploadZone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        videoUploadZone.style.borderColor = '#667eea';
+        videoUploadZone.style.background = 'rgba(102, 126, 234, 0.1)';
+    });
+    
+    videoUploadZone.addEventListener('dragleave', (e) => {
+        e.preventDefault();
+        videoUploadZone.style.borderColor = '';
+        videoUploadZone.style.background = '';
+    });
+    
+    videoUploadZone.addEventListener('drop', async (e) => {
+        e.preventDefault();
+        videoUploadZone.style.borderColor = '';
+        videoUploadZone.style.background = '';
+        
+        const file = e.dataTransfer.files[0];
+        if (file && file.type.startsWith('video/')) {
+            await analyzeVideoFile(file);
+        } else {
+            alert('請上傳影片文件');
+        }
+    });
+}
+
+async function analyzeVideoFromUrl(youtubeUrl) {
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadStatus = document.getElementById('uploadStatus');
+    
+    uploadProgress.style.display = 'block';
+    uploadStatus.textContent = '正在下載 YouTube 影片...';
+    
+    const formData = new FormData();
+    formData.append('youtube_url', youtubeUrl);
+    
+    try {
+        const response = await fetch('/video/analyze', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || '影片分析失敗');
+        }
+        
+        const result = await response.json();
+        
+        uploadStatus.textContent = '影片載入成功！正在分析...';
+        
+        // Display video and start analysis
+        await displayVideoAndAnalyze(result);
+        
+    } catch (error) {
+        console.error('影片分析錯誤:', error);
+        uploadStatus.textContent = '錯誤: ' + error.message;
+        throw error;
+    } finally {
+        setTimeout(() => {
+            uploadProgress.style.display = 'none';
+        }, 2000);
+    }
+}
+
+async function analyzeVideoFile(file) {
+    const uploadProgress = document.getElementById('uploadProgress');
+    const uploadStatus = document.getElementById('uploadStatus');
+    
+    uploadProgress.style.display = 'block';
+    uploadStatus.textContent = '正在上傳影片...';
+    
+    const formData = new FormData();
+    formData.append('video', file);
+    
+    try {
+        const response = await fetch('/video/analyze', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: formData
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || '影片分析失敗');
+        }
+        
+        const result = await response.json();
+        
+        uploadStatus.textContent = '影片上傳成功！正在分析...';
+        
+        // Display video and start analysis
+        await displayVideoAndAnalyze(result);
+        
+    } catch (error) {
+        console.error('影片分析錯誤:', error);
+        uploadStatus.textContent = '錯誤: ' + error.message;
+        alert('影片上傳失敗: ' + error.message);
+    } finally {
+        setTimeout(() => {
+            uploadProgress.style.display = 'none';
+        }, 2000);
+    }
+}
+
+async function displayVideoAndAnalyze(result) {
+    const { video_info, video_url, frames, is_youtube } = result;
+    
+    // Close video modal
+    const videoModal = document.getElementById('videoModal');
+    if (videoModal) {
+        videoModal.style.display = 'none';
+    }
+    
+    // Create video message in chat
+    const videoMessage = document.createElement('div');
+    videoMessage.className = 'message user-message';
+    videoMessage.innerHTML = `
+        <div class="message-avatar">
+            ${window.userAvatar && window.userAvatarType === 'emoji' 
+                ? `<div style="font-size: 24px;">${window.userAvatar}</div>`
+                : '<i class="fas fa-user"></i>'}
+        </div>
+        <div class="message-content">
+            <div class="video-preview-container" style="margin-bottom: 15px;">
+                <video controls style="width: 100%; max-width: 600px; border-radius: 12px; background: #000;">
+                    <source src="${video_url}" type="video/mp4">
+                    您的瀏覽器不支援視頻播放
+                </video>
+            </div>
+            <div style="padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px;">
+                <strong>${is_youtube ? '📺' : '📹'} ${video_info.title || video_info.filename}</strong><br>
+                <small>
+                    ⏱️ 時長: ${formatDuration(video_info.duration)} | 
+                    📊 已提取 ${frames.length} 個關鍵幀
+                </small>
+            </div>
+            <p style="margin-top: 10px;">請分析這個影片，告訴我影片中的人在做什麼</p>
+        </div>
+    `;
+    
+    messagesDiv.appendChild(videoMessage);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    // Start streaming analysis
+    await streamVideoAnalysis(frames, video_info);
+}
+
+async function streamVideoAnalysis(frames, videoInfo) {
+    const aiMessageDiv = document.createElement('div');
+    aiMessageDiv.className = 'message ai-message';
+    aiMessageDiv.innerHTML = `
+        <div class="message-avatar">
+            <i class="fas fa-robot"></i>
+        </div>
+        <div class="message-content">
+            <div class="typing-indicator">
+                <span></span><span></span><span></span>
+            </div>
+        </div>
+    `;
+    messagesDiv.appendChild(aiMessageDiv);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    
+    try {
+        const response = await fetch('/video/stream-analysis', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+                frames: frames,
+                video_info: videoInfo,
+                prompt: '請詳細描述這個影片中發生了什麼事情，人物在做什麼動作，場景如何變化。'
+            })
+        });
+        
+        if (!response.ok) {
+            throw new Error('影片分析請求失敗');
+        }
+        
+        const reader = response.body.getReader();
+        const decoder = new TextDecoder();
+        let aiResponse = '';
+        
+        // Remove typing indicator
+        const typingIndicator = aiMessageDiv.querySelector('.typing-indicator');
+        if (typingIndicator) {
+            typingIndicator.remove();
+        }
+        
+        // Create content container
+        const contentDiv = document.createElement('div');
+        contentDiv.className = 'ai-response-content';
+        aiMessageDiv.querySelector('.message-content').appendChild(contentDiv);
+        
+        while (true) {
+            const { done, value } = await reader.read();
+            if (done) break;
+            
+            const chunk = decoder.decode(value, { stream: true });
+            const lines = chunk.split('\n');
+            
+            for (const line of lines) {
+                if (line.startsWith('data: ')) {
+                    try {
+                        const data = JSON.parse(line.slice(6));
+                        
+                        if (data.error) {
+                            throw new Error(data.error);
+                        }
+                        
+                        if (data.content) {
+                            aiResponse += data.content;
+                            contentDiv.innerHTML = marked.parse(aiResponse);
+                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                        }
+                        
+                        if (data.done) {
+                            console.log('影片分析完成');
+                        }
+                    } catch (e) {
+                        if (line.trim()) {
+                            console.error('解析錯誤:', e, line);
+                        }
+                    }
+                }
+            }
+        }
+        
+    } catch (error) {
+        console.error('影片分析錯誤:', error);
+        aiMessageDiv.querySelector('.message-content').innerHTML = `
+            <p style="color: #ff4444;">❌ 影片分析失敗: ${error.message}</p>
+        `;
+    }
+}
+
+function formatDuration(seconds) {
+    const hours = Math.floor(seconds / 3600);
+    const minutes = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    
+    if (hours > 0) {
+        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+    } else {
+        return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    }
+}
+
+console.log('✅ 影片分析功能已載入');
+
+// 添加到 chatbox.js 末尾 - 簡化版影片分析
+
+// 查找影片按鈕
+const videoBtn = document.querySelector('[title*="影片"], [onclick*="videoModal"], .video-btn');
+if (videoBtn) {
+    console.log('找到影片按鈕，替換為直接上傳');
+    
+    // 創建隱藏的文件輸入
+    const directVideoInput = document.createElement('input');
+    directVideoInput.type = 'file';
+    directVideoInput.accept = 'video/*';
+    directVideoInput.style.display = 'none';
+    directVideoInput.id = 'directVideoInput';
+    document.body.appendChild(directVideoInput);
+    
+    // 替換按鈕功能
+    videoBtn.onclick = function(e) {
+        e.preventDefault();
+        directVideoInput.click();
+    };
+    
+    // 處理文件選擇
+    directVideoInput.addEventListener('change', async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        console.log('選擇的影片:', file.name, file.size);
+        
+        // 顯示上傳中訊息
+        const uploadMsg = createMessage(
+            `📹 正在上傳影片: ${file.name} (${(file.size/1024/1024).toFixed(2)}MB)`,
+            true
+        );
+        
+        try {
+            // 上傳並分析
+            const formData = new FormData();
+            formData.append('video', file);
+            
+            const response = await fetch('/video/analyze', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                },
+                body: formData
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || '上傳失敗');
+            }
+            
+            const result = await response.json();
+            console.log('分析結果:', result);
+            
+            // 移除上傳訊息
+            uploadMsg.remove();
+            
+            // 顯示影片和分析
+            await displayVideoAndAnalyze(result);
+            
+        } catch (error) {
+            console.error('影片處理錯誤:', error);
+            uploadMsg.querySelector('.message-content').innerHTML = 
+                `❌ 錯誤: ${error.message}`;
+        }
+        
+        // 重置輸入
+        directVideoInput.value = '';
+    });
+}
+
+console.log('✅ 簡化版影片上傳已載入');
+
+// ===== 清除所有影片功能 =====
+const clearAllVideosBtn = document.getElementById('clearAllVideosBtn');
+if (clearAllVideosBtn) {
+    clearAllVideosBtn.addEventListener('click', async function() {
+        // 確認對話框
+        const confirmed = confirm('⚠️ 確定要刪除所有影片嗎？此操作無法復原！');
+        if (!confirmed) return;
+        
+        // 二次確認
+        const doubleConfirm = confirm('🚨 最後確認：這將永久刪除所有已上傳的影片！');
+        if (!doubleConfirm) return;
+        
+        try {
+            this.disabled = true;
+            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 刪除中...';
+            
+            const response = await fetch('/api/videos/clear-all', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            if (!response.ok) {
+                const error = await response.json();
+                throw new Error(error.error || '刪除失敗');
+            }
+            
+            const result = await response.json();
+            
+            // 顯示成功訊息
+            alert(`✅ ${result.message}`);
+            
+            // 清空影片列表
+            const videoList = document.getElementById('videoList');
+            if (videoList) {
+                videoList.innerHTML = '<p class="empty-state">尚無影片</p>';
+            }
+            
+            // 隱藏清除按鈕
+            this.style.display = 'none';
+            
+            // 隱藏影片詳情
+            const videoDetails = document.getElementById('videoDetails');
+            if (videoDetails) {
+                videoDetails.style.display = 'none';
+            }
+            
+        } catch (error) {
+            console.error('清除影片錯誤:', error);
+            alert('❌ 清除失敗: ' + error.message);
+        } finally {
+            this.disabled = false;
+            this.innerHTML = '<i class="fas fa-trash-alt"></i> 清除所有影片';
+        }
+    });
+}
+
+// 監聽影片列表變化，自動顯示/隱藏清除按鈕
+const videoListObserver = new MutationObserver(function(mutations) {
+    const videoList = document.getElementById('videoList');
+    const clearBtn = document.getElementById('clearAllVideosBtn');
+    
+    if (videoList && clearBtn) {
+        const hasVideos = videoList.querySelectorAll('.video-item').length > 0;
+        clearBtn.style.display = hasVideos ? 'inline-block' : 'none';
+    }
+});
+
+const videoListElement = document.getElementById('videoList');
+if (videoListElement) {
+    videoListObserver.observe(videoListElement, { 
+        childList: true, 
+        subtree: true 
+    });
+}
+
+console.log('✅ 清除所有影片功能已載入');
+
+// ===== 為已上傳的影片添加分析功能 =====
+async function analyzeExistingVideo(videoPath) {
+    console.log('開始分析已存在的影片:', videoPath);
+    
+    // 從路徑中提取文件名
+    const filename = videoPath.split('/').pop();
+    
+    // 顯示分析中訊息
+    const analyzingMsg = createMessage(
+        `🎬 正在分析影片: ${filename}...`,
+        true
+    );
+    
+    try {
+        // 獲取影片文件
+        const response = await fetch(videoPath);
+        const blob = await response.blob();
+        const file = new File([blob], filename, { type: 'video/mp4' });
+        
+        // 上傳並分析
+        const formData = new FormData();
+        formData.append('video', file);
+        
+        const analyzeResponse = await fetch('/video/analyze', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: formData
+        });
+        
+        if (!analyzeResponse.ok) {
+            const error = await analyzeResponse.json();
+            throw new Error(error.error || '分析失敗');
+        }
+        
+        const result = await analyzeResponse.json();
+        console.log('分析結果:', result);
+        
+        // 移除分析中訊息
+        analyzingMsg.remove();
+        
+        // 顯示影片和分析
+        await displayVideoAndAnalyze(result);
+        
+    } catch (error) {
+        console.error('影片分析錯誤:', error);
+        analyzingMsg.querySelector('.message-content').innerHTML = 
+            `❌ 分析失敗: ${error.message}`;
+    }
+}
+
+// 暴露到全局，方便調用
+window.analyzeExistingVideo = analyzeExistingVideo;
+
+console.log('✅ 影片重新分析功能已載入');
+
+// ===== 覆蓋影片按鈕，改為直接分析模式 =====
+document.addEventListener('DOMContentLoaded', function() {
+    setTimeout(() => {
+        const videoBtn = document.getElementById('videoUploadBtn');
+        if (videoBtn) {
+            console.log('✅ 找到影片按鈕，替換為快速分析模式');
+            
+            // 移除所有舊的事件監聽器（通過克隆節點）
+            const newVideoBtn = videoBtn.cloneNode(true);
+            videoBtn.parentNode.replaceChild(newVideoBtn, videoBtn);
+            
+            // 創建隱藏的文件輸入
+            let quickVideoInput = document.getElementById('quickVideoInput');
+            if (!quickVideoInput) {
+                quickVideoInput = document.createElement('input');
+                quickVideoInput.type = 'file';
+                quickVideoInput.accept = 'video/*';
+                quickVideoInput.id = 'quickVideoInput';
+                quickVideoInput.style.display = 'none';
+                document.body.appendChild(quickVideoInput);
+            }
+            
+            // 新的點擊事件 - 直接選擇文件
+            newVideoBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                console.log('影片按鈕被點擊 - 打開文件選擇器');
+                quickVideoInput.click();
+            });
+            
+            // 處理文件選擇 - 立即分析
+            quickVideoInput.addEventListener('change', async function(e) {
+                const file = e.target.files[0];
+                if (!file) return;
+                
+                console.log('✅ 選擇的影片:', file.name, `(${(file.size/1024/1024).toFixed(2)}MB)`);
+                
+                // 檢查文件大小
+                if (file.size > 500 * 1024 * 1024) {
+                    alert('❌ 影片太大！請選擇小於 500MB 的影片');
+                    this.value = '';
+                    return;
+                }
+                
+                // 顯示上傳中訊息
+                const uploadMsg = createMessage(
+                    `📹 正在上傳並分析影片: ${file.name}\n大小: ${(file.size/1024/1024).toFixed(2)}MB`,
+                    true
+                );
+                
+                try {
+                    // 上傳並分析
+                    const formData = new FormData();
+                    formData.append('video', file);
+                    
+                    console.log('開始上傳影片...');
+                    const response = await fetch('/video/analyze', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                        },
+                        body: formData
+                    });
+                    
+                    if (!response.ok) {
+                        const error = await response.json();
+                        throw new Error(error.error || '上傳失敗');
+                    }
+                    
+                    const result = await response.json();
+                    console.log('✅ 影片分析結果:', result);
+                    
+                    // 移除上傳訊息
+                    uploadMsg.remove();
+                    
+                    // 顯示影片和分析
+                    if (typeof displayVideoAndAnalyze === 'function') {
+                        await displayVideoAndAnalyze(result);
+                    } else {
+                        console.error('❌ displayVideoAndAnalyze 函數不存在');
+                        createMessage('影片已上傳，正在啟動分析...', false);
+                    }
+                    
+                } catch (error) {
+                    console.error('❌ 影片處理錯誤:', error);
+                    uploadMsg.querySelector('.message-content').innerHTML = 
+                        `❌ 處理失敗: ${error.message}`;
+                }
+                
+                // 重置輸入
+                this.value = '';
+            });
+            
+            console.log('✅ 影片按鈕已改為快速分析模式');
+        } else {
+            console.warn('⚠️ 未找到影片按鈕');
+        }
+    }, 1000); // 延遲1秒確保其他腳本已加載
+});
+
+console.log('✅ 影片快速分析模式已啟動');

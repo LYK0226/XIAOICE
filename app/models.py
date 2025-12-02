@@ -194,3 +194,149 @@ class Message(db.Model):
             'uploaded_files': self.uploaded_files,
             'created_at': self.created_at.isoformat() if self.created_at else None
         }
+
+
+class ChildDevelopmentAssessmentRecord(db.Model):
+    """
+    Child Development Assessment Record based on WS/T 580—2017 Standard
+    Stores assessment history for 0-6 year old children
+    """
+    __tablename__ = 'child_development_assessments'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    assessment_id = db.Column(db.String(36), unique=True, nullable=False, index=True)  # UUID for unique assessment
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    child_name = db.Column(db.String(100), nullable=False)
+    child_age_months = db.Column(db.Float, nullable=False)  # Precise monthly age (e.g., 24.5)
+    
+    # Assessment questions and answers
+    questions = db.Column(db.JSON, nullable=True)  # List of questions with IDs
+    answers = db.Column(db.JSON, nullable=True)    # User's answers {item_id: passed_bool}
+    
+    # Results from WS/T 580—2017 Standard
+    overall_dq = db.Column(db.Float, nullable=True)           # DQ (Developmental Quotient)
+    dq_level = db.Column(db.String(50), nullable=True)        # Classification: excellent/good/normal/borderline_low/disability
+    total_mental_age = db.Column(db.Float, nullable=True)     # Calculated mental age in months
+    
+    # Per-domain results (5 domains: gross_motor, fine_motor, language, adaptive, social_behavior)
+    area_results = db.Column(db.JSON, nullable=True)          # {domain_id: {passed_items, mental_age, status}}
+    
+    # Recommendations and suggestions
+    recommendations = db.Column(db.JSON, nullable=True)       # {domain_id: {status, suggestion}}
+    
+    # PDF and metadata
+    pdf_filename = db.Column(db.String(255), nullable=True)
+    pdf_content_summary = db.Column(db.Text, nullable=True)   # Summary of PDF content used for assessment
+    
+    # Status tracking
+    is_completed = db.Column(db.Boolean, default=False, index=True)
+    standard = db.Column(db.String(50), default='WS/T 580—2017')  # Standard version
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    completed_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationships
+    user = db.relationship('User', backref=db.backref('assessments', cascade='all, delete-orphan'))
+    
+    def __repr__(self):
+        return f'<ChildDevelopmentAssessment {self.assessment_id}>'
+    
+    def to_dict(self, include_answers=False):
+        """Convert to dictionary format for JSON responses"""
+        data = {
+            'assessment_id': self.assessment_id,
+            'user_id': self.user_id,
+            'child_name': self.child_name,
+            'child_age_months': self.child_age_months,
+            'overall_dq': self.overall_dq,
+            'dq_level': self.dq_level,
+            'total_mental_age': self.total_mental_age,
+            'area_results': self.area_results,
+            'recommendations': self.recommendations,
+            'is_completed': self.is_completed,
+            'standard': self.standard,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+        }
+        
+        if include_answers:
+            data['questions'] = self.questions
+            data['answers'] = self.answers
+        
+        return data
+
+
+class VideoRecord(db.Model):
+    """Model for storing video records with transcription and analysis"""
+    __tablename__ = 'video_records'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+    filename = db.Column(db.String(255), nullable=False)
+    original_filename = db.Column(db.String(255), nullable=False)
+    file_path = db.Column(db.String(500), nullable=False)
+    file_size = db.Column(db.Integer)  # in bytes
+    duration = db.Column(db.Float)  # in seconds
+    full_transcription = db.Column(db.Text)
+    transcription_status = db.Column(db.String(50), default='pending')  # pending, processing, completed, failed
+    analysis_report = db.Column(db.JSON)  # Store analysis results as JSON
+    analysis_status = db.Column(db.String(50), default='pending')  # pending, processing, completed, failed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    user = db.relationship('User', backref=db.backref('videos', cascade='all, delete-orphan'))
+    timestamps = db.relationship('VideoTimestamp', backref='video', cascade='all, delete-orphan', lazy='dynamic')
+    
+    def __repr__(self):
+        return f'<VideoRecord {self.id}>'
+    
+    def to_dict(self, include_timestamps=False):
+        data = {
+            'id': self.id,
+            'user_id': self.user_id,
+            'filename': self.filename,
+            'original_filename': self.original_filename,
+            'file_size': self.file_size,
+            'duration': self.duration,
+            'full_transcription': self.full_transcription,
+            'transcription_status': self.transcription_status,
+            'analysis_report': self.analysis_report,
+            'analysis_status': self.analysis_status,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+        }
+        
+        if include_timestamps:
+            data['timestamps'] = [ts.to_dict() for ts in self.timestamps]
+        
+        return data
+
+
+class VideoTimestamp(db.Model):
+    """Model for storing 1-minute segment transcriptions"""
+    __tablename__ = 'video_timestamps'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    video_id = db.Column(db.Integer, db.ForeignKey('video_records.id'), nullable=False, index=True)
+    start_time = db.Column(db.Float)  # in seconds
+    end_time = db.Column(db.Float)  # in seconds
+    text = db.Column(db.Text)  # transcription text for this segment
+    formatted_time = db.Column(db.String(20))  # HH:MM:SS format
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<VideoTimestamp {self.id}>'
+    
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'video_id': self.video_id,
+            'start_time': self.start_time,
+            'end_time': self.end_time,
+            'text': self.text,
+            'formatted_time': self.formatted_time,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }

@@ -14,7 +14,16 @@ class Config:
 
     # Uploads
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'upload')
-    MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB
+    MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500 MB (for video uploads)
+    
+    # Allowed file extensions
+    ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv'}
+    ALLOWED_EXTENSIONS = ALLOWED_IMAGE_EXTENSIONS | ALLOWED_VIDEO_EXTENSIONS
+    
+    # Video processing settings
+    VIDEO_FRAME_INTERVAL = 5  # Extract a frame every N seconds
+    VIDEO_MAX_FRAMES = 20  # Maximum number of frames to extract for analysis
 
     # Database
     # Use DATABASE_URL environment variable if provided (Postgres, MySQL, etc.),

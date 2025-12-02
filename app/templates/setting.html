@@ -39,11 +39,114 @@
                             </div>
                             <div class="field-actions">
                                 <button class="edit-btn" onclick="document.getElementById('userAvatarInput').click()">
-                                    <i class="fas fa-edit"></i> <span data-i18n="settings.profile.edit">編輯</span>
+                                    <i class="fas fa-upload"></i> <span data-i18n="settings.profile.upload">上傳圖片</span>
+                                </button>
+                                <button class="edit-btn" id="selectPresetAvatarBtn">
+                                    <i class="fas fa-images"></i> <span data-i18n="settings.profile.selectPreset">選擇頭像</span>
                                 </button>
                                 <button class="clear-btn" id="clearUserAvatar">
                                     <i class="fas fa-times"></i> <span data-i18n="settings.profile.clear">清除</span>
                                 </button>
+                            </div>
+                        </div>
+
+                        <!-- Preset Avatar Selector (Hidden by default) -->
+                        <div class="preset-avatar-selector" id="presetAvatarSelector" style="display: none;">
+                            <div class="preset-avatar-header">
+                                <h4>🎨 選擇可愛頭像</h4>
+                                <button class="close-preset-btn" id="closePresetSelector">×</button>
+                            </div>
+                            <div class="preset-avatar-grid">
+                                <!-- Category: Animals -->
+                                <div class="avatar-category">
+                                    <h5>🐾 動物</h5>
+                                    <div class="avatar-options">
+                                        <div class="preset-avatar-option" data-avatar="🐶">🐶</div>
+                                        <div class="preset-avatar-option" data-avatar="🐱">🐱</div>
+                                        <div class="preset-avatar-option" data-avatar="🐭">🐭</div>
+                                        <div class="preset-avatar-option" data-avatar="🐹">🐹</div>
+                                        <div class="preset-avatar-option" data-avatar="🐰">🐰</div>
+                                        <div class="preset-avatar-option" data-avatar="🦊">🦊</div>
+                                        <div class="preset-avatar-option" data-avatar="🐻">🐻</div>
+                                        <div class="preset-avatar-option" data-avatar="🐼">🐼</div>
+                                        <div class="preset-avatar-option" data-avatar="🐨">🐨</div>
+                                        <div class="preset-avatar-option" data-avatar="🐯">🐯</div>
+                                        <div class="preset-avatar-option" data-avatar="🦁">🦁</div>
+                                        <div class="preset-avatar-option" data-avatar="🐮">🐮</div>
+                                    </div>
+                                </div>
+                                <!-- Category: Food -->
+                                <div class="avatar-category">
+                                    <h5>🍰 食物</h5>
+                                    <div class="avatar-options">
+                                        <div class="preset-avatar-option" data-avatar="🍕">🍕</div>
+                                        <div class="preset-avatar-option" data-avatar="🍔">🍔</div>
+                                        <div class="preset-avatar-option" data-avatar="🍟">🍟</div>
+                                        <div class="preset-avatar-option" data-avatar="🍿">🍿</div>
+                                        <div class="preset-avatar-option" data-avatar="🍩">🍩</div>
+                                        <div class="preset-avatar-option" data-avatar="🍪">🍪</div>
+                                        <div class="preset-avatar-option" data-avatar="🎂">🎂</div>
+                                        <div class="preset-avatar-option" data-avatar="🍰">🍰</div>
+                                        <div class="preset-avatar-option" data-avatar="🧁">🧁</div>
+                                        <div class="preset-avatar-option" data-avatar="🍦">🍦</div>
+                                        <div class="preset-avatar-option" data-avatar="🍧">🍧</div>
+                                        <div class="preset-avatar-option" data-avatar="🍨">🍨</div>
+                                    </div>
+                                </div>
+                                <!-- Category: Nature -->
+                                <div class="avatar-category">
+                                    <h5>🌸 自然</h5>
+                                    <div class="avatar-options">
+                                        <div class="preset-avatar-option" data-avatar="🌸">🌸</div>
+                                        <div class="preset-avatar-option" data-avatar="🌺">🌺</div>
+                                        <div class="preset-avatar-option" data-avatar="🌻">🌻</div>
+                                        <div class="preset-avatar-option" data-avatar="🌷">🌷</div>
+                                        <div class="preset-avatar-option" data-avatar="🌹">🌹</div>
+                                        <div class="preset-avatar-option" data-avatar="🪻">🪻</div>
+                                        <div class="preset-avatar-option" data-avatar="🌼">🌼</div>
+                                        <div class="preset-avatar-option" data-avatar="🌿">🌿</div>
+                                        <div class="preset-avatar-option" data-avatar="☘️">☘️</div>
+                                        <div class="preset-avatar-option" data-avatar="🍀">🍀</div>
+                                        <div class="preset-avatar-option" data-avatar="🌈">🌈</div>
+                                        <div class="preset-avatar-option" data-avatar="⭐">⭐</div>
+                                    </div>
+                                </div>
+                                <!-- Category: Objects -->
+                                <div class="avatar-category">
+                                    <h5>🎁 物品</h5>
+                                    <div class="avatar-options">
+                                        <div class="preset-avatar-option" data-avatar="🎨">🎨</div>
+                                        <div class="preset-avatar-option" data-avatar="🎭">🎭</div>
+                                        <div class="preset-avatar-option" data-avatar="🎪">🎪</div>
+                                        <div class="preset-avatar-option" data-avatar="🎯">🎯</div>
+                                        <div class="preset-avatar-option" data-avatar="🎮">🎮</div>
+                                        <div class="preset-avatar-option" data-avatar="🎲">🎲</div>
+                                        <div class="preset-avatar-option" data-avatar="🎹">🎹</div>
+                                        <div class="preset-avatar-option" data-avatar="🎸">🎸</div>
+                                        <div class="preset-avatar-option" data-avatar="🎺">🎺</div>
+                                        <div class="preset-avatar-option" data-avatar="🎻">🎻</div>
+                                        <div class="preset-avatar-option" data-avatar="🎼">🎼</div>
+                                        <div class="preset-avatar-option" data-avatar="🎧">🎧</div>
+                                    </div>
+                                </div>
+                                <!-- Category: Faces -->
+                                <div class="avatar-category">
+                                    <h5>😊 表情</h5>
+                                    <div class="avatar-options">
+                                        <div class="preset-avatar-option" data-avatar="😊">😊</div>
+                                        <div class="preset-avatar-option" data-avatar="😎">😎</div>
+                                        <div class="preset-avatar-option" data-avatar="🤓">🤓</div>
+                                        <div class="preset-avatar-option" data-avatar="🥳">🥳</div>
+                                        <div class="preset-avatar-option" data-avatar="😇">😇</div>
+                                        <div class="preset-avatar-option" data-avatar="🤩">🤩</div>
+                                        <div class="preset-avatar-option" data-avatar="😺">😺</div>
+                                        <div class="preset-avatar-option" data-avatar="😸">😸</div>
+                                        <div class="preset-avatar-option" data-avatar="😻">😻</div>
+                                        <div class="preset-avatar-option" data-avatar="💖">💖</div>
+                                        <div class="preset-avatar-option" data-avatar="💝">💝</div>
+                                        <div class="preset-avatar-option" data-avatar="✨">✨</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                         
@@ -116,6 +219,127 @@
                             <div class="lang-option" data-lang="ja">
                                 <i class="fas fa-circle"></i>
                                 <span>日本語</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bot Avatar Setting -->
+                    <div class="setting-item">
+                        <label>🤖 機器人頭像</label>
+                        <p class="setting-description" style="font-size: 14px; color: #666; margin-bottom: 15px;">自訂聊天機器人的頭像</p>
+                        <div class="bot-avatar-section">
+                            <div class="avatar-preview" id="botAvatarPreview" style="display: inline-flex; margin-right: 15px; vertical-align: middle;">
+                                <i class="fas fa-robot"></i>
+                            </div>
+                            <button class="edit-btn" id="selectBotAvatarBtn" style="display: inline-flex; align-items: center; gap: 8px;">
+                                <i class="fas fa-images"></i> <span>選擇機器人頭像</span>
+                            </button>
+                            <button class="clear-btn" id="clearBotAvatar" style="display: inline-flex; align-items: center; gap: 8px; margin-left: 10px;">
+                                <i class="fas fa-undo"></i> <span>恢復預設</span>
+                            </button>
+                        </div>
+
+                        <!-- Bot Avatar Selector (Hidden by default) -->
+                        <div class="preset-avatar-selector" id="botAvatarSelector" style="display: none; margin-top: 20px;">
+                            <div class="preset-avatar-header">
+                                <h4>🤖 選擇機器人頭像</h4>
+                                <button class="close-preset-btn" id="closeBotSelector">×</button>
+                            </div>
+                            <div class="preset-avatar-grid">
+                                <!-- Category: Robots & AI -->
+                                <div class="avatar-category">
+                                    <h5>🤖 機器人</h5>
+                                    <div class="avatar-options">
+                                        <div class="preset-avatar-option" data-avatar="🤖">🤖</div>
+                                        <div class="preset-avatar-option" data-avatar="🦾">🦾</div>
+                                        <div class="preset-avatar-option" data-avatar="🦿">🦿</div>
+                                        <div class="preset-avatar-option" data-avatar="👾">👾</div>
+                                        <div class="preset-avatar-option" data-avatar="🛸">🛸</div>
+                                        <div class="preset-avatar-option" data-avatar="🚀">🚀</div>
+                                        <div class="preset-avatar-option" data-avatar="🛰️">🛰️</div>
+                                        <div class="preset-avatar-option" data-avatar="💻">💻</div>
+                                        <div class="preset-avatar-option" data-avatar="⚙️">⚙️</div>
+                                        <div class="preset-avatar-option" data-avatar="🔧">🔧</div>
+                                        <div class="preset-avatar-option" data-avatar="🔬">🔬</div>
+                                        <div class="preset-avatar-option" data-avatar="🧬">🧬</div>
+                                    </div>
+                                </div>
+
+                                <!-- Category: Magic & Fantasy -->
+                                <div class="avatar-category">
+                                    <h5>✨ 魔法</h5>
+                                    <div class="avatar-options">
+                                        <div class="preset-avatar-option" data-avatar="✨">✨</div>
+                                        <div class="preset-avatar-option" data-avatar="⚡">⚡</div>
+                                        <div class="preset-avatar-option" data-avatar="🔮">🔮</div>
+                                        <div class="preset-avatar-option" data-avatar="🪄">🪄</div>
+                                        <div class="preset-avatar-option" data-avatar="🌟">🌟</div>
+                                        <div class="preset-avatar-option" data-avatar="💫">💫</div>
+                                        <div class="preset-avatar-option" data-avatar="🌠">🌠</div>
+                                        <div class="preset-avatar-option" data-avatar="🎯">🎯</div>
+                                        <div class="preset-avatar-option" data-avatar="🎪">🎪</div>
+                                        <div class="preset-avatar-option" data-avatar="🎭">🎭</div>
+                                        <div class="preset-avatar-option" data-avatar="🎨">🎨</div>
+                                        <div class="preset-avatar-option" data-avatar="🎬">🎬</div>
+                                    </div>
+                                </div>
+
+                                <!-- Category: Gems & Symbols -->
+                                <div class="avatar-category">
+                                    <h5>💎 寶石</h5>
+                                    <div class="avatar-options">
+                                        <div class="preset-avatar-option" data-avatar="💎">💎</div>
+                                        <div class="preset-avatar-option" data-avatar="💠">💠</div>
+                                        <div class="preset-avatar-option" data-avatar="🔷">🔷</div>
+                                        <div class="preset-avatar-option" data-avatar="🔶">🔶</div>
+                                        <div class="preset-avatar-option" data-avatar="🟣">🟣</div>
+                                        <div class="preset-avatar-option" data-avatar="🟢">🟢</div>
+                                        <div class="preset-avatar-option" data-avatar="🔵">🔵</div>
+                                        <div class="preset-avatar-option" data-avatar="🟡">🟡</div>
+                                        <div class="preset-avatar-option" data-avatar="🟠">🟠</div>
+                                        <div class="preset-avatar-option" data-avatar="🔴">🔴</div>
+                                        <div class="preset-avatar-option" data-avatar="⭐">⭐</div>
+                                        <div class="preset-avatar-option" data-avatar="🌈">🌈</div>
+                                    </div>
+                                </div>
+
+                                <!-- Category: Space -->
+                                <div class="avatar-category">
+                                    <h5>🌌 宇宙</h5>
+                                    <div class="avatar-options">
+                                        <div class="preset-avatar-option" data-avatar="🌌">🌌</div>
+                                        <div class="preset-avatar-option" data-avatar="🌙">🌙</div>
+                                        <div class="preset-avatar-option" data-avatar="🌎">🌎</div>
+                                        <div class="preset-avatar-option" data-avatar="🪐">🪐</div>
+                                        <div class="preset-avatar-option" data-avatar="☄️">☄️</div>
+                                        <div class="preset-avatar-option" data-avatar="🌞">🌞</div>
+                                        <div class="preset-avatar-option" data-avatar="⭐">⭐</div>
+                                        <div class="preset-avatar-option" data-avatar="💫">💫</div>
+                                        <div class="preset-avatar-option" data-avatar="🌠">🌠</div>
+                                        <div class="preset-avatar-option" data-avatar="🌃">🌃</div>
+                                        <div class="preset-avatar-option" data-avatar="🌆">🌆</div>
+                                        <div class="preset-avatar-option" data-avatar="🌇">🌇</div>
+                                    </div>
+                                </div>
+
+                                <!-- Category: Smart Faces -->
+                                <div class="avatar-category">
+                                    <h5>😊 智能表情</h5>
+                                    <div class="avatar-options">
+                                        <div class="preset-avatar-option" data-avatar="😊">😊</div>
+                                        <div class="preset-avatar-option" data-avatar="🤓">🤓</div>
+                                        <div class="preset-avatar-option" data-avatar="😎">😎</div>
+                                        <div class="preset-avatar-option" data-avatar="🧐">🧐</div>
+                                        <div class="preset-avatar-option" data-avatar="🤖">🤖</div>
+                                        <div class="preset-avatar-option" data-avatar="👽">👽</div>
+                                        <div class="preset-avatar-option" data-avatar="👻">👻</div>
+                                        <div class="preset-avatar-option" data-avatar="💀">💀</div>
+                                        <div class="preset-avatar-option" data-avatar="🎃">🎃</div>
+                                        <div class="preset-avatar-option" data-avatar="😈">😈</div>
+                                        <div class="preset-avatar-option" data-avatar="👹">👹</div>
+                                        <div class="preset-avatar-option" data-avatar="👺">👺</div>
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
