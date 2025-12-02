@@ -197,6 +197,11 @@ def upload_files_to_gcs(files, user_id=None, conversation_id=None, message_id=No
             timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
             unique_filename = f"{name}_{timestamp}{ext}" if name else f"upload_{timestamp}{ext}"
 
+            # Get file size before uploading (seek to end, get position, seek back)
+            file.seek(0, 2)  # Seek to end
+            file_size = file.tell()
+            file.seek(0)  # Seek back to beginning
+            
             # Upload to Google Cloud Storage
             gcs_url = upload_file_to_gcs(file, unique_filename)
 
@@ -211,6 +216,7 @@ def upload_files_to_gcs(files, user_id=None, conversation_id=None, message_id=No
                     file_path=gcs_url,
                     file_type=file_type,
                     content_type=file.content_type or 'application/octet-stream',
+                    file_size=file_size,
                     conversation_id=conversation_id,
                     message_id=message_id
                 )
@@ -246,6 +252,11 @@ def upload_image_to_gcs(image_file, filename=None, user_id=None, conversation_id
     timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
     unique_filename = f"{name}_{timestamp}{ext}" if name else f"upload_{timestamp}{ext}"
 
+    # Get file size before uploading
+    image_file.seek(0, 2)  # Seek to end
+    file_size = image_file.tell()
+    image_file.seek(0)  # Seek back to beginning
+    
     gcs_url = upload_file_to_gcs(image_file, unique_filename)
 
     # Save to database if user_id provided
@@ -260,6 +271,7 @@ def upload_image_to_gcs(image_file, filename=None, user_id=None, conversation_id
             file_path=gcs_url,
             file_type=file_type,
             content_type=image_file.content_type or 'application/octet-stream',
+            file_size=file_size,
             conversation_id=conversation_id,
             message_id=message_id
         )

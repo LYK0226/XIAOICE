@@ -162,7 +162,7 @@ class Conversation(db.Model):
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
         }
         if include_messages:
-            data['messages'] = [message.to_dict() for message in self.messages.order_by(Message.created_at.asc())]
+            data['messages'] = [message.to_dict() for message in self.messages.all()]
         return data
 
 
@@ -205,13 +205,14 @@ class FileUpload(db.Model):
     file_path = db.Column(db.Text, nullable=False)  # GCS URL or file path
     file_type = db.Column(db.String(50), nullable=False)  # File extension/type (e.g., 'pdf', 'jpg', 'docx')
     content_type = db.Column(db.String(100), nullable=False)  # MIME type
-    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id', ondelete='SET NULL'), nullable=True, index=True)
-    message_id = db.Column(db.Integer, db.ForeignKey('messages.id', ondelete='SET NULL'), nullable=True, index=True)
+    conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id', ondelete='CASCADE'), nullable=True, index=True)
+    file_size = db.Column(db.BigInteger, nullable=False, default=0)  # File size in bytes
     uploaded_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    message_id = db.Column(db.Integer, db.ForeignKey('messages.id', ondelete='CASCADE'), nullable=True, index=True)
 
     # Relationships
     user = db.relationship('User', backref=db.backref('file_uploads', lazy='dynamic', cascade='all, delete-orphan'))
-    conversation = db.relationship('Conversation', backref=db.backref('file_uploads', lazy='dynamic'))
+    conversation = db.relationship('Conversation', backref=db.backref('file_uploads', lazy='dynamic', cascade='all, delete-orphan'))
     message = db.relationship('Message', backref=db.backref('file_uploads', lazy='dynamic'))
 
     def __repr__(self):
@@ -225,6 +226,7 @@ class FileUpload(db.Model):
             'file_path': self.file_path,
             'file_type': self.file_type,
             'content_type': self.content_type,
+            'file_size': self.file_size,
             'conversation_id': self.conversation_id,
             'message_id': self.message_id,
             'uploaded_at': self.uploaded_at.isoformat() if self.uploaded_at else None
