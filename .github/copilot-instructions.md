@@ -9,7 +9,7 @@ XIAOICE is a multi-user Flask web application providing AI-powered chat conversa
 - **SQLAlchemy Models**: User management, conversations, messages, and file uploads in `app/models.py`
 - **JWT Authentication**: Token-based auth with refresh tokens via `app/auth.py`
 - **REST API**: Conversation and message management in `app/routes.py`
-- **AI Integration**: Google Gemini streaming responses in `app/vertex_ai.py`
+- **AI Integration**: Google Agent Development Kit streaming responses in `app/agent/`
 - **File Storage**: Google Cloud Storage uploads via `app/gcs_upload.py`
 
 ### Data Flow

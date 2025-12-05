@@ -508,6 +508,7 @@ async def generate_streaming_response_async(
         )
         
         # Run the agent with streaming using ADK
+        has_yielded = False
         async for event in runner.run_async(
             user_id=user_id,
             session_id=session_id,
@@ -515,12 +516,18 @@ async def generate_streaming_response_async(
         ):
             # Handle different event types from ADK
             if hasattr(event, 'content') and event.content:
-                if hasattr(event.content, 'parts'):
+                if hasattr(event.content, 'parts') and event.content.parts:
                     for part in event.content.parts:
                         if hasattr(part, 'text') and part.text:
+                            has_yielded = True
                             yield part.text
-            elif hasattr(event, 'text'):
-                yield event.text
+            elif hasattr(event, 'text') and getattr(event, 'text', None):
+                has_yielded = True
+                yield getattr(event, 'text')
+        
+        # Ensure we always yield something
+        if not has_yielded:
+            yield "I apologize, but I couldn't generate a response. Please try again."
                     
     except Exception as e:
         logger.error(f"Error generating streaming response: {e}")
@@ -639,8 +646,8 @@ def generate_streaming_response(
             asyncio.set_event_loop(loop)
         
         # Define an async function to collect and yield chunks
-        async def run_agent_async():
-            chunks = []
+        async def run_agent_async() -> List[str]:
+            chunks: List[str] = []
             async for event in runner.run_async(
                 user_id=user_id,
                 session_id=session_id,
@@ -648,19 +655,18 @@ def generate_streaming_response(
             ):
                 # Handle different event types from ADK
                 if hasattr(event, 'content') and event.content:
-                    if hasattr(event.content, 'parts'):
+                    if hasattr(event.content, 'parts') and event.content.parts:
                         for part in event.content.parts:
                             if hasattr(part, 'text') and part.text:
                                 chunks.append(part.text)
-                elif hasattr(event, 'text'):
-                    chunks.append(event.text)
+                elif hasattr(event, 'text') and getattr(event, 'text', None):
+                    chunks.append(getattr(event, 'text'))
             return chunks
         
         # Run the async function and yield results
+        chunks: Optional[List[str]] = None
         try:
             chunks = loop.run_until_complete(run_agent_async())
-            for chunk in chunks:
-                yield chunk
         except RuntimeError as e:
             # Fallback: If we can't use the event loop directly, 
             # use concurrent.futures for thread-safe execution
@@ -671,10 +677,16 @@ def generate_streaming_response(
                         lambda: asyncio.run(run_agent_async())
                     )
                     chunks = future.result()
-                    for chunk in chunks:
-                        yield chunk
             else:
                 raise
+        
+        # Yield collected chunks (ensure chunks is iterable)
+        if chunks:
+            for chunk in chunks:
+                yield chunk
+        else:
+            # No response received from the model
+            yield "I apologize, but I couldn't generate a response. Please try again."
                 
     except Exception as e:
         logger.error(f"Error generating streaming response: {e}")

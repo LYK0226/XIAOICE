@@ -3,7 +3,8 @@ WebSocket event handlers for real-time chat functionality.
 Uses Google ADK (Agent Development Kit) for AI responses.
 """
 from flask import request
-from flask_socketio import emit, join_room, leave_room, ConnectionRefusedError
+from flask_socketio import emit, join_room, leave_room
+from socketio.exceptions import ConnectionRefusedError
 from flask_jwt_extended import decode_token, verify_jwt_in_request
 from app import socketio
 from .models import db, User, Conversation, Message, UserProfile, UserApiKey
@@ -170,9 +171,9 @@ def handle_send_message(data):
         # Save user message to database
         user_message = Message(
             conversation_id=conversation_id,
-            role='user',
+            sender='user',
             content=message_text,
-            timestamp=datetime.utcnow()
+            created_at=datetime.utcnow()
         )
         db.session.add(user_message)
         db.session.commit()
@@ -181,9 +182,9 @@ def handle_send_message(data):
         room = f"conversation_{conversation_id}"
         emit('new_message', {
             'message_id': user_message.id,
-            'role': 'user',
+            'sender': 'user',
             'content': message_text,
-            'timestamp': user_message.timestamp.isoformat(),
+            'created_at': user_message.created_at.isoformat(),
             'conversation_id': conversation_id
         }, room=room)
         
@@ -191,11 +192,11 @@ def handle_send_message(data):
         history = []
         previous_messages = Message.query.filter_by(
             conversation_id=conversation_id
-        ).order_by(Message.timestamp.desc()).limit(10).all()
+        ).order_by(Message.created_at.desc()).limit(10).all()
         
         for msg in reversed(previous_messages[:-1]):  # Exclude the message we just added
             history.append({
-                'role': msg.role,
+                'sender': msg.sender,
                 'content': msg.content
             })
         
@@ -255,9 +256,9 @@ def handle_send_message(data):
             # Save AI response to database
             ai_message = Message(
                 conversation_id=conversation_id,
-                role='assistant',
+                sender='assistant',
                 content=ai_response_text,
-                timestamp=datetime.utcnow()
+                created_at=datetime.utcnow()
             )
             db.session.add(ai_message)
             db.session.commit()
@@ -265,9 +266,9 @@ def handle_send_message(data):
             # Notify clients that AI response is complete
             emit('ai_response_complete', {
                 'message_id': ai_message.id,
-                'role': 'assistant',
+                'sender': 'assistant',
                 'content': ai_response_text,
-                'timestamp': ai_message.timestamp.isoformat(),
+                'created_at': ai_message.created_at.isoformat(),
                 'conversation_id': conversation_id
             }, room=room)
             
@@ -278,9 +279,9 @@ def handle_send_message(data):
             # Save error message
             error_message = Message(
                 conversation_id=conversation_id,
-                role='assistant',
+                sender='assistant',
                 content=error_msg,
-                timestamp=datetime.utcnow()
+                created_at=datetime.utcnow()
             )
             db.session.add(error_message)
             db.session.commit()

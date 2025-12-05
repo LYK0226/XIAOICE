@@ -12,7 +12,7 @@ load_dotenv()
 from .models import db, User
 migrate = Migrate()
 jwt = JWTManager()
-socketio = SocketIO(cors_allowed_origins="*", async_mode='eventlet')
+socketio = SocketIO(cors_allowed_origins="*", async_mode='threading')
 
 def create_app():
     """Create and configure an instance of the Flask application."""
