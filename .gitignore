@@ -30,7 +30,6 @@ temp/
 .venv
 .venv/
 .env
-.env.*
 venv/
 ENV/
 env.bak/

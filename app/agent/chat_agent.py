@@ -27,12 +27,14 @@ logger = logging.getLogger(__name__)
 
 # System instruction for the chat agent
 CHAT_AGENT_INSTRUCTION = """You are XIAOICE, a friendly and helpful AI assistant. 
+
 You should:
 - Be conversational and engaging
 - Provide helpful, accurate, and thoughtful responses
+- Answer questions directly without deflecting
 - Be respectful and considerate
 - If you don't know something, admit it honestly
-- Support both English and Chinese conversations naturally
+- Support Chinese conversations naturally
 - When analyzing images or videos, describe what you see in detail
 
 Always maintain a warm and professional tone in your responses."""
@@ -349,7 +351,8 @@ def build_message_content(
     message: str,
     image_path: Optional[str] = None,
     image_mime_type: Optional[str] = None,
-    history: Optional[List[Dict[str, Any]]] = None
+    history: Optional[List[Dict[str, Any]]] = None,
+    username: Optional[str] = None
 ) -> str:
     """
     Build the message content string with optional history context.
@@ -362,11 +365,16 @@ def build_message_content(
         image_path: Optional path to an image in GCS
         image_mime_type: MIME type of the image
         history: Optional conversation history
+        username: Optional username for personalization
         
     Returns:
         Formatted message string with context
     """
     content_parts = []
+    
+    # Add user info for personalization
+    if username:
+        content_parts.append(f"[User's name is: {username}]")
     
     # Add conversation history as context if provided
     if history:
@@ -410,7 +418,8 @@ async def generate_streaming_response_async(
     api_key: Optional[str] = None,
     model_name: Optional[str] = None,
     user_id: str = "default",
-    conversation_id: Optional[int] = None
+    conversation_id: Optional[int] = None,
+    username: Optional[str] = None
 ) -> AsyncIterator[str]:
     """
     Generates a streaming response from the ADK agent asynchronously.
@@ -427,6 +436,7 @@ async def generate_streaming_response_async(
         model_name: The Gemini model to use
         user_id: User identifier for session management
         conversation_id: Database conversation ID for persistent sessions
+        username: User's display name for personalization
         
     Yields:
         Text chunks as they are generated
@@ -445,8 +455,8 @@ async def generate_streaming_response_async(
     # Build content parts for the message
     content_parts = []
     
-    # Build text content with history context
-    text_content = build_message_content(message, image_path, image_mime_type, history)
+    # Build text content with history context and username
+    text_content = build_message_content(message, image_path, image_mime_type, history, username)
     if text_content:
         content_parts.append(types.Part.from_text(text=text_content))
     
@@ -526,7 +536,8 @@ def generate_streaming_response(
     api_key: Optional[str] = None,
     model_name: Optional[str] = None,
     user_id: str = "default",
-    conversation_id: Optional[int] = None
+    conversation_id: Optional[int] = None,
+    username: Optional[str] = None
 ) -> Generator[str, None, None]:
     """
     Synchronous wrapper for streaming response generation using ADK.
@@ -543,6 +554,7 @@ def generate_streaming_response(
         model_name: The Gemini model to use
         user_id: User identifier for session management
         conversation_id: Database conversation ID for persistent sessions
+        username: User's display name for personalization
         
     Yields:
         Text chunks as they are generated
@@ -561,8 +573,8 @@ def generate_streaming_response(
     # Build content parts for the message
     content_parts = []
     
-    # Build text content with history context
-    text_content = build_message_content(message, None, None, history)
+    # Build text content with history context and username
+    text_content = build_message_content(message, None, None, history, username)
     if text_content:
         content_parts.append(types.Part.from_text(text=text_content))
     elif message:

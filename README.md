@@ -1,26 +1,21 @@
 # XIAOICE 智能聊天助手 🤖
 
 ### ⚠️ **重要**：請勿將 ENCRYPTION_KEY 提交到 Git 倉庫！
+ 
+### Setting up your .env file (step-by-step) ✅
 
-### .env
 ```bash
-# Environment variables for Flask and Google AI Studio
-# Flask
-SECRET_KEY="your_very_secret_key_here"
-FLASK_APP="run.py"
-FLASK_ENV="development"
+# Copy .env.example to .env
+cp .env.example .env
 
-# Database
-DATABASE_URL=postgresql://xiaoice_user:xiaoice_password@localhost:5432/xiaoice
-CREATE_DB_ON_STARTUP=true
+# Generate secure secret values (choose one of the generators below):
+# Secure Flask / JWT secret (recommended for both):
+python -c "import secrets; print(secrets.token_urlsafe(48))"
 
-# Encryption key for API keys (generate a secure random key)
-# DO NOT COMMIT: Replace "your_32_byte_encryption_key_here" with your actual Fernet key
-ENCRYPTION_KEY="your_32_byte_encryption_key_here"
-
-GCS_BUCKET_NAME="your_gcs_bucket_name_here"
-GCS_CREDENTIALS_PATH="your_gcs_credentials_path_here"
+# `ENCRYPTION_KEY` 
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
+
 ### 安裝依賴並啟動應用
 
 ```bash

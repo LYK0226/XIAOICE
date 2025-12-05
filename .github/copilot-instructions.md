@@ -2,7 +2,7 @@
 
 ## Architecture Overview
 
-XIAOICE is a multi-user Flask web application providing AI-powered chat conversations with Google Gemini integration. Key architectural patterns:
+XIAOICE is a multi-user Flask web application providing AI-powered chat conversations with Google Gemini integration (part of Google Generative AI / Vertex AI). Key architectural patterns:
 
 ### Core Components
 - **Flask App Factory**: `app/__init__.py` creates the application instance with blueprints
@@ -80,9 +80,9 @@ gunicorn -w 4 -b 0.0.0.0:8080 'app:create_app()'
 - Use `gcs_upload.py` utilities for upload/download/delete operations
 
 ### AI Model Selection
-- Users select AI model via `UserProfile.ai_model` (gemini-2.5-flash, gemini-2.5-pro)
-- Model passed to `vertex_ai.generate_streaming_response()`
-- Default fallback in config if not set
+- Users select the AI model via `UserProfile.ai_model` (e.g., `gemini-2.5-flash`, `gemini-2.5-pro`).
+- The model is passed to `vertex_ai.generate_streaming_response()`.
+- A default fallback model is configured in `config.py` if the user hasn't set one.
 
 ### Conversation Management
 - Conversations pinned via `is_pinned` boolean for quick access
@@ -162,6 +162,81 @@ ENCRYPTION_KEY="your_32_byte_encryption_key_here"
 - Authentication tests in `test_auth.py`
 - Database inspection via `view_database.py`
 - Manual testing through web interface
+
+### Quick start — Local setup and run (recommended)
+Follow these steps to get a local development environment running quickly:
+
+1. Create and activate a virtual environment, install dependencies, and set up `.env`:
+
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env  # or create your own .env with required vars
+```
+
+2. Initialize and migrate the local database (skip if using a dev db):
+
+```bash
+flask db init  # run only once per project
+flask db migrate -m "init"
+flask db upgrade
+```
+
+3. Start the development server:
+
+```bash
+python run.py
+```
+
+4. For faster development, set `CREATE_DB_ON_STARTUP=true` in `.env`.
+
+### Running Tests
+Use pytest to run all tests or a subset for a specific area:
+
+```bash
+pytest -q
+# Or run specific test files
+pytest -q test/test_api.py test/test_auth.py
+```
+
+If tests rely on environment variables, ensure the `.env` file is configured or pass variables inline.
+
+### CI, Linting & Formatting
+We recommend adding or using an existing CI pipeline to run tests and formatting/lint checks. Example local commands:
+
+```bash
+# Lint/format with flake8/black
+black --check . || true
+flake8 || true
+```
+
+Consider adding a `pre-commit` config to handle formatting on commit and ensure consistent style.
+
+### Docker & Production Hints
+For production deployments, run the app behind a WSGI server such as Gunicorn and an optional reverse proxy like Nginx. Example:
+
+```bash
+gunicorn -w 4 -b 0.0.0.0:8080 'app:create_app()'
+```
+
+For containerized deployments, add a `Dockerfile` and `docker-compose.yml` to orchestrate the app and a database such as PostgreSQL.
+
+---
+
+### Secrets & Encryption (clarified)
+API keys and other secrets must be encrypted at rest. To generate a Fernet encryption key:
+
+```bash
+python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+```
+
+Store `ENCRYPTION_KEY` in `.env` or a secure secrets manager and don't commit `.env` to source control.
+
+### Development conveniences
+- Use `.env` and `python-dotenv` locally to load environment variables in development.
+- Add `CREATE_DB_ON_STARTUP=true` to `.env` for a faster setup when developing.
+- Run `python -m pip install -U pip setuptools wheel` before installing requirements to avoid dependency issues.
 
 ## Deployment Notes
 

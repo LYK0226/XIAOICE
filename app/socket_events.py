@@ -221,13 +221,19 @@ def handle_send_message(data):
         ai_response_text = ""
         
         try:
+            # Get user's name for personalization
+            user = User.query.get(user_id)
+            username = user.username if user else None
+            
             # Stream AI response using ADK agent
             for chunk in chat_agent.generate_streaming_response(
                 message_text,
                 history=history,
                 api_key=api_key,
                 model_name=ai_model,
-                user_id=str(user_id)
+                user_id=str(user_id),
+                conversation_id=conversation_id,
+                username=username
             ):
                 chunk = chunk.strip()
                 
