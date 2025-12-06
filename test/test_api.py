@@ -15,6 +15,9 @@ from dotenv import load_dotenv
 # 載入環境變數
 load_dotenv()
 
+# Add the parent directory to the Python path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+
 print("🔍 檢查 Google AI Studio API 設定...\n")
 
 # 檢查 ENCRYPTION_KEY

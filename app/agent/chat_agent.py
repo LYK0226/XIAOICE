@@ -1,10 +1,16 @@
 """
 ADK Agent module for XIAOICE chatbot.
-This module provides a chat agent using Google Agent Development Kit (ADK)
-to replace direct genai SDK usage.
+This module provides a multi-agent chat system using Google Agent Development Kit (ADK).
+
+Multi-Agent Architecture:
+- Coordinator Agent: Routes user requests to specialized agents based on content type
+- Text Agent: Handles plain text conversations, Q&A, and general interactions
+- Media Agent: Analyzes images and videos, provides detailed visual descriptions
 
 Key Features:
 - Full ADK integration for both text and multimodal content
+- Intelligent task distribution via coordinator agent
+- Specialized agents for optimal performance on specific tasks
 - Persistent session management tied to database conversation IDs
 - Per-user agent/runner isolation with API key and model preferences
 """
@@ -25,8 +31,25 @@ from app import gcs_upload
 # Configure logging
 logger = logging.getLogger(__name__)
 
-# System instruction for the chat agent
-CHAT_AGENT_INSTRUCTION = """You are XIAOICE, a friendly and helpful AI assistant. 
+# System instructions for different agents
+
+# Coordinator agent - distributes tasks to specialized agents
+COORDINATOR_AGENT_INSTRUCTION = """You are XIAOICE, a friendly AI coordinator assistant. Your role is to analyze user requests and delegate tasks to specialized agents.
+
+Your sub-agents are:
+- text_agent: Handles general text-based conversations, questions, and responses (no images/videos)
+- media_agent: Analyzes images and videos, provides detailed descriptions and answers questions about visual content
+
+Decision Guidelines:
+- If the user message contains images or videos, ALWAYS delegate to media_agent
+- For plain text questions, general conversation, or non-visual tasks, delegate to text_agent
+- Be efficient - analyze the request and quickly transfer to the appropriate agent
+- Do not answer questions directly; your job is to route to the right specialist
+
+Always maintain a warm and professional tone when interacting."""
+
+# Text-only agent instruction
+TEXT_AGENT_INSTRUCTION = """You are XIAOICE's text specialist, a friendly and helpful AI assistant.
 
 You should:
 - Be conversational and engaging
@@ -35,9 +58,22 @@ You should:
 - Be respectful and considerate
 - If you don't know something, admit it honestly
 - Support Chinese conversations naturally
-- When analyzing images or videos, describe what you see in detail
+- Handle general knowledge questions, conversations, and text-based tasks
 
 Always maintain a warm and professional tone in your responses."""
+
+# Media analysis agent instruction
+MEDIA_AGENT_INSTRUCTION = """You are XIAOICE's media specialist, an expert at analyzing images and videos.
+
+You should:
+- Provide detailed, accurate descriptions of visual content
+- Answer specific questions about what you see in images/videos
+- Be descriptive and thorough in your analysis
+- Point out important details, objects, people, scenes, actions, and context
+- Support Chinese conversations naturally
+- If asked about something not visible in the media, clearly state that
+
+Always provide complete and informative analysis directly to the user."""
 
 # Supported MIME types for file uploads
 SUPPORTED_MIME_TYPES = [
@@ -74,48 +110,75 @@ class ChatAgentManager:
     def _create_agent(self, api_key: str, model_name: str = "gemini-2.5-flash") -> Agent:
         """
         Create a new ADK Agent with the specified configuration.
+        This creates a multi-agent system with:
+        - A coordinator agent that routes tasks
+        - A text-only agent for plain text conversations
+        - A media agent for image/video analysis
         
         Args:
             api_key: Google AI API key
             model_name: The Gemini model to use
             
         Returns:
-            Configured Agent instance
+            Configured Agent instance (coordinator with sub-agents)
         """
         # Store API key for later use (avoid setting in os.environ for thread safety)
         os.environ['GOOGLE_API_KEY'] = api_key
         
-        agent = Agent(
-            name="xiaoice_chat_agent",
-            model=model_name,
-            description="Your name is xiaoice, a friendly AI chat assistant that can understand and respond to user messages, analyze images and videos.",
-            instruction=CHAT_AGENT_INSTRUCTION,
-            generate_content_config=types.GenerateContentConfig(
-                temperature=1.0,
-                top_p=0.95,
-                max_output_tokens=8192,
-                safety_settings=[
-                    types.SafetySetting(
-                        category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                        threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                    ),
-                    types.SafetySetting(
-                        category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                        threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                    ),
-                    types.SafetySetting(
-                        category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                        threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                    ),
-                    types.SafetySetting(
-                        category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
-                        threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                    ),
-                ],
-            ),
+        # Configure generation settings
+        generation_config = types.GenerateContentConfig(
+            temperature=1.0,
+            top_p=0.95,
+            max_output_tokens=8192,
+            safety_settings=[
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                    threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                    threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                    threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                ),
+                types.SafetySetting(
+                    category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                    threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                ),
+            ],
         )
         
-        return agent
+        # Create the text-only agent (handles plain text conversations)
+        text_agent = Agent(
+            name="text_agent",
+            model=model_name,
+            description="Specialist for handling text-based conversations and questions without images or videos",
+            instruction=TEXT_AGENT_INSTRUCTION,
+            generate_content_config=generation_config,
+        )
+        
+        # Create the media analysis agent (handles images and videos)
+        media_agent = Agent(
+            name="media_agent",
+            model=model_name,
+            description="Specialist for analyzing images and videos, providing detailed visual descriptions and answering questions about visual content",
+            instruction=MEDIA_AGENT_INSTRUCTION,
+            generate_content_config=generation_config,
+        )
+        
+        # Create the coordinator agent (routes to text or media agent)
+        coordinator_agent = Agent(
+            name="xiaoice_coordinator",
+            model=model_name,
+            description="XIAOICE coordinator that routes user requests to specialized agents based on content type",
+            instruction=COORDINATOR_AGENT_INSTRUCTION,
+            generate_content_config=generation_config,
+            sub_agents=[text_agent, media_agent],  # Register sub-agents
+        )
+        
+        return coordinator_agent
     
     def get_or_create_agent(self, user_id: str, api_key: str, model_name: str = "gemini-2.5-flash") -> Agent:
         """
@@ -357,8 +420,8 @@ def build_message_content(
     """
     Build the message content string with optional history context.
     
-    For ADK, we pass text content directly. Image handling is done separately
-    through the Parts API when needed.
+    This function creates context for the multi-agent system, helping the
+    coordinator understand what type of request it is handling.
     
     Args:
         message: The user's message
@@ -403,9 +466,13 @@ def build_message_content(
     if message:
         content_parts.append(message)
     
-    # Add image reference note if present
-    if image_path:
-        content_parts.append(f"\n[Image attached: {image_mime_type or 'unknown type'}]")
+    # Add media information to help coordinator route correctly
+    # Note: The actual image/video will be passed as a separate Part in the content
+    if image_path and image_mime_type:
+        if image_mime_type.startswith('image/'):
+            content_parts.append("\n[Note: This request includes an image for analysis]")
+        elif image_mime_type.startswith('video/'):
+            content_parts.append("\n[Note: This request includes a video for analysis]")
     
     return "\n".join(content_parts) if content_parts else ""
 
@@ -422,24 +489,29 @@ async def generate_streaming_response_async(
     username: Optional[str] = None
 ) -> AsyncIterator[str]:
     """
-    Generates a streaming response from the ADK agent asynchronously.
+    Generates a streaming response from the multi-agent ADK system asynchronously.
     
-    This function fully uses ADK for both text and multimodal content,
-    with persistent sessions tied to database conversation IDs.
+    This function uses a multi-agent architecture:
+    - Coordinator agent analyzes the request and routes to appropriate specialist
+    - Text agent handles plain text conversations
+    - Media agent handles image/video analysis
+    
+    The coordinator automatically delegates based on content type and provides
+    the specialized agent's response directly to the user.
     
     Args:
         message: The user's message
-        image_path: Optional GCS path to an image
-        image_mime_type: MIME type of the image
+        image_path: Optional GCS path to an image or video
+        image_mime_type: MIME type of the media file
         history: Optional conversation history
         api_key: Google AI API key
-        model_name: The Gemini model to use
+        model_name: The Gemini model to use for all agents
         user_id: User identifier for session management
         conversation_id: Database conversation ID for persistent sessions
         username: User's display name for personalization
         
     Yields:
-        Text chunks as they are generated
+        Text chunks as they are generated by the appropriate specialized agent
     """
     # Validate and set defaults for API key and model
     if api_key is None:
@@ -547,24 +619,27 @@ def generate_streaming_response(
     username: Optional[str] = None
 ) -> Generator[str, None, None]:
     """
-    Synchronous wrapper for streaming response generation using ADK.
+    Synchronous wrapper for multi-agent streaming response generation.
     
-    This function wraps the async generator to provide a synchronous interface
-    for Flask routes while maintaining full ADK integration.
+    This function wraps the async multi-agent generator to provide a synchronous 
+    interface for Flask routes. The multi-agent system includes:
+    - Coordinator agent that routes requests
+    - Text agent for plain text conversations
+    - Media agent for image/video analysis
     
     Args:
         message: The user's message
-        image_path: Optional GCS path to an image
-        image_mime_type: MIME type of the image
+        image_path: Optional GCS path to an image or video
+        image_mime_type: MIME type of the media file
         history: Optional conversation history
         api_key: Google AI API key
-        model_name: The Gemini model to use
+        model_name: The Gemini model to use for all agents
         user_id: User identifier for session management
         conversation_id: Database conversation ID for persistent sessions
         username: User's display name for personalization
         
     Yields:
-        Text chunks as they are generated
+        Text chunks as they are generated by the appropriate specialized agent
     """
     # Validate and set defaults
     if api_key is None:
