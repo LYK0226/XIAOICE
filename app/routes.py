@@ -1,11 +1,11 @@
 from datetime import datetime
-from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, Response, send_file
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, Response, send_file, send_from_directory
 from flask_jwt_extended import jwt_required, decode_token
 import os
 import json
 from . import agent
 from werkzeug.utils import secure_filename
-from . import gcs_upload
+from . import gcp_bucket
 import io
 
 bp = Blueprint('main', __name__)
@@ -36,6 +36,29 @@ def login_page():
 def forgot_password_page():
     """Render the forgot password page."""
     return render_template('forget_password.html')
+
+@bp.route('/pose_detection')
+def pose_detection_page():
+    """Render the pose detection page."""
+    token = request.cookies.get('access_token')
+
+    if not token:
+        return redirect(url_for('main.login_page'))
+
+    try:
+        decode_token(token)
+    except Exception:
+        response = redirect(url_for('main.login_page'))
+        response.delete_cookie('access_token')
+        return response
+
+    return render_template('pose_detection.html')
+
+@bp.route('/pose_detection/js/<path:filename>')
+def serve_pose_detection_js(filename):
+    """Serve JavaScript files from the pose_detection module."""
+    pose_detection_dir = os.path.join(os.path.dirname(__file__), 'pose_detection')
+    return send_from_directory(pose_detection_dir, filename)
 
 @bp.route('/chat/stream', methods=['POST'])
 @jwt_required()
@@ -75,7 +98,7 @@ def chat_stream():
                 return jsonify({'error': 'Invalid file name'}), 400
 
             # Upload to Google Cloud Storage
-            image_path = gcs_upload.upload_image_to_gcs(image_file, filename, user_id=user_id)
+            image_path = gcp_bucket.upload_image_to_gcs(image_file, filename, user_id=user_id)
             image_mime_type = image_file.mimetype
 
         # Parse optional conversation history sent from client
@@ -98,6 +121,9 @@ def chat_stream():
         if user_profile and user_profile.ai_model:
             ai_model = user_profile.ai_model
 
+        # Get conversation_id if provided (for session persistence)
+        conversation_id = request.form.get('conversation_id', type=int)
+
         def generate():
             try:
                 for chunk in agent.generate_streaming_response(
@@ -106,10 +132,15 @@ def chat_stream():
                     image_mime_type=image_mime_type,
                     history=history,
                     api_key=api_key,
-                    model_name=ai_model
+                    model_name=ai_model,
+                    user_id=str(user_id),
+                    conversation_id=conversation_id
                 ):
                     # Clean up common AI prefixes that might appear in responses
                     chunk = chunk.strip()
+                    if not chunk:
+                        continue
+                    
                     # Remove common prefixes that AI models might add
                     prefixes_to_remove = ['Assistant:', 'AI:', 'Bot:', 'System:', 'Human:']
                     for prefix in prefixes_to_remove:
@@ -117,9 +148,12 @@ def chat_stream():
                             chunk = chunk[len(prefix):].strip()
                             break
                     
-                    yield f"data: {chunk}\n\n"
+                    if chunk:
+                        yield f"data: {chunk}\n\n"
             except Exception as e:
-                print(f"Error in streaming endpoint: {e}")
+                current_app.logger.error(f"Error in streaming endpoint: {e}")
+                import traceback
+                traceback.print_exc()
                 yield f"data: Error: {str(e)}\n\n"
 
         return Response(generate(), mimetype='text/event-stream')
@@ -495,7 +529,7 @@ def delete_conversation(conversation_id):
         # Delete associated files from GCS before deleting the conversation
         file_uploads = FileUpload.query.filter_by(conversation_id=conversation_id).all()
         for file_upload in file_uploads:
-            gcs_upload.delete_file_from_gcs(file_upload.file_path)
+            gcp_bucket.delete_file_from_gcs(file_upload.file_path)
 
         db.session.delete(conversation)
         db.session.commit()
@@ -522,7 +556,7 @@ def create_message():
         # Get conversation_id from request data for file association
         temp_data = request.form.to_dict() if not request.is_json else (request.get_json(silent=True) or {})
         conv_id = temp_data.get('conversation_id')
-        uploaded_files = gcs_upload.upload_files_to_gcs(files, user_id=user_id, conversation_id=conv_id)
+        uploaded_files = gcp_bucket.upload_files_to_gcs(files, user_id=user_id, conversation_id=conv_id)
     
     # Get data from JSON or form
     if request.is_json:
@@ -624,7 +658,7 @@ def serve_file():
 
     try:
         # Download file from GCS and get content type
-        file_data, content_type = gcs_upload.get_file_data_and_content_type(gcs_url)
+        file_data, content_type = gcp_bucket.get_file_data_and_content_type(gcs_url)
         
         # Create a file-like object
         file_obj = io.BytesIO(file_data)
@@ -700,7 +734,7 @@ def upload_file_websocket():
             return jsonify({'error': 'No files provided'}), 400
         
         # Upload files to GCS
-        uploaded_urls = gcs_upload.upload_files_to_gcs(
+        uploaded_urls = gcp_bucket.upload_files_to_gcs(
             files, 
             user_id=user_id, 
             conversation_id=conversation_id

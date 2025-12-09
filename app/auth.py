@@ -177,12 +177,12 @@ def update_avatar():
         # If 'avatar' not in request.files, treat as a request to clear avatar
         if 'avatar' not in request.files:
             # clear avatar
-            from . import gcs_upload
+            from . import gcp_bucket
             existing = user.avatar
             # If avatar is a GCS URL, delete
             if existing and isinstance(existing, str) and existing.startswith('https://storage.googleapis.com/'):
                 try:
-                    gcs_upload.delete_file_from_gcs(existing)
+                    gcp_bucket.delete_file_from_gcs(existing)
                 except Exception:
                     current_app.logger.warning('Failed to delete existing avatar from GCS')
             else:
@@ -218,11 +218,11 @@ def update_avatar():
         filename = secure_filename(file.filename)
 
         # If user already had an avatar stored in GCS, try to delete it first
-        from . import gcs_upload
+        from . import gcp_bucket
         existing = user.avatar
         try:
             if existing and isinstance(existing, str) and existing.startswith('https://storage.googleapis.com/'):
-                gcs_upload.delete_file_from_gcs(existing)
+                gcp_bucket.delete_file_from_gcs(existing)
             else:
                 # if existing was stored locally, remove it
                 upload_folder = current_app.config.get('UPLOAD_FOLDER')
@@ -240,7 +240,7 @@ def update_avatar():
         name, ext = os.path.splitext(filename)
         timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
         base_filename = f"{name}_{timestamp}{ext}"
-        gcs_url = gcs_upload.upload_image_to_gcs(file, base_filename, user_id=user_id)
+        gcs_url = gcp_bucket.upload_image_to_gcs(file, base_filename, user_id=user_id)
         user.avatar = gcs_url
         user.updated_at = datetime.utcnow()
         

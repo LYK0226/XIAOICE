@@ -10,12 +10,13 @@
     <link rel="stylesheet" href="../static/css/sidebar.css">
     <!-- Settings modal styles -->
     <link rel="stylesheet" href="../static/css/settings.css">
+
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
     <div id="sidebar">
         <div class="sidebar-header">
-            <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
+            <button type="button" class="sidebar-toggle" id="sidebarToggle" title="Toggle sidebar"><i class="fas fa-bars"></i></button>
             <i class="fas fa-comment"></i>
             <h2>聊天盒子</h2>
         </div>
@@ -28,9 +29,9 @@
         </div>
         
         <div class="sidebar-footer">
-            <button class="sidebar-btn" id="newChat"><i class="fas fa-plus"></i> 新對話</button>
-            <button class="sidebar-btn" id="settings"><i class="fas fa-cog"></i> 設定</button>
-            <button class="sidebar-btn" id="logout"><i class="fas fa-sign-out-alt"></i> 登出</button>
+            <button type="button" class="sidebar-btn" id="newChat"><i class="fas fa-plus"></i> 新對話</button>
+            <button type="button" class="sidebar-btn" id="settings"><i class="fas fa-cog"></i> 設定</button>
+            <button type="button" class="sidebar-btn" id="logout"><i class="fas fa-sign-out-alt"></i> 登出</button>
         </div>
     </div>
     
@@ -38,14 +39,14 @@
         <div id="chat-container">
             <div id="chat-header">
                 <div class="chat-title">
-                    <button class="sidebar-show-btn" id="sidebarShowBtn" style="display: none;"><i class="fas fa-bars"></i></button>
+                    <button type="button" class="sidebar-show-btn" id="sidebarShowBtn" style="display: none;" title="Show sidebar"><i class="fas fa-bars"></i></button>
                     <i class="fas fa-comment"></i>
                     <span>聊天盒子</span>
                 </div>
                 <div class="chat-actions">
-                    <button class="icon-btn"><i class="fas fa-search"></i></button>
-                    <button class="icon-btn"><i class="fas fa-user-circle"></i></button>
-                    <button class="icon-btn"><i class="fas fa-ellipsis-h"></i></button>
+                    <button type="button" class="icon-btn" title="Search"><i class="fas fa-search"></i></button>
+                    <button type="button" class="icon-btn" title="User profile"><i class="fas fa-user-circle"></i></button>
+                    <button type="button" class="icon-btn" title="More options"><i class="fas fa-ellipsis-h"></i></button>
                 </div>
             </div>
             
@@ -62,15 +63,16 @@
             
             <div id="input-container">
                 <div class="input-toolbar">
-                    <button class="toolbar-btn" id="fileUploadBtn" title="附加文件/圖像"><i class="fas fa-paperclip"></i></button>
-                    <button class="toolbar-btn" id="emojiBtn" title="表情符號"><i class="fas fa-smile"></i></button>
-                    <button class="toolbar-btn" id="voiceInputBtn" title="語音輸入"><i class="fas fa-microphone"></i></button>
-                    <button class="toolbar-btn" id="webcamBtn" title="攝影機"><i class="fas fa-camera"></i></button>
+                    <button type="button" class="toolbar-btn" id="fileUploadBtn" title="附加文件/圖像"><i class="fas fa-paperclip"></i></button>
+                    <button type="button" class="toolbar-btn" id="emojiBtn" title="表情符號"><i class="fas fa-smile"></i></button>
+                    <button type="button" class="toolbar-btn" id="voiceInputBtn" title="語音輸入"><i class="fas fa-microphone"></i></button>
+                    <button type="button" class="toolbar-btn" id="webcamBtn" title="攝影機"><i class="fas fa-camera"></i></button>
                 </div>
                 <div class="input-wrapper">
                     <input type="text" id="messageInput" placeholder="在這裡輸入您的問題...">
                     <input type="file" id="fileInput" accept="image/*,video/*,application/pdf" multiple style="display: none;">
-                    <button id="sendButton"><i class="fas fa-paper-plane"></i></button>
+                    <button type="button" id="sendButton" title="Send message"><i class="fas fa-paper-plane"></i></button>
+                    <button type="button" id="poseDetectionPageBtn" class="pose-page-btn" title="姿態分析" onclick="window.location.href='/pose_detection'"><i class="fas fa-running"></i></button>
                 </div>
                 
                 <!-- File Preview Container -->
@@ -96,16 +98,16 @@
                     <div class="webcam-content">
                         <div class="webcam-header">
                             <h3>拍照</h3>
-                            <button class="close-webcam" id="closeWebcam">&times;</button>
+                            <button type="button" class="close-webcam" id="closeWebcam" title="Close webcam">&times;</button>
                         </div>
                         <div class="webcam-body">
                             <video id="webcamVideo" autoplay playsinline></video>
                             <canvas id="webcamCanvas" style="display: none;"></canvas>
                         </div>
                         <div class="webcam-footer">
-                            <button class="webcam-action-btn" id="captureBtn"><i class="fas fa-camera"></i> 拍照</button>
-                            <button class="webcam-action-btn" id="retakeBtn" style="display: none;"><i class="fas fa-redo"></i> 重拍</button>
-                            <button class="webcam-action-btn primary" id="usePhotoBtn" style="display: none;"><i class="fas fa-check"></i> 使用照片</button>
+                            <button type="button" class="webcam-action-btn" id="captureBtn"><i class="fas fa-camera"></i> 拍照</button>
+                            <button type="button" class="webcam-action-btn" id="retakeBtn" style="display: none;"><i class="fas fa-redo"></i> 重拍</button>
+                            <button type="button" class="webcam-action-btn primary" id="usePhotoBtn" style="display: none;"><i class="fas fa-check"></i> 使用照片</button>
                         </div>
                     </div>
                 </div>
@@ -116,7 +118,7 @@
         <div id="preview-panel" class="preview-panel" style="display: none;">
             <div class="preview-header">
                 <h3 id="preview-title">Document Preview</h3>
-                <button class="close-preview" id="closePreview">&times;</button>
+                <button type="button" class="close-preview" id="closePreview" title="Close preview">&times;</button>
             </div>
             <div class="preview-content" id="preview-content">
                 <!-- Preview content will be inserted here -->
@@ -124,6 +126,7 @@
         </div>
     </div>
     
+
     <!-- Settings Modal (included from separate file) -->
     {% include 'setting.html' %}
     
@@ -152,5 +155,6 @@
     <script src="../static/js/chatbox.js"></script>
     <!-- 最後載入設定功能 -->
     <script src="../static/js/settings.js"></script>
+
 </body>
 </html>

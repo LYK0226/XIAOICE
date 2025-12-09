@@ -25,7 +25,7 @@ from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
-from app import gcs_upload
+from app import gcp_bucket
 
 
 # Configure logging
@@ -97,8 +97,8 @@ class ChatAgentManager:
     - Agent/Runner instances are cached per user/model combination
     """
     
-    # App name constant for ADK Runner
-    APP_NAME = "xiaoice_chat"
+    # App name constant for ADK Runner (must match agent package structure)
+    APP_NAME = "agents"
     
     def __init__(self):
         self._agents: Dict[str, Agent] = {}
@@ -256,15 +256,22 @@ class ChatAgentManager:
         session_key = f"{self.APP_NAME}_{user_id}_{session_id}"
         
         if session_key not in self._created_sessions:
-            # Create the session synchronously
-            self._session_service.create_session_sync(
-                app_name=self.APP_NAME,
-                user_id=user_id,
-                session_id=session_id,
-                state={}
-            )
-            self._created_sessions.add(session_key)
-            logger.info(f"Created new session: {session_id} for user: {user_id}")
+            # Create the session using async method in sync context
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(
+                    self._session_service.create_session(
+                        app_name=self.APP_NAME,
+                        user_id=user_id,
+                        session_id=session_id,
+                        state={}
+                    )
+                )
+                self._created_sessions.add(session_key)
+                logger.info(f"Created new session: {session_id} for user: {user_id}")
+            finally:
+                loop.close()
     
     async def ensure_session_exists_async(self, user_id: str, session_id: str) -> None:
         """
@@ -325,14 +332,21 @@ class ChatAgentManager:
         # Remove from tracked sessions
         self._created_sessions.discard(session_key)
         
-        # Try to delete from session service
+        # Try to delete from session service using async method
         try:
-            self._session_service.delete_session_sync(
-                app_name=self.APP_NAME,
-                user_id=user_id,
-                session_id=session_id
-            )
-            logger.info(f"Deleted session: {session_id} for user: {user_id}")
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            try:
+                loop.run_until_complete(
+                    self._session_service.delete_session(
+                        app_name=self.APP_NAME,
+                        user_id=user_id,
+                        session_id=session_id
+                    )
+                )
+                logger.info(f"Deleted session: {session_id} for user: {user_id}")
+            finally:
+                loop.close()
         except Exception as e:
             logger.warning(f"Failed to delete session {session_id}: {e}")
 
@@ -374,7 +388,7 @@ def _download_file_from_gcs(image_path: str) -> Optional[tuple]:
         Tuple of (file_data, file_size) or None on error
     """
     try:
-        file_data = gcs_upload.download_file_from_gcs(image_path)
+        file_data = gcp_bucket.download_file_from_gcs(image_path)
         logger.info(f"Downloaded file: size={len(file_data)} bytes")
         return file_data, len(file_data)
     except Exception as e:
@@ -708,60 +722,82 @@ def generate_streaming_response(
             parts=content_parts
         )
         
-        # For synchronous usage, we need to run the async generator in an event loop
-        # Create or get the event loop
-        try:
-            loop = asyncio.get_event_loop()
-            if loop.is_running():
-                # If loop is already running (e.g., in some Flask contexts),
-                # we need to use a different approach
-                raise RuntimeError("Event loop is already running")
-        except RuntimeError:
-            loop = asyncio.new_event_loop()
-            asyncio.set_event_loop(loop)
+        # For synchronous usage with streaming, we need to use a thread-safe approach
+        # that yields chunks as they arrive rather than collecting them all first
+        import queue
+        import threading
         
-        # Define an async function to collect and yield chunks
-        async def run_agent_async() -> List[str]:
-            chunks: List[str] = []
-            async for event in runner.run_async(
-                user_id=user_id,
-                session_id=session_id,
-                new_message=user_content
-            ):
-                # Handle different event types from ADK
-                if hasattr(event, 'content') and event.content:
-                    if hasattr(event.content, 'parts') and event.content.parts:
-                        for part in event.content.parts:
-                            if hasattr(part, 'text') and part.text:
-                                chunks.append(part.text)
-                elif hasattr(event, 'text') and getattr(event, 'text', None):
-                    chunks.append(getattr(event, 'text'))
-            return chunks
+        # Create a queue to pass chunks from async to sync context
+        chunk_queue = queue.Queue()
+        exception_holder = [None]  # Use list to allow modification in nested function
         
-        # Run the async function and yield results
-        chunks: Optional[List[str]] = None
-        try:
-            chunks = loop.run_until_complete(run_agent_async())
-        except RuntimeError as e:
-            # Fallback: If we can't use the event loop directly, 
-            # use concurrent.futures for thread-safe execution
-            if "cannot be called from a running event loop" in str(e):
-                import concurrent.futures
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    future = executor.submit(
-                        lambda: asyncio.run(run_agent_async())
-                    )
-                    chunks = future.result()
-            else:
-                raise
+        def run_in_thread():
+            """Run the async generator in a separate thread with its own event loop."""
+            try:
+                # Create a new event loop for this thread
+                thread_loop = asyncio.new_event_loop()
+                asyncio.set_event_loop(thread_loop)
+                
+                async def stream_chunks():
+                    """Async function to stream chunks into the queue."""
+                    try:
+                        has_content = False
+                        async for event in runner.run_async(
+                            user_id=user_id,
+                            session_id=session_id,
+                            new_message=user_content
+                        ):
+                            # Handle different event types from ADK
+                            if hasattr(event, 'content') and event.content:
+                                if hasattr(event.content, 'parts') and event.content.parts:
+                                    for part in event.content.parts:
+                                        if hasattr(part, 'text') and part.text:
+                                            chunk_queue.put(part.text)
+                                            has_content = True
+                            elif hasattr(event, 'text') and getattr(event, 'text', None):
+                                chunk_queue.put(getattr(event, 'text'))
+                                has_content = True
+                        
+                        if not has_content:
+                            chunk_queue.put("I apologize, but I couldn't generate a response. Please try again.")
+                    except Exception as e:
+                        exception_holder[0] = e
+                    finally:
+                        # Signal completion
+                        chunk_queue.put(None)
+                
+                # Run the async streaming function
+                thread_loop.run_until_complete(stream_chunks())
+                thread_loop.close()
+                
+            except Exception as e:
+                exception_holder[0] = e
+                chunk_queue.put(None)
         
-        # Yield collected chunks (ensure chunks is iterable)
-        if chunks:
-            for chunk in chunks:
-                yield chunk
-        else:
-            # No response received from the model
-            yield "I apologize, but I couldn't generate a response. Please try again."
+        # Start the async processing in a separate thread
+        thread = threading.Thread(target=run_in_thread, daemon=True)
+        thread.start()
+        
+        # Yield chunks as they arrive from the queue
+        while True:
+            chunk = chunk_queue.get()
+            
+            # Check if we're done (None signals completion)
+            if chunk is None:
+                break
+            
+            # Check for exceptions
+            if exception_holder[0]:
+                raise exception_holder[0]
+            
+            yield chunk
+        
+        # Wait for thread to complete
+        thread.join(timeout=1.0)
+        
+        # Check for any exceptions that occurred
+        if exception_holder[0]:
+            raise exception_holder[0]
                 
     except Exception as e:
         logger.error(f"Error generating streaming response: {e}")

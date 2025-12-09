@@ -10,7 +10,7 @@ XIAOICE is a multi-user Flask web application providing AI-powered chat conversa
 - **JWT Authentication**: Token-based auth with refresh tokens via `app/auth.py`
 - **REST API**: Conversation and message management in `app/routes.py`
 - **AI Integration**: Google Agent Development Kit streaming responses in `app/agent/`
-- **File Storage**: Google Cloud Storage uploads via `app/gcs_upload.py`
+- **File Storage**: Google Cloud Storage uploads via `app/gcp_bucket.py`
 
 ### Data Flow
 1. User authenticates → JWT tokens issued
@@ -77,7 +77,7 @@ gunicorn -w 4 -b 0.0.0.0:8080 'app:create_app()'
 - Files uploaded to Google Cloud Storage buckets
 - URLs stored in `file_uploads` table with MIME types and file extensions
 - Associated with conversations and messages for context
-- Use `gcs_upload.py` utilities for upload/download/delete operations
+- Use `gcp_bucket.py` utilities for upload/download/delete operations
 
 ### AI Model Selection
 - Users select the AI model via `UserProfile.ai_model` (e.g., `gemini-2.5-flash`, `gemini-2.5-pro`).
@@ -143,7 +143,7 @@ ENCRYPTION_KEY="your_32_byte_encryption_key_here"
 - Include conversation history for context
 
 ### File Operations
-- Use `gcs_upload.py` functions for GCS operations
+- Use `gcp_bucket.py` functions for GCS operations
 - Store file metadata in `FileUpload` model
 - Associate files with conversations/messages
 - Handle cleanup on deletion

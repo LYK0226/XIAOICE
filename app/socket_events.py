@@ -10,7 +10,10 @@ from app import socketio
 from .models import db, User, Conversation, Message, UserProfile, UserApiKey
 from datetime import datetime
 import os
+import logging
 from .agent import chat_agent
+
+logger = logging.getLogger(__name__)
 
 
 @socketio.on('connect')
@@ -332,3 +335,366 @@ def handle_typing(data):
         
     except Exception as e:
         print(f"Error handling typing indicator: {e}")
+
+
+# Pose Detection Event Handlers (2D backend removed - now using 3D frontend detection)
+    """
+    Initialize pose detection session for user.
+    
+    Args:
+        data: Dictionary containing:
+            - user_id: ID of the user starting pose detection
+    """
+    try:
+        print(f"🔔 POSE_START EVENT RECEIVED: {data}")  # Console output for immediate visibility
+        logger.info(f"Received pose_start event with data: {data}")
+        
+        # Immediate acknowledgment for debugging
+        emit('pose_debug', {'message': 'pose_start received', 'data': data})
+        
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            logger.error("Pose detection start failed: user_id is missing from request")
+            emit('pose_error', {
+                'error': 'User ID is required',
+                'details': 'user_id field is missing from request',
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            return
+        
+        # Verify user exists
+        user = User.query.get(user_id)
+        if not user:
+            logger.error(f"Pose detection start failed: User {user_id} not found")
+            emit('pose_error', {
+                'error': 'Invalid user',
+                'details': 'User not found',
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            return
+        
+        logger.info(f"User {user_id} verified, initializing pose detection modules...")
+        
+        # Initialize pose detector and action recognizer for this session
+        try:
+            from .pose_detection import PoseDetector, ActionRecognizer
+            logger.info("Pose detection modules imported successfully")
+        except ImportError as ie:
+            logger.error(f"Failed to import pose detection modules: {ie}", exc_info=True)
+            emit('pose_error', {
+                'error': 'Pose detection modules not available',
+                'details': f'Import error: {str(ie)}',
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            return
+        
+        from flask import current_app
+        
+        # Get configuration values
+        config = current_app.config
+        model_complexity = config.get('POSE_MODEL_COMPLEXITY', 1)
+        min_detection_confidence = config.get('POSE_MIN_DETECTION_CONFIDENCE', 0.5)
+        min_tracking_confidence = config.get('POSE_MIN_TRACKING_CONFIDENCE', 0.5)
+        
+        logger.info(f"Creating pose detector with complexity={model_complexity}, "
+                   f"detection_conf={min_detection_confidence}, tracking_conf={min_tracking_confidence}")
+        
+        session_key = f"user_{user_id}_{request.sid}"
+        
+        # Clean up any existing session for this user (handle rapid stop/start cycles)
+        if session_key in _pose_sessions:
+            logger.warning(f"Found existing session for user {user_id}, cleaning up before starting new one")
+            try:
+                old_session = _pose_sessions[session_key]
+                if 'pose_detector' in old_session:
+                    old_session['pose_detector'].close()
+                del _pose_sessions[session_key]
+                logger.info("Old session cleaned up successfully")
+            except Exception as cleanup_error:
+                logger.warning(f"Error cleaning up old session: {cleanup_error}")
+        
+        # Initialize pose detector
+        try:
+            pose_detector = PoseDetector(
+                min_detection_confidence=min_detection_confidence,
+                min_tracking_confidence=min_tracking_confidence,
+                model_complexity=model_complexity
+            )
+            logger.info("PoseDetector initialized successfully")
+        except Exception as pe:
+            logger.error(f"Failed to initialize PoseDetector: {pe}", exc_info=True)
+            emit('pose_error', {
+                'error': 'Failed to initialize pose detector',
+                'details': str(pe),
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            return
+        
+        # Initialize action recognizer
+        try:
+            action_recognizer = ActionRecognizer()
+            logger.info("ActionRecognizer initialized successfully")
+        except Exception as ae:
+            logger.error(f"Failed to initialize ActionRecognizer: {ae}", exc_info=True)
+            emit('pose_error', {
+                'error': 'Failed to initialize action recognizer',
+                'details': str(ae),
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            return
+        
+        _pose_sessions[session_key] = {
+            'user_id': user_id,
+            'sid': request.sid,
+            'pose_detector': pose_detector,
+            'action_recognizer': action_recognizer,
+            'started_at': datetime.utcnow()
+        }
+        
+        logger.info(f"✅ Pose detection session started for user {user_id} (SID: {request.sid})")
+        
+        emit('pose_started', {
+            'status': 'success',
+            'message': 'Pose detection session initialized',
+            'user_id': user_id,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+        logger.info(f"✅ Emitted pose_started event for user {user_id}")
+        
+    except Exception as e:
+        error_msg = f"Failed to start pose detection: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        emit('pose_error', {
+            'error': 'Failed to initialize pose detection',
+            'details': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        })
+
+
+@socketio.on('pose_stop')
+def handle_pose_stop(data):
+    """
+    Clean up pose detection session.
+    
+    Args:
+        data: Dictionary containing:
+            - user_id: ID of the user stopping pose detection
+    """
+    try:
+        logger.info(f"Received pose_stop event with data: {data}")
+        user_id = data.get('user_id')
+        
+        if not user_id:
+            logger.error("Pose detection stop failed: user_id is missing from request")
+            emit('pose_error', {
+                'error': 'User ID is required',
+                'details': 'user_id field is missing from request',
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            return
+        
+        session_key = f"user_{user_id}_{request.sid}"
+        
+        # Clean up session if it exists
+        if session_key in _pose_sessions:
+            session = _pose_sessions[session_key]
+            
+            # Release pose detector resources
+            try:
+                if 'pose_detector' in session:
+                    session['pose_detector'].close()
+                    logger.info(f"Released pose detector resources for user {user_id}")
+            except Exception as e:
+                logger.warning(f"Error releasing pose detector: {e}")
+            
+            del _pose_sessions[session_key]
+            
+            logger.info(f"✅ Pose detection session stopped for user {user_id} (SID: {request.sid})")
+            
+            emit('pose_stopped', {
+                'status': 'success',
+                'message': 'Pose detection session ended',
+                'user_id': user_id,
+                'timestamp': datetime.utcnow().isoformat()
+            })
+        else:
+            logger.info(f"No active session found for user {user_id} (SID: {request.sid})")
+            emit('pose_stopped', {
+                'status': 'success',
+                'message': 'No active session found',
+                'user_id': user_id,
+                'timestamp': datetime.utcnow().isoformat()
+            })
+        
+    except Exception as e:
+        error_msg = f"Failed to stop pose detection: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        emit('pose_error', {
+            'error': 'Failed to stop pose detection',
+            'details': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        })
+
+
+@socketio.on('pose_frame')
+def handle_pose_frame(data):
+    """
+    Process incoming video frame for pose detection.
+    
+    Args:
+        data: Dictionary containing:
+            - frame: Base64-encoded JPEG image
+            - user_id: ID of the user
+            - timestamp: Frame timestamp (optional)
+    
+    Emits:
+        - pose_results: Detection results with keypoints and action
+        - pose_error: Error message if processing fails
+    """
+    import time
+    
+    try:
+        frame_data = data.get('frame')
+        user_id = data.get('user_id')
+        frame_timestamp = data.get('timestamp', time.time())
+        
+        if not frame_data:
+            logger.error("Pose frame processing failed: frame data is missing from request")
+            emit('pose_error', {
+                'error': 'Frame data is required',
+                'details': 'frame field is missing from request',
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            return
+        
+        if not user_id:
+            logger.error("Pose frame processing failed: user_id is missing from request")
+            emit('pose_error', {
+                'error': 'User ID is required',
+                'details': 'user_id field is missing from request',
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            return
+        
+        session_key = f"user_{user_id}_{request.sid}"
+        
+        # Check if session exists
+        if session_key not in _pose_sessions:
+            logger.error(f"Pose frame processing failed: No active session for user {user_id} (SID: {request.sid})")
+            emit('pose_error', {
+                'error': 'No active pose detection session',
+                'details': 'Please start a pose detection session first',
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            return
+        
+        session = _pose_sessions[session_key]
+        pose_detector = session['pose_detector']
+        action_recognizer = session['action_recognizer']
+        
+        # Start timing
+        start_time = time.time()
+        
+        try:
+            # Detect pose from base64 frame
+            pose_result = pose_detector.detect_pose_from_base64(frame_data)
+            
+            # If no pose detected, return empty result
+            if not pose_result['detected']:
+                emit('pose_results', {
+                    # 2D compatibility fields
+                    'keypoints': [],
+                    'detected': False,
+                    'action': 'No Person Detected',
+                    'action_confidence': 0.0,
+                    'processing_time_ms': (time.time() - start_time) * 1000,
+                    'timestamp': frame_timestamp,
+                    
+                    # 3D data extensions
+                    'keypoints_3d': [],
+                    'movements': [],
+                    'primary_movement': None
+                })
+                return
+            
+            # Recognize action from keypoints
+            action_result = action_recognizer.recognize_action(pose_result['keypoints'])
+            
+            # Calculate processing time
+            processing_time_ms = (time.time() - start_time) * 1000
+            
+            # Prepare 3D keypoints with z and z_normalized fields
+            keypoints_3d = []
+            for kp in pose_result['keypoints']:
+                kp_3d = kp.copy()
+                # Ensure z_normalized is present (normalize z to 0.0-1.0 range if not already)
+                if 'z_normalized' not in kp_3d and 'z' in kp_3d:
+                    # Simple normalization: map z values to 0-1 range
+                    # MediaPipe z is relative to hips, typically in range [-1, 1]
+                    kp_3d['z_normalized'] = (kp_3d['z'] + 1.0) / 2.0
+                keypoints_3d.append(kp_3d)
+            
+            # Detect movements using movement detector if available
+            movements = []
+            primary_movement = None
+            try:
+                # Import movement detector (will be implemented in frontend)
+                # For now, provide empty movements array for backward compatibility
+                movements = []
+                primary_movement = None
+            except Exception as e:
+                logger.debug(f"Movement detection not available: {e}")
+            
+            # Emit results with 3D data and movement information
+            emit('pose_results', {
+                # 2D compatibility fields (existing format)
+                'keypoints': pose_result['keypoints'],
+                'detected': True,
+                'action': action_result['action'],
+                'action_confidence': action_result['confidence'],
+                'processing_time_ms': processing_time_ms,
+                'timestamp': frame_timestamp,
+                
+                # 3D data extensions (new format)
+                'keypoints_3d': keypoints_3d,
+                'movements': movements,
+                'primary_movement': primary_movement
+            })
+            
+            logger.debug(f"Processed frame for user {user_id}: {action_result['action']} "
+                        f"(confidence={action_result['confidence']:.2f}, "
+                        f"time={processing_time_ms:.1f}ms)")
+            
+        except ValueError as ve:
+            # Invalid frame data - skip and continue
+            error_msg = f"Invalid frame data: {str(ve)}"
+            logger.warning(error_msg)
+            emit('pose_error', {
+                'error': 'Invalid frame data',
+                'details': str(ve),
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            # Don't raise - continue processing subsequent frames
+            
+        except Exception as e:
+            # Unexpected error during processing
+            error_msg = f"Error processing frame: {str(e)}"
+            logger.error(error_msg, exc_info=True)
+            emit('pose_error', {
+                'error': 'Failed to process frame',
+                'details': str(e),
+                'timestamp': datetime.utcnow().isoformat()
+            })
+            # Don't raise - continue processing subsequent frames
+        
+    except Exception as e:
+        # Top-level error handling
+        error_msg = f"Error handling pose frame: {str(e)}"
+        logger.error(error_msg, exc_info=True)
+        emit('pose_error', {
+            'error': 'Failed to handle frame',
+            'details': str(e),
+            'timestamp': datetime.utcnow().isoformat()
+        })

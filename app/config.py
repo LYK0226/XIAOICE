@@ -41,3 +41,11 @@ class Config:
     JWT_COOKIE_SAMESITE = os.environ.get('JWT_COOKIE_SAMESITE', 'Lax')
     # Disable CSRF protection for cookie-based JWTs since we pair them with Authorization headers
     JWT_COOKIE_CSRF_PROTECT = os.environ.get('JWT_COOKIE_CSRF_PROTECT', 'false').lower() == 'true'
+
+    # Pose Detection Configuration
+    POSE_DETECTION_ENABLED = os.environ.get('POSE_DETECTION_ENABLED', 'true').lower() == 'true'
+    POSE_MODEL_COMPLEXITY = int(os.environ.get('POSE_MODEL_COMPLEXITY', '1'))  # 0=lite, 1=full, 2=heavy
+    POSE_MIN_DETECTION_CONFIDENCE = float(os.environ.get('POSE_MIN_DETECTION_CONFIDENCE', '0.5'))
+    POSE_MIN_TRACKING_CONFIDENCE = float(os.environ.get('POSE_MIN_TRACKING_CONFIDENCE', '0.5'))
+    POSE_MAX_CONCURRENT_SESSIONS = int(os.environ.get('POSE_MAX_CONCURRENT_SESSIONS', '50'))
+    POSE_FRAME_SIZE_LIMIT_MB = int(os.environ.get('POSE_FRAME_SIZE_LIMIT_MB', '5'))
