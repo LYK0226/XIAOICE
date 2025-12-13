@@ -3,14 +3,15 @@ ADK Agent module for XIAOICE chatbot.
 This module provides a multi-agent chat system using Google Agent Development Kit (ADK).
 
 Multi-Agent Architecture:
-- Coordinator Agent: Routes user requests to specialized agents based on content type
-- Text Agent: Handles plain text conversations, Q&A, and general interactions
-- Media Agent: Analyzes images and videos, provides detailed visual descriptions
+- Coordinator Agent: Manages conversations, delegates tasks, receives analysis results, and interacts directly with users
+- PDF Agent: Analyzes PDF documents and returns structured results to coordinator (does not interact with users)
+- Media Agent: Analyzes images and videos and returns structured results to coordinator (does not interact with users)
 
 Key Features:
-- Full ADK integration for both text and multimodal content
+- Full ADK integration for text, PDF, and multimodal content
 - Intelligent task distribution via coordinator agent
-- Specialized agents for optimal performance on specific tasks
+- Specialized agents for PDF and media analysis
+- Coordinator receives analysis results and presents them conversationally to users
 - Persistent session management tied to database conversation IDs
 - Per-user agent/runner isolation with API key and model preferences
 """
@@ -33,51 +34,92 @@ logger = logging.getLogger(__name__)
 
 # System instructions for different agents
 
-# Coordinator agent - distributes tasks to specialized agents
-COORDINATOR_AGENT_INSTRUCTION = """You are XIAOICE, a friendly AI coordinator assistant. Your role is to analyze user requests and delegate tasks to specialized agents.
+# Coordinator agent - distributes tasks, receives analysis results, and interacts with users
+COORDINATOR_AGENT_INSTRUCTION = """You are XIAOICE, a friendly and helpful AI assistant who loves chatting with users.
 
-Your sub-agents are:
-- text_agent: Handles general text-based conversations, questions, and responses (no images/videos)
-- media_agent: Analyzes images and videos, provides detailed descriptions and answers questions about visual content
+Your abilities:
+- When users upload PDFs, you can ask pdf_agent to analyze them for you
+- When users upload images or videos, you can ask media_agent to analyze them for you
+- For regular text conversations, you handle them directly with your knowledge and personality
 
-Decision Guidelines:
-- If the user message contains images or videos, ALWAYS delegate to media_agent
-- For plain text questions, general conversation, or non-visual tasks, delegate to text_agent
-- Be efficient - analyze the request and quickly transfer to the appropriate agent
-- Do not answer questions directly; your job is to route to the right specialist
+How you work:
+- Be warm, friendly, and conversational - like talking to a friend
+- When a user uploads a file (PDF, image, or video), quickly delegate to the appropriate specialist agent
+- Take the analysis from your specialist agents and present it naturally in your own words
+- Don't just repeat what the specialist says - add your own friendly commentary and insights
+- Keep the conversation flowing and engaging
 
-Always maintain a warm and professional tone when interacting."""
+Language matching (CRITICAL):
+- ALWAYS detect what language the user is using in their message
+- ALWAYS respond in the SAME language the user used
+- If the user writes in Chinese (Traditional or Simplified), respond in Chinese
+- If the user writes in English, respond in English
+- If the user writes in Japanese, respond in Japanese
+- Match the user's language choice exactly - this is essential for a natural conversation
+- When presenting specialist analysis results, translate them if needed to match the user's language
 
-# Text-only agent instruction
-TEXT_AGENT_INSTRUCTION = """You are XIAOICE's text specialist, a friendly and helpful AI assistant.
+Remember: You're the face of XIAOICE. Users talk to YOU, not the specialists. Make every interaction feel personal and helpful."""
 
-You should:
-- Be conversational and engaging
-- Provide helpful, accurate, and thoughtful responses
-- Answer questions directly without deflecting
-- Be respectful and considerate
-- If you don't know something, admit it honestly
-- Support Chinese conversations naturally
-- Handle general knowledge questions, conversations, and text-based tasks
+# PDF analysis agent instruction
+PDF_AGENT_INSTRUCTION = """You are a PDF analysis specialist working behind the scenes for XIAOICE.
 
-Always maintain a warm and professional tone in your responses."""
+Your job:
+- Carefully read and analyze PDF documents
+- Extract the main ideas, important information, and key details
+- Understand content in multiple languages (especially Chinese, English, Japanese)
+- Provide a clear, natural summary of what you found
+
+How to respond:
+- Write in a clear, natural way - like explaining to a colleague
+- Start with the main point or summary of the document
+- Then mention the important details, data, or conclusions you found
+- Don't use formal section headers like "Summary:" or "Key Points:" - just flow naturally
+- Be thorough but concise - focus on what's actually useful
+- If you can't analyze the PDF, explain why simply and clearly
+
+Language handling:
+- Analyze the PDF content in whatever language it's written
+- Respond in the same language as the user's question/request
+- If the PDF is in one language but the user asks in another, provide your analysis in the user's language
+- Preserve important terms, names, and technical vocabulary in their original language when appropriate
+
+Remember: Your analysis goes to the coordinator, who will present it to the user conversationally."""
 
 # Media analysis agent instruction
-MEDIA_AGENT_INSTRUCTION = """You are XIAOICE's media specialist, an expert at analyzing images and videos.
+MEDIA_AGENT_INSTRUCTION = """You are a media analysis specialist working behind the scenes for XIAOICE.
 
-You should:
-- Provide detailed, accurate descriptions of visual content
-- Answer specific questions about what you see in images/videos
-- Be descriptive and thorough in your analysis
-- Point out important details, objects, people, scenes, actions, and context
-- Support Chinese conversations naturally
-- If asked about something not visible in the media, clearly state that
+Your job:
+- Carefully examine images and videos
+- Identify what you see: objects, people, scenes, actions, emotions, and context
+- Notice visual details like colors, composition, lighting, and atmosphere
+- For videos: describe movements, sequences, and how things change over time
+- Read any text visible in the images (OCR) - recognize text in multiple languages
 
-Always provide complete and informative analysis directly to the user."""
+How to respond:
+- Describe what you see in a natural, flowing way - like telling someone about a photo
+- Start with the most important or striking elements
+- Then add relevant details and observations
+- Don't use formal headers like "Visual Overview:" or "Key Elements:" - just describe naturally
+- Be descriptive and thorough, but conversational
+- If there's text in the image, mention it naturally: "I can see text that says..."
+- If you can't analyze the media, explain why simply and clearly
+
+Language handling:
+- Analyze visual content regardless of what language appears in it
+- Respond in the same language as the user's question/request
+- If you see text in the image (Chinese, English, Japanese, etc.), report it in its original language
+- Then provide your description in the user's language
+- For example: if user asks in Chinese about an English sign, describe it in Chinese but quote the English text
+
+Remember: Your description goes to the coordinator, who will present it to the user in a friendly way."""
 
 # Supported MIME types for file uploads
 SUPPORTED_MIME_TYPES = [
+    # PDF documents
+    'application/pdf',
+    # Images
     'image/jpeg', 'image/png', 'image/webp', 'image/heic', 'image/heif',
+    # Videos
     'video/mp4', 'video/mpeg', 'video/mov', 'video/avi', 'video/x-flv', 
     'video/mpg', 'video/webm', 'video/wmv', 'video/3gpp'
 ]
@@ -111,9 +153,9 @@ class ChatAgentManager:
         """
         Create a new ADK Agent with the specified configuration.
         This creates a multi-agent system with:
-        - A coordinator agent that routes tasks
-        - A text-only agent for plain text conversations
-        - A media agent for image/video analysis
+        - A coordinator agent that manages conversations and interacts with users
+        - A PDF agent for analyzing PDF documents
+        - A media agent for analyzing images and videos
         
         Args:
             api_key: Google AI API key
@@ -150,32 +192,32 @@ class ChatAgentManager:
             ],
         )
         
-        # Create the text-only agent (handles plain text conversations)
-        text_agent = Agent(
-            name="text_agent",
+        # Create the PDF analysis agent (analyzes PDFs, returns results to coordinator)
+        pdf_agent = Agent(
+            name="pdf_agent",
             model=model_name,
-            description="Specialist for handling text-based conversations and questions without images or videos",
-            instruction=TEXT_AGENT_INSTRUCTION,
+            description="Specialist for analyzing PDF documents and returning structured analysis results to the coordinator",
+            instruction=PDF_AGENT_INSTRUCTION,
             generate_content_config=generation_config,
         )
         
-        # Create the media analysis agent (handles images and videos)
+        # Create the media analysis agent (analyzes images/videos, returns results to coordinator)
         media_agent = Agent(
             name="media_agent",
             model=model_name,
-            description="Specialist for analyzing images and videos, providing detailed visual descriptions and answering questions about visual content",
+            description="Specialist for analyzing images and videos and returning structured analysis results to the coordinator",
             instruction=MEDIA_AGENT_INSTRUCTION,
             generate_content_config=generation_config,
         )
         
-        # Create the coordinator agent (routes to text or media agent)
+        # Create the coordinator agent (routes tasks, receives results, interacts with users)
         coordinator_agent = Agent(
             name="xiaoice_coordinator",
             model=model_name,
-            description="XIAOICE coordinator that routes user requests to specialized agents based on content type",
+            description="XIAOICE coordinator that manages conversations, delegates analysis tasks, receives results from specialists, and interacts directly with users",
             instruction=COORDINATOR_AGENT_INSTRUCTION,
             generate_content_config=generation_config,
-            sub_agents=[text_agent, media_agent],  # Register sub-agents
+            sub_agents=[pdf_agent, media_agent],  # Register sub-agents
         )
         
         return coordinator_agent
@@ -368,7 +410,7 @@ def _validate_file(image_mime_type: str, file_size: int) -> Optional[str]:
     """
     if image_mime_type not in SUPPORTED_MIME_TYPES:
         return (f"Error: Unsupported file format '{image_mime_type}'. "
-                f"Supported formats: Images (JPEG, PNG, WebP, HEIC, HEIF) and "
+                f"Supported formats: PDF documents, Images (JPEG, PNG, WebP, HEIC, HEIF), and "
                 f"Videos (MP4, MPEG, MOV, AVI, FLV, MPG, WEBM, WMV, 3GPP).")
     
     if file_size > MAX_FILE_SIZE:
@@ -435,12 +477,13 @@ def build_message_content(
     Build the message content string with optional history context.
     
     This function creates context for the multi-agent system, helping the
-    coordinator understand what type of request it is handling.
+    coordinator understand what type of request it is handling and route to
+    the appropriate specialist agent (PDF or media).
     
     Args:
         message: The user's message
-        image_path: Optional path to an image in GCS
-        image_mime_type: MIME type of the image
+        image_path: Optional path to a file in GCS (PDF, image, or video)
+        image_mime_type: MIME type of the file
         history: Optional conversation history
         username: Optional username for personalization
         
@@ -480,10 +523,12 @@ def build_message_content(
     if message:
         content_parts.append(message)
     
-    # Add media information to help coordinator route correctly
-    # Note: The actual image/video will be passed as a separate Part in the content
+    # Add file type information to help coordinator route correctly
+    # Note: The actual file will be passed as a separate Part in the content
     if image_path and image_mime_type:
-        if image_mime_type.startswith('image/'):
+        if image_mime_type == 'application/pdf':
+            content_parts.append("\n[Note: This request includes a PDF document for analysis]")
+        elif image_mime_type.startswith('image/'):
             content_parts.append("\n[Note: This request includes an image for analysis]")
         elif image_mime_type.startswith('video/'):
             content_parts.append("\n[Note: This request includes a video for analysis]")
@@ -506,17 +551,17 @@ async def generate_streaming_response_async(
     Generates a streaming response from the multi-agent ADK system asynchronously.
     
     This function uses a multi-agent architecture:
-    - Coordinator agent analyzes the request and routes to appropriate specialist
-    - Text agent handles plain text conversations
-    - Media agent handles image/video analysis
+    - Coordinator agent manages conversations and interacts directly with users
+    - PDF agent analyzes PDF documents and returns results to coordinator
+    - Media agent analyzes images/videos and returns results to coordinator
     
-    The coordinator automatically delegates based on content type and provides
-    the specialized agent's response directly to the user.
+    The coordinator delegates analysis tasks to specialists, receives their structured
+    results, and presents the information conversationally to the user.
     
     Args:
         message: The user's message
-        image_path: Optional GCS path to an image or video
-        image_mime_type: MIME type of the media file
+        image_path: Optional GCS path to a PDF, image, or video
+        image_mime_type: MIME type of the file (PDF, image, or video)
         history: Optional conversation history
         api_key: Google AI API key
         model_name: The Gemini model to use for all agents
@@ -525,7 +570,7 @@ async def generate_streaming_response_async(
         username: User's display name for personalization
         
     Yields:
-        Text chunks as they are generated by the appropriate specialized agent
+        Text chunks as they are generated by the coordinator agent
     """
     # Validate and set defaults for API key and model
     if api_key is None:
@@ -637,14 +682,14 @@ def generate_streaming_response(
     
     This function wraps the async multi-agent generator to provide a synchronous 
     interface for Flask routes. The multi-agent system includes:
-    - Coordinator agent that routes requests
-    - Text agent for plain text conversations
-    - Media agent for image/video analysis
+    - Coordinator agent that manages conversations and interacts with users
+    - PDF agent for analyzing PDF documents (returns results to coordinator)
+    - Media agent for analyzing images/videos (returns results to coordinator)
     
     Args:
         message: The user's message
-        image_path: Optional GCS path to an image or video
-        image_mime_type: MIME type of the media file
+        image_path: Optional GCS path to a PDF, image, or video
+        image_mime_type: MIME type of the file (PDF, image, or video)
         history: Optional conversation history
         api_key: Google AI API key
         model_name: The Gemini model to use for all agents
@@ -653,7 +698,7 @@ def generate_streaming_response(
         username: User's display name for personalization
         
     Yields:
-        Text chunks as they are generated by the appropriate specialized agent
+        Text chunks as they are generated by the coordinator agent
     """
     # Validate and set defaults
     if api_key is None:

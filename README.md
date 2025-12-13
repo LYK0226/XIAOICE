@@ -2,7 +2,7 @@
 
 XIAOICE is an intelligent chat assistant with multimodal support (text, images, videos) and real-time pose detection capabilities.
 
-### ⚠️ **重要**：請勿將 ENCRYPTION_KEY 提交到 Git 倉庫！
+### ⚠️ **重要**：建立一個名為「.credentials」的新資料夾，並將 GCP 憑證放入其中。！
 
 ## Features
 
