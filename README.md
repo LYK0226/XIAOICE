@@ -1,26 +1,32 @@
 # XIAOICE 智能聊天助手 🤖
 
-### ⚠️ **重要**：請勿將 ENCRYPTION_KEY 提交到 Git 倉庫！
+XIAOICE is an intelligent chat assistant with multimodal support (text, images, videos) and real-time pose detection capabilities.
 
-### .env
+### ⚠️ **重要**：建立一個名為「.credentials」的新資料夾，並將 GCP 憑證放入其中。！
+
+## Features
+
+- 🤖 **Multi-agent AI System**: Powered by Google ADK with specialized agents for text and media
+- 💬 **Real-time Chat**: WebSocket-based streaming responses
+- 🖼️ **Multimodal Support**: Analyze images and videos (up to 500MB)
+- 🧍 **Pose Detection**: Real-time human pose detection and action recognition via webcam
+- 🔐 **Secure Authentication**: JWT-based authentication with encrypted API key storage
+- 🌍 **Multi-language**: Support for Chinese (Traditional), English, and Japanese
+- 🎨 **Customizable**: User preferences for themes, language, and AI models
+ 
+### Setting up your .env file (step-by-step) ✅
+
 ```bash
-# Environment variables for Flask and Google AI Studio
-# Flask
-SECRET_KEY="your_very_secret_key_here"
-FLASK_APP="run.py"
-FLASK_ENV="development"
+# Copy .env.example to .env
+cp .env.example .env
 
-# Encryption key for API keys (generate a secure random key)
-# DO NOT COMMIT: Replace "your_32_byte_encryption_key_here" with your actual Fernet key
-ENCRYPTION_KEY="your_32_byte_encryption_key_here"
+# Generate secure secret values (choose one of the generators below):
+# Secure Flask / JWT secret (recommended for both):
+python -c "import secrets; print(secrets.token_urlsafe(48))"
 
+# `ENCRYPTION_KEY` 
+python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
 ```
-# API 設定
-
-### 取得您的加密金鑰 (填入 .env -> ENCRYPTION_KEY="your_32_byte_encryption_key_here")
-python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-
-設定 -> 高級 ->填入你的 API Key
 
 
 ### 安裝依賴並啟動應用
@@ -28,6 +34,8 @@ python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().
 ```bash
 # 建立並啟動虛擬環境
 python -m venv .venv && source .venv/bin/activate
+# windows
+python -m venv .venv; .\.venv\Scripts\Activate
 
 # 安裝 Python 依賴
 pip install -r requirements.txt
@@ -65,6 +73,62 @@ cd .devcontainer && docker-compose down
 cd .devcontainer && docker ps
 ```
 
+## Pose Detection Feature
+
+The pose detection feature enables real-time human pose tracking and action recognition through your webcam.
+
+### Quick Start
+
+1. **Open XIAOICE**: Navigate to the main chat interface
+2. **Click Pose Detection Button**: Activate the pose detection mode
+3. **Allow Camera Access**: Grant permission when prompted
+4. **Start Moving**: The system will detect your pose and recognize your actions in real-time
+
+### Supported Actions
+- **Standing**: Upright posture with arms at sides
+- **Sitting**: Seated position with bent hips and knees
+- **Walking**: Alternating leg movements
+- **Raising Hands**: One or both hands above shoulder level
+- **Squatting**: Bent knees with lowered hips
+
+📖 **For detailed instructions, troubleshooting, and tips, see the [Pose Detection User Guide](document/POSE_DETECTION_USER_GUIDE.md)**
+
+### Configuration
+
+Pose detection settings can be configured in your `.env` file:
+
+```bash
+# Enable/disable pose detection feature
+POSE_DETECTION_ENABLED=true
+
+# Model complexity: 0=lite (fastest), 1=full (balanced), 2=heavy (most accurate)
+POSE_MODEL_COMPLEXITY=1
+
+# Detection confidence thresholds (0.0-1.0)
+POSE_MIN_DETECTION_CONFIDENCE=0.5
+POSE_MIN_TRACKING_CONFIDENCE=0.5
+
+# Resource limits
+POSE_MAX_CONCURRENT_SESSIONS=50
+POSE_FRAME_SIZE_LIMIT_MB=5
+```
+
+### Performance Tips
+- Use `POSE_MODEL_COMPLEXITY=0` for faster processing on lower-end hardware
+- Increase confidence thresholds for more accurate but stricter detection
+- Reduce `POSE_MAX_CONCURRENT_SESSIONS` if experiencing high CPU usage
+
+### Browser Compatibility
+- Ensure your browser has webcam permissions enabled
+- For best performance, use Chrome or Edge (Chromium-based browsers)
+- Safari users may need to enable camera access in System Preferences
+
+### Privacy & Security
+- ✅ Real-time processing only - no video recording
+- ✅ No data storage - frames are immediately discarded
+- ✅ Secure WebSocket connections
+- ✅ No third-party data sharing
+
 ### 查看資料庫資料
 
 ```bash
@@ -86,6 +150,27 @@ python view_database.py search "ryan"
 python view_database.py delete 5
 ```
 
+## Key Dependencies
+
+### Backend
+- **Flask 3.1.2**: Web framework
+- **Flask-SocketIO 5.4.1**: Real-time WebSocket communication
+- **Google ADK 1.18.0**: Multi-agent AI system
+- **Google GenAI 1.52.0**: AI model integration
+- **Google Cloud Storage 3.5.0**: File storage
+- **SQLAlchemy**: Database ORM
+- **Cryptography 46.0.3**: API key encryption
+- **Pillow 12.0.0**: Image processing
+
+### Frontend
+- **MediaPipe Pose (Browser)**: Real-time 3D pose detection
+- **WebRTC**: Webcam access
+- **Canvas API**: Pose visualization
+
+### Testing
+- **pytest ≥9.0.1**: Unit testing framework
+- **Hypothesis 6.148.7**: Property-based testing
+
 ##  專案結構
 
 ```
@@ -98,23 +183,38 @@ XIAOICE/
 │ ├── __init__.py                   # Flask 應用初始化
 │ ├── auth.py                       # 認證相關功能
 │ ├── config.py                     # 應用配置
+│ ├── gcp_bucket.py                 # Google Cloud Storage 整合
 │ ├── models.py                     # 資料庫模型
 │ ├── routes.py                     # 路由定義
-│ ├── vertex_ai.py                  # Vertex AI 整合
+│ ├── socket_events.py              # WebSocket event handlers
+│ ├── agent/                        # Multi-agent AI system
+│ │   ├── chat_agent.py            # ADK agent manager and coordinators
+│ │   └── __init__.py
+│ ├── pose_detection/              # Pose detection modules (frontend JS)
+│ │   ├── movement_analyzers.js   # Body part movement analyzers
+│ │   ├── movement_descriptor.js  # Natural language descriptions
+│ │   ├── movement_detector.js    # Movement detection logic
+│ │   ├── pose_detector_3d.js     # 3D pose detection
+│ │   ├── pose_error_handler.js   # Error handling
+│ │   └── pose_renderer.js        # Canvas rendering
 │ ├── static/                       # 靜態資源目錄
 │ │ ├── css/
 │ │ │ ├── chatbox.css              # 主聊天頁面專用樣式
 │ │ │ ├── sidebar.css              # 側邊欄專用樣式
 │ │ │ ├── settings.css             # 設定頁面專用樣式
 │ │ │ ├── login_signup.css         # 登入註冊頁面專用樣式
-│ │ │ └── forget_password.css      # 忘記密碼頁面專用樣式
+│ │ │ ├── forget_password.css      # 忘記密碼頁面專用樣式
+│ │ │ └── pose_detection.css       # 姿勢檢測介面樣式
 │ │ ├── js/
 │ │ │ ├── api_module.js            # API 互動模組
 │ │ │ ├── chatbox.js               # 主要聊天邏輯
 │ │ │ ├── sidebar.js               # 側邊欄對話管理功能
 │ │ │ ├── settings.js              # 設定頁面互動模組
 │ │ │ ├── login_signup.js          # 登入註冊頁面互動模組
-│ │ │ └── forget_password.js       # 忘記密碼頁面互動模組
+│ │ │ ├── forget_password.js       # 忘記密碼頁面互動模組
+│ │ │ ├── pose_detection.js        # 姿勢檢測 UI 模組
+│ │ │ ├── pose_renderer.js         # Canvas 渲染器
+│ │ │ └── socket_module.js         # WebSocket 連接管理
 │ │ └── upload/                    # 上傳檔案目錄
 │ └── templates/                   # HTML 模板
 │     ├── index.html               # 主聊天頁面
@@ -128,12 +228,35 @@ XIAOICE/
 │ ├── README                       # 遷移說明
 │ ├── script.py.mako               # 遷移腳本模板
 │ └── versions/                    # 遷移版本
+├── test/                          # 測試目錄
+│ ├── check_api_keys.py            # API key 驗證工具
+│ ├── test_3d_pose_module_initialization.py  # 3D 姿勢模組初始化測試
+│ ├── test_api.py                  # API 連接測試
+│ └── test_multi_agent.py          # Multi-agent 系統測試
 ├── .env                           # 環境變數配置
 ├── .gitignore                     # Git 忽略文件
 ├── README.md                      # 本文件
 ├── requirements.txt               # Python 依賴
 ├── run.py                         # 應用啟動腳本
-├── test_api.py                    # API 測試腳本
-├── test_auth.py                   # 認證測試腳本
 └── view_database.py               # 資料庫查看工具
+```
+
+## Testing
+
+Run the test suite to verify functionality:
+
+```bash
+# Run all tests
+pytest
+
+# Run specific test files
+pytest test/test_api.py
+pytest test/test_multi_agent.py
+pytest test/test_3d_pose_module_initialization.py
+
+# Run with verbose output
+pytest -v
+
+# Check API connectivity
+python test/check_api_keys.py
 ```

@@ -824,13 +824,15 @@ body.dark-theme .form-hint {
 
 /* Custom Alert and Confirm Modals - Higher z-index to appear above other modals */
 #customAlertModal,
-#customConfirmModal {
+#customConfirmModal,
+#customPromptModal {
     z-index: 1100 !important;
     animation: fadeIn 0.2s;
 }
 
 #customAlertModal .modal-content,
-#customConfirmModal .modal-content {
+#customConfirmModal .modal-content,
+#customPromptModal .modal-content {
     max-width: 450px;
     text-align: center;
     position: fixed;
@@ -843,20 +845,23 @@ body.dark-theme .form-hint {
 }
 
 #customAlertModal h3,
-#customConfirmModal h3 {
+#customConfirmModal h3,
+#customPromptModal h3 {
     margin-bottom: 15px;
     font-size: 18px;
 }
 
 #customAlertModal p,
-#customConfirmModal p {
+#customConfirmModal p,
+#customPromptModal p {
     margin: 20px 0;
     font-size: 16px;
     line-height: 1.5;
 }
 
 #customAlertModal .modal-content button,
-#customConfirmModal .modal-content button {
+#customConfirmModal .modal-content button,
+#customPromptModal .modal-content button {
     min-width: 120px;
 }
 

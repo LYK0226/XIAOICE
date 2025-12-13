@@ -1,10 +1,12 @@
 from datetime import datetime
-from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, Response
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, Response, send_file, send_from_directory
 from flask_jwt_extended import jwt_required, decode_token
 import os
 import json
-from . import vertex_ai
+from . import agent
 from werkzeug.utils import secure_filename
+from . import gcp_bucket
+import io
 
 bp = Blueprint('main', __name__)
 
@@ -30,11 +32,33 @@ def index():
 def login_page():
     """Render the login/signup page."""
     return render_template('login_signup.html')
-
 @bp.route('/forgot_password')
 def forgot_password_page():
     """Render the forgot password page."""
     return render_template('forget_password.html')
+
+@bp.route('/pose_detection')
+def pose_detection_page():
+    """Render the pose detection page."""
+    token = request.cookies.get('access_token')
+
+    if not token:
+        return redirect(url_for('main.login_page'))
+
+    try:
+        decode_token(token)
+    except Exception:
+        response = redirect(url_for('main.login_page'))
+        response.delete_cookie('access_token')
+        return response
+
+    return render_template('pose_detection.html')
+
+@bp.route('/pose_detection/js/<path:filename>')
+def serve_pose_detection_js(filename):
+    """Serve JavaScript files from the pose_detection module."""
+    pose_detection_dir = os.path.join(os.path.dirname(__file__), 'pose_detection')
+    return send_from_directory(pose_detection_dir, filename)
 
 @bp.route('/chat/stream', methods=['POST'])
 @jwt_required()
@@ -44,9 +68,16 @@ def chat_stream():
     from .models import UserProfile, UserApiKey
     
     user_id = get_jwt_identity()
+    # Ensure GCS and Google API related env vars are available for background streaming work
+    credentials_path = current_app.config.get('GCS_CREDENTIALS_PATH')
+    if credentials_path:
+        os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
+    bucket_name = current_app.config.get('GCS_BUCKET_NAME')
+    if bucket_name:
+        os.environ['GCS_BUCKET_NAME'] = bucket_name
     
-    if 'message' not in request.form and 'image' not in request.files:
-        return jsonify({'error': 'No message or image provided'}), 400
+    if 'message' not in request.form and 'image' not in request.files and 'image_url' not in request.form:
+        return jsonify({'error': 'No message, image, or image_url provided'}), 400
 
     message = request.form.get('message', '')
     image_file = request.files.get('image')
@@ -55,7 +86,10 @@ def chat_stream():
     image_mime_type = None
 
     try:
-        if image_file:
+        if 'image_url' in request.form:
+            image_path = request.form['image_url']
+            image_mime_type = request.form.get('image_mime_type')
+        elif image_file:
             if not image_file.filename:
                  return jsonify({'error': 'No selected file'}), 400
 
@@ -63,16 +97,8 @@ def chat_stream():
             if not filename:
                 return jsonify({'error': 'Invalid file name'}), 400
 
-            # Save the uploaded image to the configured static folder
-            upload_folder = current_app.config['UPLOAD_FOLDER']
-            os.makedirs(upload_folder, exist_ok=True)
-
-            name, ext = os.path.splitext(filename)
-            timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-            unique_filename = f"{name}_{timestamp}{ext}" if name else f"upload_{timestamp}{ext}"
-
-            image_path = os.path.join(upload_folder, unique_filename)
-            image_file.save(image_path)
+            # Upload to Google Cloud Storage
+            image_path = gcp_bucket.upload_image_to_gcs(image_file, filename, user_id=user_id)
             image_mime_type = image_file.mimetype
 
         # Parse optional conversation history sent from client
@@ -95,18 +121,26 @@ def chat_stream():
         if user_profile and user_profile.ai_model:
             ai_model = user_profile.ai_model
 
+        # Get conversation_id if provided (for session persistence)
+        conversation_id = request.form.get('conversation_id', type=int)
+
         def generate():
             try:
-                for chunk in vertex_ai.generate_streaming_response(
+                for chunk in agent.generate_streaming_response(
                     message,
                     image_path=image_path,
                     image_mime_type=image_mime_type,
                     history=history,
                     api_key=api_key,
-                    model_name=ai_model
+                    model_name=ai_model,
+                    user_id=str(user_id),
+                    conversation_id=conversation_id
                 ):
                     # Clean up common AI prefixes that might appear in responses
                     chunk = chunk.strip()
+                    if not chunk:
+                        continue
+                    
                     # Remove common prefixes that AI models might add
                     prefixes_to_remove = ['Assistant:', 'AI:', 'Bot:', 'System:', 'Human:']
                     for prefix in prefixes_to_remove:
@@ -114,18 +148,19 @@ def chat_stream():
                             chunk = chunk[len(prefix):].strip()
                             break
                     
-                    yield f"data: {chunk}\n\n"
+                    if chunk:
+                        yield f"data: {chunk}\n\n"
             except Exception as e:
                 current_app.logger.error(f"Error in streaming endpoint: {e}")
+                import traceback
+                traceback.print_exc()
                 yield f"data: Error: {str(e)}\n\n"
 
         return Response(generate(), mimetype='text/event-stream')
 
     except Exception as e:
         current_app.logger.error(f"Error in chat stream endpoint: {e}")
-        return jsonify({'error': 'An error occurred while processing your request.'}), 500
-
-# ===== API Key Management Routes =====
+        return jsonify({'error': 'An error occurred while processing your request.'}), 500# ===== API Key Management Routes =====
 
 @bp.route('/api/keys', methods=['GET'])
 @jwt_required()
@@ -482,7 +517,7 @@ def update_conversation(conversation_id):
 def delete_conversation(conversation_id):
     """Delete a conversation and its messages."""
     from flask_jwt_extended import get_jwt_identity
-    from .models import Conversation, db
+    from .models import Conversation, FileUpload, db
 
     user_id = get_jwt_identity()
 
@@ -490,6 +525,11 @@ def delete_conversation(conversation_id):
         conversation = Conversation.query.filter_by(id=conversation_id, user_id=user_id).first()
         if not conversation:
             return jsonify({'error': 'Conversation not found'}), 404
+
+        # Delete associated files from GCS before deleting the conversation
+        file_uploads = FileUpload.query.filter_by(conversation_id=conversation_id).all()
+        for file_upload in file_uploads:
+            gcp_bucket.delete_file_from_gcs(file_upload.file_path)
 
         db.session.delete(conversation)
         db.session.commit()
@@ -513,21 +553,10 @@ def create_message():
     uploaded_files = []
     if request.files:
         files = request.files.getlist('files')
-        upload_folder = current_app.config['UPLOAD_FOLDER']
-        os.makedirs(upload_folder, exist_ok=True)
-        
-        for file in files:
-            if file.filename:
-                filename = secure_filename(file.filename)
-                if not filename:
-                    continue
-                name, ext = os.path.splitext(filename)
-                timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-                unique_filename = f"{name}_{timestamp}{ext}" if name else f"upload_{timestamp}{ext}"
-                file_path = os.path.join(upload_folder, unique_filename)
-                file.save(file_path)
-                relative_path = f"upload/{unique_filename}"
-                uploaded_files.append(relative_path)
+        # Get conversation_id from request data for file association
+        temp_data = request.form.to_dict() if not request.is_json else (request.get_json(silent=True) or {})
+        conv_id = temp_data.get('conversation_id')
+        uploaded_files = gcp_bucket.upload_files_to_gcs(files, user_id=user_id, conversation_id=conv_id)
     
     # Get data from JSON or form
     if request.is_json:
@@ -539,6 +568,7 @@ def create_message():
     sender = (data.get('sender') or '').strip().lower()
     content = (data.get('content') or '').strip()
     metadata = data.get('metadata')
+    temp_id = data.get('temp_id')  # Get temp_id for optimistic UI
 
     if not conversation_id:
         return jsonify({'error': 'conversation_id is required'}), 400
@@ -562,7 +592,36 @@ def create_message():
         db.session.add(message)
         db.session.commit()
 
-        return jsonify({'message': message.to_dict(), 'conversation': conversation.to_dict()}), 201
+        # Update FileUpload records with message_id if files were uploaded
+        if uploaded_files:
+            from .models import FileUpload
+            for gcs_url in uploaded_files:
+                file_upload = FileUpload.query.filter_by(
+                    user_id=user_id,
+                    file_path=gcs_url,
+                    conversation_id=conversation.id
+                ).first()
+                if file_upload and not file_upload.message_id:
+                    file_upload.message_id = message.id
+            db.session.commit()
+
+        # Prepare response with temp_id if provided
+        response_data = {
+            'message': message.to_dict(),
+            'conversation': conversation.to_dict()
+        }
+        if temp_id:
+            response_data['temp_id'] = temp_id
+        
+        # Emit socket event with temp_id for real-time updates
+        from app import socketio
+        socketio.emit('new_message', {
+            'message': message.to_dict(),
+            'conversation_id': conversation.id,
+            'temp_id': temp_id
+        }, room=f"conversation_{conversation.id}")
+
+        return jsonify(response_data), 201
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error creating message: {e}")
@@ -588,3 +647,145 @@ def get_conversation_messages(conversation_id):
     except Exception as e:
         current_app.logger.error(f"Error fetching messages: {e}")
         return jsonify({'error': 'Failed to fetch messages'}), 500
+
+@bp.route('/serve_file', methods=['GET'])
+@jwt_required()
+def serve_file():
+    """Serve a file from Google Cloud Storage."""
+    gcs_url = request.args.get('url')
+    if not gcs_url:
+        return jsonify({'error': 'url parameter is required'}), 400
+
+    try:
+        # Download file from GCS and get content type
+        file_data, content_type = gcp_bucket.get_file_data_and_content_type(gcs_url)
+        
+        # Create a file-like object
+        file_obj = io.BytesIO(file_data)
+        file_obj.seek(0)
+        
+        return send_file(file_obj, mimetype=content_type, as_attachment=False)
+    except Exception as e:
+        current_app.logger.error(f"Error serving file from GCS: {e}")
+        # Check if it's a 404 error (file not found)
+        if '404' in str(e) or 'No such object' in str(e):
+            return jsonify({'error': 'File not found in storage'}), 404
+        return jsonify({'error': 'Failed to serve file'}), 500
+
+@bp.route('/api/files', methods=['GET'])
+@jwt_required()
+def get_user_files():
+    """Get all files uploaded by the current user."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import FileUpload
+
+    user_id = get_jwt_identity()
+    
+    try:
+        # Get query parameters for filtering
+        conversation_id = request.args.get('conversation_id', type=int)
+        limit = request.args.get('limit', 50, type=int)
+        offset = request.args.get('offset', 0, type=int)
+        
+        query = FileUpload.query.filter_by(user_id=user_id)
+        
+        if conversation_id:
+            query = query.filter_by(conversation_id=conversation_id)
+        
+        files = query.order_by(FileUpload.uploaded_at.desc()).limit(limit).offset(offset).all()
+        
+        return jsonify({
+            'files': [file.to_dict() for file in files],
+            'total': query.count()
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error getting user files: {e}")
+        return jsonify({'error': 'Failed to retrieve files'}), 500
+
+@bp.route('/api/upload_file', methods=['POST'])
+@jwt_required()
+def upload_file_websocket():
+    """
+    Upload file(s) to GCS and broadcast via WebSocket.
+    This endpoint is used for file uploads in WebSocket-based chat.
+    """
+    from flask_jwt_extended import get_jwt_identity
+    from .models import Conversation, Message, db
+    from app import socketio
+    
+    user_id = get_jwt_identity()
+    
+    try:
+        # Get conversation_id and optional message content
+        conversation_id = request.form.get('conversation_id', type=int)
+        message_content = request.form.get('message', '').strip()
+        
+        if not conversation_id:
+            return jsonify({'error': 'conversation_id is required'}), 400
+        
+        # Verify conversation exists and belongs to user
+        conversation = Conversation.query.filter_by(id=conversation_id, user_id=user_id).first()
+        if not conversation:
+            return jsonify({'error': 'Conversation not found'}), 404
+        
+        # Get uploaded files
+        files = request.files.getlist('files')
+        if not files or not files[0].filename:
+            return jsonify({'error': 'No files provided'}), 400
+        
+        # Upload files to GCS
+        uploaded_urls = gcp_bucket.upload_files_to_gcs(
+            files, 
+            user_id=user_id, 
+            conversation_id=conversation_id
+        )
+        
+        if not uploaded_urls:
+            return jsonify({'error': 'Failed to upload files'}), 500
+        
+        # Create user message with file attachments
+        user_message = Message(
+            conversation_id=conversation_id,
+            role='user',
+            content=message_content or '[File attachment]',
+            timestamp=datetime.utcnow()
+        )
+        db.session.add(user_message)
+        db.session.commit()
+        
+        # Update FileUpload records with message_id
+        from .models import FileUpload
+        for gcs_url in uploaded_urls:
+            file_upload = FileUpload.query.filter_by(
+                user_id=user_id,
+                file_path=gcs_url,
+                conversation_id=conversation_id
+            ).order_by(FileUpload.uploaded_at.desc()).first()
+            
+            if file_upload and not file_upload.message_id:
+                file_upload.message_id = user_message.id
+        
+        db.session.commit()
+        
+        # Broadcast file upload to WebSocket room
+        room = f"conversation_{conversation_id}"
+        socketio.emit('file_uploaded', {
+            'message_id': user_message.id,
+            'role': 'user',
+            'content': user_message.content,
+            'files': uploaded_urls,
+            'timestamp': user_message.timestamp.isoformat(),
+            'conversation_id': conversation_id
+        }, room=room)
+        
+        return jsonify({
+            'success': True,
+            'message_id': user_message.id,
+            'files': uploaded_urls,
+            'conversation_id': conversation_id
+        }), 201
+        
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error uploading file: {e}")
+        return jsonify({'error': f'Failed to upload file: {str(e)}'}), 500

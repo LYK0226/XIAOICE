@@ -1,0 +1,32 @@
+{
+    "name": "XiaoIce Dev Environment",
+    "image": "mcr.microsoft.com/devcontainers/python:3.12-bookworm",
+    "features": {
+        "ghcr.io/devcontainers/features/docker-in-docker": {}
+    },
+    "postCreateCommand": "python -m venv .venv && .venv/bin/pip install -r requirements.txt && echo 'source .venv/bin/activate' >> ~/.bashrc",
+    "postStartCommand": "docker compose -f .devcontainer/docker-compose.yml up -d",
+    "portsAttributes": {
+        "5050": {
+            "label": "pgAdmin",
+            "protocol": "http",
+            "onAutoForward": "openBrowser"
+        },
+        "5432": {
+            "label": "Postgres",
+            "protocol": "tcp"
+        }
+    },
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "ms-python.python",
+                "ms-azuretools.vscode-docker"
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": ".venv/bin/python",
+                "python.terminal.activateEnvironment": true
+            }
+        }
+    }
+}
