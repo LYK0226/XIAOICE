@@ -324,7 +324,7 @@ def set_user_model():
         return jsonify({'error': 'ai_model is required'}), 400
     
     ai_model = data['ai_model']
-    allowed_models = ['gemini-2.5-flash', 'gemini-2.5-pro']
+    allowed_models = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview', 'gemini-3-pro-preview']
     
     if ai_model not in allowed_models:
         return jsonify({'error': f'Invalid model. Allowed: {", ".join(allowed_models)}'}), 400
