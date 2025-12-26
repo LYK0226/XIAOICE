@@ -1,183 +1,119 @@
-# 🚀 QUICK START - Video Feature with YouTube Support
+# 🚀 快速開始指南
 
-## What's New? 🎉
+## 系統要求
+- Python 3.8+
+- Flask
+- 現代瀏覽器
 
-✅ **Fixed JSON Error** - API now returns proper JSON  
-✅ **YouTube Support** - Paste YouTube links directly  
-✅ **No Page Navigation** - Upload stays on same page  
-✅ **Better UI** - Bilingual, friendly error messages  
-✅ **All Tested** - Code syntax validated  
+## 安裝和運行
 
-## How to Use
-
-### 1. Start the Server
+### 1. 啟動應用
 ```bash
 cd /workspaces/XIAOICE
 python run.py
 ```
 
-### 2. Open Browser
+### 2. 訪問評估頁面
 ```
-http://localhost:5000
-```
-
-### 3. Login
-Use your account credentials
-
-### 4. Upload Video
-- **Option A**: Drag & drop a video file onto the upload zone
-- **Option B**: Click the upload zone to browse
-- Supported: MP4, AVI, MOV, MKV, WebM (max 500MB)
-
-### 5. Add YouTube Video
-- Paste a YouTube link in the input field
-- Click "提交 (Submit)" or press Enter
-- Choose from any YouTube URL format:
-  - `https://www.youtube.com/watch?v=VIDEO_ID`
-  - `https://youtu.be/VIDEO_ID`
-  - `https://www.youtube.com/embed/VIDEO_ID`
-
-### 6. View Videos
-- Videos appear in a grid immediately
-- Click any video to see analysis report
-- Report shows inline (no page navigation)
-
-## API Endpoints
-
-### Upload Video
-```
-POST /api/upload-video
+http://localhost:5000/child-assessment
 ```
 
-### Get Video List
+## 評估流程
+
+### 步驟 1️⃣: 開始評估
+- 點擊 "🚀 開始評估" 按鈕
+- 填寫兒童信息:
+  - 👧 兒童姓名 (必填)
+  - 🎂 兒童年齡 - 月份 (必填)
+  - 📄 上傳 PDF (可選)
+  - 📊 評估類型 (必填)
+
+### 步驟 2️⃣: 進行評估
+- 系統會提出 5 個問題 (五大能區)
+- 每個問題都要輸入詳細評述
+- 觀察進度條跟踪進度
+
+### 步驟 3️⃣: 查看結果
+- 評估完成後自動計算 DQ 分數
+- 查看發育商等級評估
+- 導出評估結果 (JSON 格式)
+
+## 五大能區
+
+| 能區 | 圖標 | 問題示例 |
+|-----|-----|--------|
+| 大運動 | 🦵 | 兒童能否站立並保持平衡？ |
+| 精細動作 | ✋ | 兒童能否用手指拿起小物體？ |
+| 語言 | 💬 | 兒童能否發出有意義的聲音？ |
+| 適應能力 | 🍴 | 兒童能否自己進食？ |
+| 社會行為 | 😊 | 兒童能否與他人互動？ |
+
+## 常見操作
+
+### 上傳 PDF
 ```
-GET /api/videos-list
-```
-
-### Get Video Details
-```
-GET /api/videos-details/123
-```
-
-### Process YouTube
-```
-POST /api/youtube/process
-Body: {"url": "https://youtu.be/..."}
-```
-
-## Troubleshooting
-
-### "Unexpected token '<'"
-- ✅ FIXED - This should no longer appear
-
-### Upload fails silently
-- Check browser console (F12)
-- File must be under 500MB
-
-### YouTube link not recognized
-- Try different URL format (youtu.be/... usually works)
-- Check server logs
-
-## Features
-
-🎬 **Local Video Upload**
-- Drag-drop or browse
-- Up to 500MB
-- Multiple format support
-- Background transcription
-
-📺 **YouTube Integration**
-- Paste link directly
-- Automatic download (optional)
-- URL parsing with multiple format support
-- Demo analysis if download unavailable
-
-📊 **Analysis & Reports**
-- Confidence score display
-- Full transcription
-- Video metadata (duration, filename)
-- Inline display (no page navigation)
-
-🌐 **Bilingual Interface**
-- Chinese: 拖放影片或按此上載
-- English: Drop video or click to upload
-- Mixed language support throughout
-
-🔔 **Smart Notifications**
-- ✅ Success (green)
-- ❌ Error (red)
-- ⏳ Info (blue)
-- Auto-dismiss after 3 seconds
-
-## File Structure
-
-```
-app/
-├── routes.py (API endpoints, fixed JSON error)
-├── video_service.py (transcription & analysis)
-├── templates/index.html (UI, added YouTube input)
-├── static/
-│   ├── css/video_cute.css (styling)
-│   └── js/video_cute_manager.js (rewritten, added YouTube)
-└── models.py (VideoRecord database model)
+1. 點擊上傳區域
+2. 選擇 PDF 文件
+   或
+   將 PDF 拖放到上傳區域
+3. 確認文件名顯示
 ```
 
-## What Was Fixed
+### 輸入評述
+```
+1. 閱讀問題和評估說明
+2. 在文本框中輸入詳細描述
+3. 點擊「下一題」進入下一題
+```
 
-| Issue | Before | After |
-|-------|--------|-------|
-| **JSON Error** | `"<html"...` | `{"success": true}` |
-| **Page Navigation** | Navigated away | Stays on page |
-| **YouTube** | Not supported | Full support |
-| **Error Messages** | Technical errors | User-friendly toasts |
-| **Bilingual** | English only | Chinese + English |
+### 導出結果
+```
+1. 評估完成後自動生成結果
+2. 點擊「📥 導出結果」按鈕
+3. 結果以 JSON 格式下載
+```
 
-## Performance
+## 驗證安裝
 
-- Upload: < 1 second
-- YouTube processing: 5-15 seconds
-- Transcription: 10-120 seconds (depends on video)
-- Report display: < 500ms
-
-## Security
-
-✅ HTML injection prevention  
-✅ Authorization checks  
-✅ File validation  
-✅ SQL injection prevention  
-
-## Next Steps
-
-1. **Test video upload** - Drag a test video
-2. **Test YouTube** - Paste a YouTube link
-3. **Check console** - No JSON parse errors expected
-4. **Monitor logs** - Watch for any issues
-
-## Need Help?
-
-See detailed documentation:
-- `VIDEO_TEST_GUIDE.md` - Step-by-step testing
-- `VIDEO_IMPLEMENTATION_COMPLETE.md` - Full specs
-- `CHANGES_SESSION.md` - All modifications
-
-## Quick Test Commands
-
+運行驗證腳本確認一切正常：
 ```bash
-# Test API directly
-curl http://localhost:5000/api/videos-list \
-  -H "Authorization: Bearer YOUR_TOKEN"
-
-# Check if server is running
-curl http://localhost:5000/
-
-# View logs
-tail -f nohup.out  # or check your log file
+python3 verify_assessment_update.py
 ```
+
+預期輸出：
+```
+✅ 所有檢查均已通過!
+✅ 評估系統已成功更新!
+✅ 可以開始測試和部署
+```
+
+## 常見問題
+
+**Q: 評估需要多長時間？**
+A: 平均 5-10 分鐘
+
+**Q: 可以保存進度嗎？**
+A: 目前需要一次性完成評估
+
+**Q: 如何修改已保存的評估？**
+A: 可以重新進行評估，系統會保存新的記錄
+
+**Q: 支持哪些文件格式？**
+A: 目前支持 PDF 文件上傳
+
+## 文檔資源
+
+- 📖 ASSESSMENT_UPDATE_SUMMARY.md - 詳細技術文檔
+- 📊 ASSESSMENT_COMPARISON.md - 新舊版本對比
+- ✅ UPDATE_COMPLETION_REPORT.md - 完整報告
+
+## 支持
+
+如有問題，請：
+1. 查看文檔
+2. 檢查瀏覽器控制台錯誤
+3. 運行驗證腳本
+4. 聯繫開發團隊
 
 ---
-
-**Status**: ✅ Ready to use  
-**Version**: 2.0  
-**Last Updated**: Today  
-
-🎉 **Enjoy!**
+**兒童發育評估系統 v2.0.0** ✅

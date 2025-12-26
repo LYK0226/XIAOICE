@@ -13,8 +13,8 @@
 
 /* Sidebar container */
 #sidebar {
-    width: 240px;
-    flex: 0 0 240px;
+    width: 280px;
+    flex: 0 0 280px;
     background: linear-gradient(180deg, #f8f9fa 0%, #e9ecef 100%);
     display: flex;
     flex-direction: column;
@@ -31,7 +31,7 @@ body.dark-theme #sidebar {
 }
 
 #sidebar.hidden {
-    margin-left: -240px;
+    margin-left: -280px;
     opacity: 0;
     pointer-events: none;
 }

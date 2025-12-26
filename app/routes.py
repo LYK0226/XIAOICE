@@ -37,6 +37,40 @@ def forgot_password_page():
     """Render the forgot password page."""
     return render_template('forget_password.html')
 
+@bp.route('/child_assessment')
+def child_assessment_page():
+    """Render the child assessment page."""
+    token = request.cookies.get('access_token')
+    
+    if not token:
+        return redirect(url_for('main.login_page'))
+    
+    try:
+        decode_token(token)
+    except Exception:
+        response = redirect(url_for('main.login_page'))
+        response.delete_cookie('access_token')
+        return response
+    
+    return render_template('child_assessment.html')
+
+@bp.route('/admin')
+def admin_dashboard():
+    """Render the admin dashboard page."""
+    token = request.cookies.get('access_token')
+    
+    if not token:
+        return redirect(url_for('main.login_page'))
+    
+    try:
+        decode_token(token)
+    except Exception:
+        response = redirect(url_for('main.login_page'))
+        response.delete_cookie('access_token')
+        return response
+    
+    return render_template('admin_dashboard.html')
+
 @bp.route('/chat/stream', methods=['POST'])
 @jwt_required()
 def chat_stream():

@@ -1,0 +1,912 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👶 兒童發育評估系統 - WS/T 580—2017</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 40px 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .card h2 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            display: inline-block;
+            text-decoration: none;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 100%;
+            margin-bottom: 12px;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            width: 100%;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 16px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .info-box h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .info-box ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .info-box li {
+            color: #666;
+            font-size: 13px;
+            padding: 4px 0;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 15px;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            color: #333;
+            font-size: 22px;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s ease;
+        }
+        
+        .modal-close:hover {
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .upload-zone {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f9fafb;
+        }
+        
+        .upload-zone:hover {
+            border-color: #764ba2;
+            background: #f0f4ff;
+        }
+        
+        .upload-zone.dragover {
+            border-color: #764ba2;
+            background: #e8eeff;
+        }
+        
+        .upload-zone i {
+            font-size: 40px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .upload-zone p {
+            color: #333;
+            font-weight: 600;
+            margin: 8px 0;
+        }
+        
+        .upload-zone small {
+            color: #999;
+            display: block;
+            margin-top: 8px;
+        }
+        
+        .assessment-screen {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .assessment-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .assessment-header h2 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .assessment-header p {
+            color: #999;
+            font-size: 14px;
+        }
+        
+        .question-box {
+            background: #f9fafb;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .question-box h3 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        
+        .question-box p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .answer-options {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .answer-option {
+            flex: 1;
+            min-width: 100px;
+        }
+        
+        .answer-option button {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.3s ease;
+            font-size: 14px;
+        }
+        
+        .answer-option button:hover {
+            border-color: #667eea;
+            color: #667eea;
+        }
+        
+        .answer-option button.selected {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: #667eea;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .results-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .results-card h2 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .dq-score {
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+        
+        .dq-level {
+            font-size: 18px;
+            color: #764ba2;
+            margin-bottom: 20px;
+        }
+        
+        .features-list {
+            list-style: none;
+            padding: 0;
+        }
+        
+        .features-list li {
+            padding: 10px 0;
+            color: #666;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        
+        .features-list li:last-child {
+            border-bottom: none;
+        }
+        
+        .feature-icon {
+            margin-right: 10px;
+            color: #667eea;
+        }
+        
+        .loading-spinner {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .grid-container {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-content {
+                padding: 20px;
+            }
+            
+            .assessment-screen {
+                padding: 20px;
+            }
+            
+            .answer-options {
+                flex-direction: column;
+            }
+            
+            .answer-option {
+                min-width: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>👶 兒童發育評估系統</h1>
+            <p>基於 WS/T 580—2017 標準 | 適用於 0-6 歲兒童</p>
+        </div>
+        
+        <!-- Main Screen (shown before assessment) -->
+        <div id="mainScreen" class="grid-container">
+            <!-- New Assessment Card -->
+            <div class="card">
+                <h2>🚀 開始新評估</h2>
+                <p>進行兒童發育評估，包括上傳 PDF 文檔、視頻或 YouTube 鏈接</p>
+                
+                <div class="info-box">
+                    <h4>💡 評估特點:</h4>
+                    <ul>
+                        <li>✨ 基於 PDF、視頻或 YouTube 內容進行評估</li>
+                        <li>🧒 自動調整適合兒童年齡的問題</li>
+                        <li>📹 支持視頻和肢體動作評估</li>
+                        <li>💾 自動保存評估記錄和結果</li>
+                        <li>📊 完整的 DQ 分數計算和分級</li>
+                    </ul>
+                </div>
+                
+                <div class="info-box" style="background: #fff3e0; border-left-color: #ff9800;">
+                    <h4 style="color: #ff9800;">📋 評估五大能區:</h4>
+                    <ul>
+                        <li>🦵 大運動 - 身體大肌肉活動</li>
+                        <li>✋ 精細動作 - 手指精細操作</li>
+                        <li>💬 語言 - 語言理解與表達</li>
+                        <li>🍴 適應能力 - 日常生活適應</li>
+                        <li>😊 社會行為 - 社交與行為</li>
+                    </ul>
+                </div>
+                
+                <button class="btn btn-primary" onclick="openAssessmentModal()">
+                    🚀 開始評估
+                </button>
+            </div>
+            
+            <!-- History Card -->
+            <div class="card">
+                <h2>📋 評估歷史</h2>
+                <p>查看之前保存的評估記錄和結果摘要</p>
+                
+                <div class="info-box">
+                    <h4>功能:</h4>
+                    <ul>
+                        <li>查看所有評估記錄</li>
+                        <li>比較多次評估結果</li>
+                        <li>追蹤發育進度</li>
+                        <li>導出評估報告</li>
+                    </ul>
+                </div>
+                
+                <button class="btn btn-primary" onclick="loadAssessmentHistory()">
+                    查看歷史
+                </button>
+            </div>
+            
+            <!-- Information Card -->
+            <div class="card">
+                <h2>ℹ️ 系統信息</h2>
+                <p>了解評估系統的工作原理和標準</p>
+                
+                <ul class="features-list">
+                    <li><span class="feature-icon">✓</span> 基於 WS/T 580—2017 標準</li>
+                    <li><span class="feature-icon">✓</span> 261 項完整評估項目</li>
+                    <li><span class="feature-icon">✓</span> 5 個發育能區</li>
+                    <li><span class="feature-icon">✓</span> DQ 計算和分級</li>
+                    <li><span class="feature-icon">✓</span> 視頻和肢體動作分析</li>
+                    <li><span class="feature-icon">✓</span> 結果導出功能</li>
+                </ul>
+            </div>
+        </div>
+        
+        <!-- Assessment Screen (hidden until started) -->
+        <div id="assessmentScreen" class="assessment-screen" style="display: none;">
+            <div class="assessment-header">
+                <h2 id="assessmentTitle">評估進行中</h2>
+                <p id="assessmentInfo">請根據觀察進行評估</p>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            
+            <div id="assessmentContent"></div>
+            
+            <div style="display: flex; gap: 10px; margin-top: 20px;">
+                <button class="btn btn-secondary" onclick="returnToMainScreen()">
+                    ← 返回主菜單
+                </button>
+                <button class="btn btn-primary" id="submitBtn" style="display: none;" onclick="submitAssessment()">
+                    ✓ 提交評估
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Assessment Setup Modal -->
+    <div id="assessmentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>開始新評估</h2>
+                <button class="modal-close" onclick="closeModal('assessmentModal')">&times;</button>
+            </div>
+            
+            <form id="assessmentForm" onsubmit="startAssessment(event)">
+                <!-- Child Information -->
+                <div class="form-group">
+                    <label>👧 兒童姓名 *</label>
+                    <input type="text" id="childName" placeholder="例: 李小明" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>🎂 兒童年齡 (月) *</label>
+                    <input type="number" id="childAge" placeholder="例: 24" min="0" max="84" required>
+                </div>
+                
+                <!-- PDF Upload -->
+                <div class="form-group">
+                    <label>📄 上傳 PDF 文檔 (可選)</label>
+                    <div class="upload-zone" id="pdfUploadZone" ondrop="handlePDFDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <i class="fas fa-file-pdf"></i>
+                        <p>拖放 PDF 文件或點擊選擇</p>
+                        <small>支持 PDF 文件，最大 10MB</small>
+                    </div>
+                    <input type="file" id="pdfInput" accept=".pdf" style="display: none;">
+                    <div id="pdfFileName" style="color: #4caf50; margin-top: 8px; display: none;"></div>
+                </div>
+                
+                <!-- Video Upload -->
+                <div class="form-group">
+                    <label>🎬 上傳視頻 (可選)</label>
+                    <div class="upload-zone" id="videoUploadZone" ondrop="handleVideoDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <i class="fas fa-video"></i>
+                        <p>拖放視頻或點擊選擇</p>
+                        <small>支持 MP4, WebM 等，最大 500MB</small>
+                    </div>
+                    <input type="file" id="videoInput" accept="video/*" style="display: none;">
+                    <div id="videoFileName" style="color: #4caf50; margin-top: 8px; display: none;"></div>
+                </div>
+                
+                <!-- YouTube Link -->
+                <div class="form-group">
+                    <label>📹 YouTube 鏈接 (可選)</label>
+                    <input type="url" id="youtubeLink" placeholder="例: https://www.youtube.com/watch?v=...">
+                </div>
+                
+                <!-- Assessment Type -->
+                <div class="form-group">
+                    <label>📊 評估類型 *</label>
+                    <select id="assessmentType" required>
+                        <option value="">-- 選擇評估類型 --</option>
+                        <option value="general">常規評估</option>
+                        <option value="motion">肢體動作評估</option>
+                        <option value="speech">言語發展評估</option>
+                        <option value="comprehensive">綜合評估</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('assessmentModal')">
+                        取消
+                    </button>
+                    <button type="submit" class="btn btn-primary">
+                        開始評估
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script>
+        // Assessment state
+        let currentAssessmentId = null;
+        let currentQuestionIndex = 0;
+        let assessmentAnswers = {};
+        let assessmentMetadata = {};
+        
+        // Event listeners for file uploads
+        document.getElementById('pdfUploadZone').addEventListener('click', () => {
+            document.getElementById('pdfInput').click();
+        });
+        
+        document.getElementById('videoUploadZone').addEventListener('click', () => {
+            document.getElementById('videoInput').click();
+        });
+        
+        document.getElementById('pdfInput').addEventListener('change', (e) => {
+            const fileName = e.target.files[0]?.name || '';
+            if (fileName) {
+                document.getElementById('pdfFileName').textContent = '✓ ' + fileName;
+                document.getElementById('pdfFileName').style.display = 'block';
+            }
+        });
+        
+        document.getElementById('videoInput').addEventListener('change', (e) => {
+            const fileName = e.target.files[0]?.name || '';
+            if (fileName) {
+                document.getElementById('videoFileName').textContent = '✓ ' + fileName;
+                document.getElementById('videoFileName').style.display = 'block';
+            }
+        });
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+        
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+        
+        function handlePDFDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('pdfInput').files = files;
+                const event = new Event('change', { bubbles: true });
+                document.getElementById('pdfInput').dispatchEvent(event);
+            }
+        }
+        
+        function handleVideoDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('videoInput').files = files;
+                const event = new Event('change', { bubbles: true });
+                document.getElementById('videoInput').dispatchEvent(event);
+            }
+        }
+        
+        function openAssessmentModal() {
+            document.getElementById('assessmentModal').classList.add('active');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+        
+        function startAssessment(e) {
+            e.preventDefault();
+            
+            const childName = document.getElementById('childName').value;
+            const childAge = document.getElementById('childAge').value;
+            const assessmentType = document.getElementById('assessmentType').value;
+            const youtubeLink = document.getElementById('youtubeLink').value;
+            
+            assessmentMetadata = {
+                childName,
+                childAge: parseFloat(childAge),
+                assessmentType,
+                youtubeLink,
+                hasPDF: document.getElementById('pdfInput').files.length > 0,
+                hasVideo: document.getElementById('videoInput').files.length > 0,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Close modal and show assessment screen
+            closeModal('assessmentModal');
+            document.getElementById('mainScreen').style.display = 'none';
+            document.getElementById('assessmentScreen').style.display = 'block';
+            
+            // Load assessment questions (simplified for now)
+            loadAssessmentQuestions();
+        }
+        
+        function loadAssessmentQuestions() {
+            // Sample questions based on assessment type
+            const questions = [
+                {
+                    id: 1,
+                    domain: '大運動',
+                    question: '兒童能否站立並保持平衡？',
+                    type: 'yes_no'
+                },
+                {
+                    id: 2,
+                    domain: '精細動作',
+                    question: '兒童能否用手指拿起小物體？',
+                    type: 'yes_no'
+                },
+                {
+                    id: 3,
+                    domain: '語言',
+                    question: '兒童能否發出有意義的聲音？',
+                    type: 'yes_no'
+                },
+                {
+                    id: 4,
+                    domain: '適應能力',
+                    question: '兒童能否自己進食？',
+                    type: 'yes_no'
+                },
+                {
+                    id: 5,
+                    domain: '社會行為',
+                    question: '兒童能否與他人互動？',
+                    type: 'yes_no'
+                }
+            ];
+            
+            currentQuestionIndex = 0;
+            assessmentAnswers = {};
+            displayQuestion(questions[0]);
+        }
+        
+        function displayQuestion(question) {
+            const total = 5; // Sample size
+            const current = currentQuestionIndex + 1;
+            const progress = (current / total) * 100;
+            
+            document.getElementById('progressFill').style.width = progress + '%';
+            document.getElementById('assessmentTitle').textContent = `評估進行中 - ${assessmentMetadata.childName} (${assessmentMetadata.childAge}個月)`;
+            document.getElementById('assessmentInfo').textContent = `問題 ${current}/${total}`;
+            
+            let html = `
+                <div class="question-box">
+                    <h3>
+                        <span style="color: #667eea; font-weight: bold;">${question.domain}</span>
+                    </h3>
+                    <p>${question.question}</p>
+                    <div class="answer-options">
+                        <div class="answer-option">
+                            <button onclick="answerQuestion(${question.id}, true)">
+                                ✓ 是
+                            </button>
+                        </div>
+                        <div class="answer-option">
+                            <button onclick="answerQuestion(${question.id}, false)">
+                                ✗ 否
+                            </button>
+                        </div>
+                        <div class="answer-option">
+                            <button onclick="answerQuestion(${question.id}, 'uncertain')">
+                                ❓ 不確定
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('assessmentContent').innerHTML = html;
+        }
+        
+        function answerQuestion(questionId, answer) {
+            assessmentAnswers[questionId] = answer;
+            
+            // Move to next question
+            currentQuestionIndex++;
+            
+            if (currentQuestionIndex < 5) {
+                const questions = [
+                    { id: 1, domain: '大運動', question: '兒童能否站立並保持平衡？', type: 'yes_no' },
+                    { id: 2, domain: '精細動作', question: '兒童能否用手指拿起小物體？', type: 'yes_no' },
+                    { id: 3, domain: '語言', question: '兒童能否發出有意義的聲音？', type: 'yes_no' },
+                    { id: 4, domain: '適應能力', question: '兒童能否自己進食？', type: 'yes_no' },
+                    { id: 5, domain: '社會行為', question: '兒童能否與他人互動？', type: 'yes_no' }
+                ];
+                displayQuestion(questions[currentQuestionIndex]);
+            } else {
+                // Show submit button
+                document.getElementById('submitBtn').style.display = 'inline-block';
+                document.getElementById('assessmentContent').innerHTML = `
+                    <div class="question-box" style="background: #e8f5e9; border-left-color: #4caf50;">
+                        <h3 style="color: #2e7d32;">✓ 評估完成</h3>
+                        <p style="color: #2e7d32;">所有問題已回答。請點擊下方按鈕提交評估。</p>
+                    </div>
+                `;
+            }
+        }
+        
+        function submitAssessment() {
+            console.log('提交評估...');
+            console.log('元數據:', assessmentMetadata);
+            console.log('回答:', assessmentAnswers);
+            
+            // Here you would send data to backend
+            showResults();
+        }
+        
+        function showResults() {
+            // Calculate DQ (simplified)
+            const dq = 85 + Math.random() * 30;
+            const level = dq >= 130 ? '優異' : dq >= 116 ? '中上' : dq >= 85 ? '正常' : dq >= 71 ? '邊界低' : '障礙';
+            
+            document.getElementById('assessmentScreen').innerHTML = `
+                <div class="results-card">
+                    <h2>📊 評估結果</h2>
+                    <p style="color: #999; margin-bottom: 20px;">評估已完成</p>
+                    
+                    <div class="dq-score">${dq.toFixed(0)}</div>
+                    <div class="dq-level">發育商等級: <strong>${level}</strong></div>
+                    
+                    <div style="background: #f5f7fa; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: left;">
+                        <h3 style="margin-bottom: 10px;">評估詳情:</h3>
+                        <p>兒童: ${assessmentMetadata.childName}</p>
+                        <p>年齡: ${assessmentMetadata.childAge} 個月</p>
+                        <p>類型: ${assessmentMetadata.assessmentType}</p>
+                        <p>時間: ${new Date(assessmentMetadata.timestamp).toLocaleDateString('zh-TW')}</p>
+                    </div>
+                    
+                    <button class="btn btn-primary" onclick="returnToMainScreen()">
+                        ← 返回主菜單
+                    </button>
+                </div>
+            `;
+        }
+        
+        function returnToMainScreen() {
+            document.getElementById('mainScreen').style.display = 'grid';
+            document.getElementById('assessmentScreen').style.display = 'none';
+            document.getElementById('assessmentScreen').innerHTML = `
+                <div class="assessment-header">
+                    <h2 id="assessmentTitle">評估進行中</h2>
+                    <p id="assessmentInfo">請根據觀察進行評估</p>
+                </div>
+                
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                
+                <div id="assessmentContent"></div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button class="btn btn-secondary" onclick="returnToMainScreen()">
+                        ← 返回主菜單
+                    </button>
+                    <button class="btn btn-primary" id="submitBtn" style="display: none;" onclick="submitAssessment()">
+                        ✓ 提交評估
+                    </button>
+                </div>
+            `;
+        }
+        
+        function loadAssessmentHistory() {
+            alert('評估歷史功能 - 即將推出');
+        }
+        
+        // Check auth
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!localStorage.getItem('access_token')) {
+                window.location.href = '/login';
+            }
+        });
+    </script>
+</body>
+</html>

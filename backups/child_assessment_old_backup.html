@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>👶 兒童發育評估系統 - WS/T 580—2017</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft YaHei", sans-serif;
+            background: linear-gradient(135deg, #C8B8DB 0%, #B8A8D8 100%);
+            min-height: 100vh;
+            display: flex;
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 40px 20px;
+            border-radius: 12px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 36px;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .main-screen {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .card {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 40px rgba(0,0,0,0.15);
+        }
+        
+        .card h2 {
+            font-size: 24px;
+            color: #333;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .card p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 16px;
+            display: inline-block;
+            text-decoration: none;
+            width: 100%;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            margin-bottom: 12px;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+            width: auto;
+        }
+        
+        .btn-secondary:hover {
+            background: #e0e0e0;
+        }
+        
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.6);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .modal.active {
+            display: flex;
+        }
+        
+        .modal-content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 600px;
+            width: 100%;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+            padding-bottom: 15px;
+        }
+        
+        .modal-header h2 {
+            margin: 0;
+            color: #333;
+            font-size: 22px;
+        }
+        
+        .modal-close {
+            background: none;
+            border: none;
+            font-size: 28px;
+            cursor: pointer;
+            color: #999;
+            transition: color 0.3s ease;
+        }
+        
+        .modal-close:hover {
+            color: #333;
+        }
+        
+        .form-group {
+            margin-bottom: 16px;
+        }
+        
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-family: inherit;
+            font-size: 14px;
+            transition: border-color 0.3s ease;
+            box-sizing: border-box;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .upload-zone {
+            border: 2px dashed #667eea;
+            border-radius: 8px;
+            padding: 30px;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background: #f9fafb;
+        }
+        
+        .upload-zone:hover {
+            border-color: #764ba2;
+            background: #f0f4ff;
+        }
+        
+        .upload-zone.dragover {
+            border-color: #764ba2;
+            background: #e8eeff;
+        }
+        
+        .upload-zone i {
+            font-size: 40px;
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        
+        .upload-zone p {
+            color: #333;
+            font-weight: 600;
+            margin: 8px 0;
+        }
+        
+        .upload-zone small {
+            color: #999;
+            display: block;
+            margin-top: 8px;
+        }
+        
+        .assessment-screen {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            max-width: 900px;
+            margin: 0 auto;
+        }
+        
+        .assessment-header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .assessment-header h2 {
+            color: #333;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .assessment-header p {
+            color: #999;
+            font-size: 14px;
+        }
+        
+        .question-container {
+            background: #f9fafb;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .question-container h3 {
+            color: #333;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        
+        .question-container p {
+            color: #666;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .progress-bar {
+            width: 100%;
+            height: 8px;
+            background: #f0f0f0;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            overflow: hidden;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            transition: width 0.3s ease;
+        }
+        
+        .results-card {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            text-align: center;
+        }
+        
+        .results-card h2 {
+            font-size: 28px;
+            color: #333;
+            margin-bottom: 20px;
+        }
+        
+        .dq-score {
+            font-size: 48px;
+            font-weight: bold;
+            color: #667eea;
+            margin: 20px 0;
+        }
+        
+        .dq-level {
+            font-size: 18px;
+            color: #764ba2;
+            margin-bottom: 20px;
+        }
+        
+        .file-display {
+            color: #4caf50;
+            margin-top: 8px;
+            display: none;
+            font-size: 14px;
+        }
+        
+        .hidden-input {
+            display: none;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        @media (max-width: 768px) {
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .main-screen {
+                grid-template-columns: 1fr;
+            }
+            
+            .modal-content {
+                padding: 20px;
+            }
+            
+            .assessment-screen {
+                padding: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <h1>👶 兒童發育評估系統</h1>
+            <p>基於 WS/T 580—2017 標準 | 適用於 0-6 歲兒童</p>
+        </div>
+        
+        <!-- Main Screen -->
+        <div id="mainScreen" class="main-screen">
+            <!-- New Assessment Card -->
+            <div class="card">
+                <h2>🚀 開始新評估</h2>
+                <p>進行兒童發育評估，支持上傳 PDF 文檔和文本評述</p>
+                
+                <div style="background: #f0f4ff; border-left: 4px solid #667eea; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                    <h4 style="color: #667eea; margin-bottom: 8px; font-size: 14px;">📋 評估五大能區:</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="color: #666; font-size: 13px; padding: 4px 0;">🦵 大運動 - 身體大肌肉活動</li>
+                        <li style="color: #666; font-size: 13px; padding: 4px 0;">✋ 精細動作 - 手指精細操作</li>
+                        <li style="color: #666; font-size: 13px; padding: 4px 0;">💬 語言 - 語言理解與表達</li>
+                        <li style="color: #666; font-size: 13px; padding: 4px 0;">🍴 適應能力 - 日常生活適應</li>
+                        <li style="color: #666; font-size: 13px; padding: 4px 0;">😊 社會行為 - 社交與行為</li>
+                    </ul>
+                </div>
+                
+                <button class="btn btn-primary" onclick="openAssessmentModal()">
+                    🚀 開始評估
+                </button>
+            </div>
+            
+            <!-- History Card -->
+            <div class="card">
+                <h2>📋 評估歷史</h2>
+                <p>查看之前保存的評估記錄和結果摘要</p>
+                
+                <div style="background: #f0f4ff; border-left: 4px solid #667eea; padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                    <h4 style="color: #667eea; margin-bottom: 8px; font-size: 14px;">功能:</h4>
+                    <ul style="list-style: none; padding: 0;">
+                        <li style="color: #666; font-size: 13px; padding: 4px 0;">查看所有評估記錄</li>
+                        <li style="color: #666; font-size: 13px; padding: 4px 0;">比較多次評估結果</li>
+                        <li style="color: #666; font-size: 13px; padding: 4px 0;">追蹤發育進度</li>
+                        <li style="color: #666; font-size: 13px; padding: 4px 0;">導出評估報告</li>
+                    </ul>
+                </div>
+                
+                <button class="btn btn-primary" onclick="loadAssessmentHistory()">
+                    查看歷史
+                </button>
+            </div>
+        </div>
+        
+        <!-- Assessment Screen -->
+        <div id="assessmentScreen" class="assessment-screen" style="display: none;">
+            <div class="assessment-header">
+                <h2 id="assessmentTitle">評估進行中</h2>
+                <p id="assessmentInfo">請輸入您對兒童的觀察評述</p>
+            </div>
+            
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+            </div>
+            
+            <div id="assessmentContent"></div>
+            
+            <div class="button-group">
+                <button class="btn btn-secondary" onclick="returnToMainScreen()">
+                    ← 返回主菜單
+                </button>
+                <button class="btn btn-primary" id="submitBtn" style="display: none; flex: 1;" onclick="submitAssessment()">
+                    ✓ 提交評估
+                </button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Assessment Setup Modal -->
+    <div id="assessmentModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>開始新評估</h2>
+                <button class="modal-close" onclick="closeModal('assessmentModal')">&times;</button>
+            </div>
+            
+            <form id="assessmentForm" onsubmit="startAssessment(event)">
+                <!-- Child Information -->
+                <div class="form-group">
+                    <label>👧 兒童姓名 *</label>
+                    <input type="text" id="childName" placeholder="例: 李小明" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>🎂 兒童年齡 (月) *</label>
+                    <input type="number" id="childAge" placeholder="例: 24" min="0" max="84" required>
+                </div>
+                
+                <!-- PDF Upload -->
+                <div class="form-group">
+                    <label>📄 上傳 PDF 文檔 (可選)</label>
+                    <div class="upload-zone" id="pdfUploadZone" ondrop="handlePDFDrop(event)" ondragover="handleDragOver(event)" ondragleave="handleDragLeave(event)">
+                        <i class="fas fa-file-pdf"></i>
+                        <p>拖放 PDF 文件或點擊選擇</p>
+                        <small>支持 PDF 文件，最大 10MB</small>
+                    </div>
+                    <input type="file" id="pdfInput" accept=".pdf" class="hidden-input">
+                    <div id="pdfFileName" class="file-display"></div>
+                </div>
+                
+                <!-- Assessment Type -->
+                <div class="form-group">
+                    <label>📊 評估類型 *</label>
+                    <select id="assessmentType" required>
+                        <option value="">-- 選擇評估類型 --</option>
+                        <option value="general">常規評估</option>
+                        <option value="motion">肢體動作評估</option>
+                        <option value="speech">言語發展評估</option>
+                        <option value="comprehensive">綜合評估</option>
+                    </select>
+                </div>
+                
+                <div style="display: flex; gap: 10px; margin-top: 20px;">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('assessmentModal')" style="flex: 1;">
+                        取消
+                    </button>
+                    <button type="submit" class="btn btn-primary" style="flex: 1;">
+                        開始評估
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script src="{{ url_for('static', filename='js/child_assessment.js') }}"></script>
+    <script>
+        // File upload handlers
+        document.getElementById('pdfUploadZone').addEventListener('click', () => {
+            document.getElementById('pdfInput').click();
+        });
+        
+        document.getElementById('pdfInput').addEventListener('change', (e) => {
+            const fileName = e.target.files[0]?.name || '';
+            if (fileName) {
+                document.getElementById('pdfFileName').textContent = '✓ ' + fileName;
+                document.getElementById('pdfFileName').style.display = 'block';
+            }
+        });
+        
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('dragover');
+        }
+        
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('dragover');
+        }
+        
+        function handlePDFDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                document.getElementById('pdfInput').files = files;
+                const event = new Event('change', { bubbles: true });
+                document.getElementById('pdfInput').dispatchEvent(event);
+            }
+        }
+        
+        function openAssessmentModal() {
+            document.getElementById('assessmentModal').classList.add('active');
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.remove('active');
+        }
+        
+        function startAssessment(e) {
+            e.preventDefault();
+            ChildAssessmentModule.startNewAssessment(
+                document.getElementById('childName').value,
+                parseInt(document.getElementById('childAge').value),
+                document.getElementById('pdfInput').files[0],
+                document.getElementById('assessmentType').value
+            );
+        }
+        
+        function returnToMainScreen() {
+            document.getElementById('mainScreen').style.display = 'grid';
+            document.getElementById('assessmentScreen').style.display = 'none';
+            ChildAssessmentModule.reset();
+        }
+        
+        function submitAssessment() {
+            ChildAssessmentModule.submitAssessment();
+        }
+        
+        function loadAssessmentHistory() {
+            alert('評估歷史功能 - 即將推出');
+        }
+        
+        // Check auth
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!localStorage.getItem('access_token')) {
+                window.location.href = '/login';
+            }
+        });
+    </script>
+</body>
+</html>
