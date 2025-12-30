@@ -607,8 +607,8 @@
             const modal = document.getElementById('evaluationModal');
             const assessmentId = modal.dataset.assessmentId || 'general';
 
-            // 隱藏評估列表，顯示評估畫面
-            document.getElementById('assessmentListScreen').style.display = 'none';
+            // 隱藏開始畫面，顯示評估畫面
+            document.getElementById('startScreen').style.display = 'none';
             document.getElementById('assessmentScreen').style.display = 'block';
 
             // 使用評估模塊開始評估
@@ -625,6 +625,19 @@
         function submitAssessment() {
             if (typeof ChildAssessmentModule !== 'undefined') {
                 ChildAssessmentModule.submitAssessment();
+            }
+        }
+
+        function backToAssessmentList() {
+            // 隱藏評估畫面，顯示開始畫面
+            document.getElementById('assessmentScreen').style.display = 'none';
+            document.getElementById('startScreen').style.display = 'block';
+            
+            // 重置評估數據
+            if (typeof ChildAssessmentModule !== 'undefined') {
+                ChildAssessmentModule.assessmentData = null;
+                ChildAssessmentModule.currentQuestionIndex = 0;
+                ChildAssessmentModule.assessmentAnswers = {};
             }
         }
 

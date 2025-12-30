@@ -75,13 +75,13 @@ body {
     height: 100vh;
     display: flex;
     overflow: hidden;
-    background: #f5f7fa;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
     color: #333;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
 body.dark-theme {
-    background: #1a1a1a;
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
     color: #e0e0e0;
 }
 
@@ -90,9 +90,8 @@ body.dark-theme {
     flex: 1;
     display: flex;
     background: white;
-    transition: background-color 0.3s ease, margin-left 0.3s ease;
+    transition: background-color 0.3s ease;
     min-width: 0;
-    margin-left: 280px;
 }
 
 body.dark-theme #main-content {
@@ -192,7 +191,7 @@ body.dark-theme .icon-btn:hover {
 /* Messages area */
 #messages {
     flex: 1;
-    padding: 15px 20px;
+    padding: 20px;
     overflow-y: auto;
     background: linear-gradient(180deg, #f5f7fa 0%, #e9ecef 100%);
     transition: background-color 0.3s ease;
@@ -206,7 +205,7 @@ body.dark-theme #messages {
 .user-message-container {
     display: flex;
     gap: 12px;
-    margin-bottom: 15px;
+    margin-bottom: 20px;
     animation: fadeInUp 0.4s ease;
 }
 
