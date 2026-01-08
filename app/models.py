@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime
+import uuid
 
 db = SQLAlchemy()
 
@@ -258,14 +259,47 @@ class ChildDevelopmentAssessmentRecord(db.Model):
             'is_completed': self.is_completed,
             'standard': self.standard,
             'created_at': self.created_at.isoformat() if self.created_at else None,
-            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
-        }
+			'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+			'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+			'pdf_filename': self.pdf_filename,
+			'pdf_content_summary': self.pdf_content_summary,
+		}
         
         if include_answers:
             data['questions'] = self.questions
             data['answers'] = self.answers
         
+        return data
+
+
+class PoseAssessmentRun(db.Model):
+    """Stores a user's pose/action assessment run (from /pose_detection)."""
+
+    __tablename__ = 'pose_assessment_runs'
+
+    id = db.Column(db.Integer, primary_key=True)
+    run_id = db.Column(db.String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False, index=True)
+
+    # Raw payload from frontend (steps, timings, detected actions, etc.)
+    payload = db.Column(db.JSON, nullable=False)
+
+    # Computed scoring/evaluation summary
+    evaluation = db.Column(db.JSON, nullable=True)
+
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+
+    user = db.relationship('User', backref=db.backref('pose_assessment_runs', cascade='all, delete-orphan'))
+
+    def to_dict(self, include_payload=True):
+        data = {
+            'run_id': self.run_id,
+            'user_id': self.user_id,
+            'evaluation': self.evaluation,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+        }
+        if include_payload:
+            data['payload'] = self.payload
         return data
 
 

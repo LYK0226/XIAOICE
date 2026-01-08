@@ -130,6 +130,13 @@ class ActionDetector {
                 icon: '🙇',
                 detect: (kp) => this.detectBendingForward(kp)
             },
+            'bending_backward': {
+                name: 'Bending Backward',
+                nameZh: '向後彎腰',
+                category: 'torso',
+                icon: '🧎',
+                detect: (kp) => this.detectBendingBackward(kp)
+            },
             // Note: Labels and detection are swapped because webcam view is mirrored
             'leaning_left': {
                 name: 'Leaning Right',
@@ -506,6 +513,8 @@ class ActionDetector {
         const rightHip = this.findKeypoint(keypoints, 'right_hip');
         const leftAnkle = this.findKeypoint(keypoints, 'left_ankle');
         const rightAnkle = this.findKeypoint(keypoints, 'right_ankle');
+        const leftShoulder = this.findKeypoint(keypoints, 'left_shoulder');
+        const rightShoulder = this.findKeypoint(keypoints, 'right_shoulder');
 
         if (!leftKnee || !rightKnee || !leftHip || !rightHip) {
             return { detected: false, confidence: 0 };
@@ -514,27 +523,64 @@ class ActionDetector {
         // 深蹲容易與「單腳抬腿/單膝彎曲」混淆。
         // 這裡改成：必須同時滿足「臀部下降」+「雙膝彎曲（且腳踝可用）」才算深蹲。
 
+        // More lenient visibility threshold
         const visibility = this.calculateAverageVisibility([leftKnee, rightKnee, leftHip, rightHip, leftAnkle, rightAnkle].filter(Boolean));
-        if (visibility < 0.15) {
+        if (visibility < 0.1) {  // Reduced from 0.15 to 0.1
             return { detected: false, confidence: 0 };
         }
 
-        const anklesUsable = this.isKeypointUsable(leftAnkle) && this.isKeypointUsable(rightAnkle);
-        if (!anklesUsable) {
+        // Make ankle requirement more lenient - at least one ankle should be usable
+        const leftAnkleUsable = this.isKeypointUsable(leftAnkle, 0.1);
+        const rightAnkleUsable = this.isKeypointUsable(rightAnkle, 0.1);
+        
+        // If no ankles are usable, try using shoulders for reference
+        if (!leftAnkleUsable && !rightAnkleUsable) {
+            // Alternative detection using shoulder-hip-knee alignment
+            if (leftShoulder && rightShoulder) {
+                const shoulderLevel = (leftShoulder.y + rightShoulder.y) / 2;
+                const hipLevel = (leftHip.y + rightHip.y) / 2;
+                const kneeLevel = (leftKnee.y + rightKnee.y) / 2;
+                
+                // Check if hips dropped significantly relative to shoulders
+                const torsoCompressed = (hipLevel - shoulderLevel) < 0.35;
+                // Knees should be bent (knees closer to shoulders than hips are)
+                const kneesBent = Math.abs(kneeLevel - shoulderLevel) < Math.abs(hipLevel - shoulderLevel);
+                
+                if (torsoCompressed && kneesBent) {
+                    return { detected: true, confidence: Math.min(1.0, visibility * 0.85) };
+                }
+            }
             return { detected: false, confidence: 0 };
         }
 
-        // 臀部下降（臀部接近膝蓋高度）
+        // 臀部下降（臀部接近或低於膝蓋高度）- more lenient threshold
         const hipLevel = (leftHip.y + rightHip.y) / 2;
         const kneeLevel = (leftKnee.y + rightKnee.y) / 2;
-        const hipLowered = hipLevel > kneeLevel - 0.10;
+        const hipLowered = hipLevel > kneeLevel - 0.15;  // Increased from 0.10 to 0.15
 
-        // 膝蓋彎曲角度（較寬鬆的角度閾值，但要求雙膝）
-        const leftKneeAngle = Math.abs(this.calculateAngle(leftHip, leftKnee, leftAnkle));
-        const rightKneeAngle = Math.abs(this.calculateAngle(rightHip, rightKnee, rightAnkle));
-        const kneesBentBoth = leftKneeAngle < 135 && rightKneeAngle < 135;
+        // 膝蓋彎曲角度（更寬鬆的角度閾值）
+        let kneesBentBoth = false;
+        if (leftAnkleUsable && rightAnkleUsable) {
+            const leftKneeAngle = Math.abs(this.calculateAngle(leftHip, leftKnee, leftAnkle));
+            const rightKneeAngle = Math.abs(this.calculateAngle(rightHip, rightKnee, rightAnkle));
+            kneesBentBoth = leftKneeAngle < 145 && rightKneeAngle < 145;  // Increased from 135 to 145
+        } else if (leftAnkleUsable) {
+            const leftKneeAngle = Math.abs(this.calculateAngle(leftHip, leftKnee, leftAnkle));
+            // If only one ankle is visible, be more lenient
+            kneesBentBoth = leftKneeAngle < 145;
+        } else if (rightAnkleUsable) {
+            const rightKneeAngle = Math.abs(this.calculateAngle(rightHip, rightKnee, rightAnkle));
+            kneesBentBoth = rightKneeAngle < 145;
+        }
 
-        if (hipLowered && kneesBentBoth) {
+        // Additional check: feet should be roughly at same level (not lifting one leg)
+        let feetLevel = true;
+        if (leftAnkleUsable && rightAnkleUsable) {
+            const ankleDiff = Math.abs(leftAnkle.y - rightAnkle.y);
+            feetLevel = ankleDiff < 0.15;  // Both feet roughly at same height
+        }
+
+        if (hipLowered && kneesBentBoth && feetLevel) {
             return { detected: true, confidence: Math.min(1.0, visibility * 0.95) };
         }
 
@@ -580,6 +626,73 @@ class ActionDetector {
         if (shoulderLowered || leaningForward || noseDown) {
             const visibility = this.calculateAverageVisibility([leftShoulder, rightShoulder, leftHip, rightHip]);
             return { detected: true, confidence: visibility * 0.85 };
+        }
+
+        return { detected: false, confidence: 0 };
+    }
+
+    /**
+     * 偵測向後彎腰（後仰）
+     *
+     * 這個動作在 2D 影像上其實很難精準辨識，主要依賴 z 軸（深度）變化做粗略判斷：
+     * - 肩膀中心相對臀部中心的 z 值「往後」偏移
+     * - 輔助訊號：鼻子位置偏高（抬頭）
+     */
+    detectBendingBackward(keypoints) {
+        const nose = this.findKeypoint(keypoints, 'nose');
+        const leftShoulder = this.findKeypoint(keypoints, 'left_shoulder');
+        const rightShoulder = this.findKeypoint(keypoints, 'right_shoulder');
+        const leftHip = this.findKeypoint(keypoints, 'left_hip');
+        const rightHip = this.findKeypoint(keypoints, 'right_hip');
+
+        if (!leftShoulder || !rightShoulder || !leftHip || !rightHip) {
+            return { detected: false, confidence: 0 };
+        }
+
+        const shoulderCenter = {
+            x: (leftShoulder.x + rightShoulder.x) / 2,
+            y: (leftShoulder.y + rightShoulder.y) / 2,
+            z: ((leftShoulder.z || 0) + (rightShoulder.z || 0)) / 2
+        };
+        const hipCenter = {
+            x: (leftHip.x + rightHip.x) / 2,
+            y: (leftHip.y + rightHip.y) / 2,
+            z: ((leftHip.z || 0) + (rightHip.z || 0)) / 2
+        };
+
+        // 後仰在單鏡頭 2D 上非常難做「姿態」判斷；實務上用「抬頭 + 非前彎」當主要特徵更穩。
+        // 同時保留 z 深度差作輔助（注意：不同模型/裝置 z 的正負方向可能相反）。
+
+        const depthDelta = shoulderCenter.z - hipCenter.z;
+        const depthDeltaAbs = Math.abs(depthDelta);
+
+        // 主要訊號：抬頭
+        const noseUp = nose ? (nose.y < shoulderCenter.y - 0.03) : false;
+
+        // 輔助訊號：肩膀在深度上明顯偏離臀部（不管正負）
+        const depthSeparated = depthDeltaAbs > 0.02;
+
+        // 輔助訊號：身體不是在「前彎」狀態（復用前彎偵測避免誤判）
+        const forwardBend = this.detectBendingForward(keypoints);
+        if (forwardBend && forwardBend.detected) {
+            return { detected: false, confidence: 0 };
+        }
+
+        // 輔助訊號：上半身更直/更挺（肩-臀的垂直距離沒有被壓縮）
+        const torsoVertical = hipCenter.y - shoulderCenter.y;
+        const torsoNotCompressed = torsoVertical > 0.22;
+
+        const detected = noseUp && (depthSeparated || torsoNotCompressed);
+        if (detected) {
+            const visibility = this.calculateAverageVisibility([leftShoulder, rightShoulder, leftHip, rightHip, nose].filter(Boolean));
+
+            // 讓 confidence 更容易跨過動作進入門檻（此動作在測驗中需要 hold）
+            const depthScore = Math.max(0, Math.min(1, (depthDeltaAbs - 0.01) / 0.08));
+            const torsoScore = Math.max(0, Math.min(1, (torsoVertical - 0.18) / 0.18));
+            const poseScore = Math.max(depthScore, torsoScore);
+
+            const confidence = Math.min(1.0, visibility * (0.92 + 0.18 * poseScore));
+            return { detected: true, confidence };
         }
 
         return { detected: false, confidence: 0 };
@@ -842,40 +955,70 @@ class ActionDetector {
         const rightWrist = this.findKeypoint(keypoints, 'right_wrist');
         const leftShoulder = this.findKeypoint(keypoints, 'left_shoulder');
         const rightShoulder = this.findKeypoint(keypoints, 'right_shoulder');
+        const leftElbow = this.findKeypoint(keypoints, 'left_elbow');
+        const rightElbow = this.findKeypoint(keypoints, 'right_elbow');
+
+        // Check if we have minimum required keypoints
+        if (!leftWrist || !rightWrist || !leftShoulder || !rightShoulder) {
+            return { detected: false, confidence: 0 };
+        }
 
         let armsSpreadDetected = false;
         let armsSpreadConfidence = 0;
-        if (leftWrist && rightWrist && leftShoulder && rightShoulder) {
-            const shoulderLevel = (leftShoulder.y + rightShoulder.y) / 2;
-            const leftArmHorizontal = Math.abs(leftWrist.y - shoulderLevel) < 0.1;
-            const rightArmHorizontal = Math.abs(rightWrist.y - shoulderLevel) < 0.1;
+        
+        // More lenient arm detection for jumping jacks
+        const shoulderLevel = (leftShoulder.y + rightShoulder.y) / 2;
+        const shoulderWidth = Math.abs(leftShoulder.x - rightShoulder.x);
+        
+        // Arms should be raised above hip level (more lenient than horizontal)
+        const leftArmRaised = leftWrist.y < shoulderLevel + 0.15;
+        const rightArmRaised = rightWrist.y < shoulderLevel + 0.15;
+        
+        // Arms should be extended outward (check wrists are wider than shoulders)
+        const wristWidth = Math.abs(leftWrist.x - rightWrist.x);
+        const armsExtended = wristWidth > shoulderWidth * 1.1;
+        
+        // Alternative check: wrists outside shoulders
+        const leftArmOut = leftWrist.x < leftShoulder.x - 0.05;
+        const rightArmOut = rightWrist.x > rightShoulder.x + 0.05;
 
-            const leftArmExtended = leftWrist.x < leftShoulder.x;
-            const rightArmExtended = rightWrist.x > rightShoulder.x;
-
-            if (leftArmHorizontal && rightArmHorizontal && leftArmExtended && rightArmExtended) {
-                armsSpreadDetected = true;
-                armsSpreadConfidence = this.calculateAverageVisibility([leftWrist, rightWrist, leftShoulder, rightShoulder]);
-            }
+        if ((leftArmRaised && rightArmRaised) && (armsExtended || (leftArmOut && rightArmOut))) {
+            armsSpreadDetected = true;
+            // Include elbows in visibility calculation if available
+            const visibilityPoints = [leftWrist, rightWrist, leftShoulder, rightShoulder];
+            if (leftElbow) visibilityPoints.push(leftElbow);
+            if (rightElbow) visibilityPoints.push(rightElbow);
+            armsSpreadConfidence = this.calculateAverageVisibility(visibilityPoints);
         }
 
         const leftAnkle = this.findKeypoint(keypoints, 'left_ankle');
         const rightAnkle = this.findKeypoint(keypoints, 'right_ankle');
         const leftHip = this.findKeypoint(keypoints, 'left_hip');
         const rightHip = this.findKeypoint(keypoints, 'right_hip');
+        const leftKnee = this.findKeypoint(keypoints, 'left_knee');
+        const rightKnee = this.findKeypoint(keypoints, 'right_knee');
 
         if (!leftAnkle || !rightAnkle || !leftHip || !rightHip) {
             return { detected: false, confidence: 0 };
         }
 
-        // 雙腳分開
+        // 雙腳分開 - more lenient threshold for rapid movements
         const hipWidth = Math.abs(leftHip.x - rightHip.x);
         const ankleWidth = Math.abs(leftAnkle.x - rightAnkle.x);
-        const legsSpread = ankleWidth > hipWidth * 1.2;
+        const legsSpread = ankleWidth > hipWidth * 1.15; // Reduced from 1.2 to 1.15
+        
+        // Alternative: Check knee width as well (more stable during movement)
+        let kneeSpread = false;
+        if (leftKnee && rightKnee) {
+            const kneeWidth = Math.abs(leftKnee.x - rightKnee.x);
+            kneeSpread = kneeWidth > hipWidth * 1.15;
+        }
 
-        // 手臂展開 + 雙腳分開
-        if (armsSpreadDetected && legsSpread) {
-            return { detected: true, confidence: armsSpreadConfidence };
+        // 手臂展開 + 雙腳分開 (accept either ankle or knee spread)
+        if (armsSpreadDetected && (legsSpread || kneeSpread)) {
+            // Boost confidence slightly for better detection stability
+            const finalConfidence = Math.min(1.0, armsSpreadConfidence * 1.1);
+            return { detected: true, confidence: finalConfidence };
         }
 
         return { detected: false, confidence: 0 };
@@ -979,14 +1122,24 @@ class ActionDetector {
         // 針對這些動作降低去抖幀數與滯後邊距，讓「持續做同一個動作」更容易穩定維持。
         let hysteresisMargin = this.config.hysteresisMargin;
         let debounceFrames = this.config.debounceFrames;
+        let baseThreshold = this.config.confidenceThreshold;
+
+        // 針對較難穩定的動作做更快的啟動/維持，避免在測驗 hold 期間閃爍導致歸零。
         const stableComboActions = new Set(['both_hands_raised', 'arms_crossed']);
         if (stableComboActions.has(actionId)) {
             hysteresisMargin = Math.min(hysteresisMargin, 0.05);
             debounceFrames = Math.min(debounceFrames, 4);
         }
 
-        const enterThreshold = this.config.confidenceThreshold + hysteresisMargin;
-        const exitThreshold = this.config.confidenceThreshold - hysteresisMargin;
+        // 向後彎腰：以抬頭為主的粗略判斷，對雜訊敏感；用較低門檻+較少去抖讓它能被觸發
+        if (actionId === 'bending_backward') {
+            hysteresisMargin = Math.min(hysteresisMargin, 0.03);
+            debounceFrames = Math.min(debounceFrames, 2);
+            baseThreshold = Math.min(baseThreshold, 0.40);
+        }
+
+        const enterThreshold = baseThreshold + hysteresisMargin;
+        const exitThreshold = baseThreshold - hysteresisMargin;
 
         // 滯後閾值邏輯
         if (state.active) {

@@ -6,8 +6,12 @@ import json
 import re
 from . import vertex_ai
 from werkzeug.utils import secure_filename
+from typing import Any, Dict, List, Optional
 
 bp = Blueprint('main', __name__)
+
+# Evaluation logic moved to dedicated module to keep routes lightweight
+from .pose_assessment import evaluate_pose_assessment
 
 @bp.route("/")
 @bp.route("/index")
@@ -78,6 +82,122 @@ def serve_pose_detection_js(filename):
     """Serve JavaScript files from the pose_detection module."""
     pose_detection_dir = os.path.join(os.path.dirname(__file__), 'pose_detection')
     return send_from_directory(pose_detection_dir, filename)
+
+
+# ==================== Pose/Action Assessment Endpoints ====================
+
+
+@bp.route('/api/pose-assessment/runs', methods=['POST'])
+@jwt_required()
+def create_pose_assessment_run():
+    """Receive pose assessment test data from frontend, score it, and store it."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import PoseAssessmentRun, db
+
+    user_id = int(get_jwt_identity())
+    data = request.get_json(silent=True) or {}
+
+    steps = data.get('steps')
+    if not isinstance(steps, list) or len(steps) == 0:
+        return jsonify({'error': 'steps is required and must be a non-empty array'}), 400
+
+    evaluation = evaluate_pose_assessment(data)
+
+    try:
+        run = PoseAssessmentRun(user_id=user_id, payload=data, evaluation=evaluation)
+        db.session.add(run)
+        db.session.commit()
+        return jsonify({'run': run.to_dict(include_payload=False)}), 201
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating pose assessment run: {e}")
+        return jsonify({'error': 'Failed to store pose assessment run'}), 500
+
+
+@bp.route('/api/pose-assessment/runs/latest', methods=['GET'])
+@jwt_required()
+def get_latest_pose_assessment_run():
+    """Fetch latest pose assessment run for current user."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import PoseAssessmentRun
+
+    user_id = int(get_jwt_identity())
+    run = (
+        PoseAssessmentRun.query
+        .filter_by(user_id=user_id)
+        .order_by(PoseAssessmentRun.created_at.desc())
+        .first()
+    )
+
+    if not run:
+        return jsonify({'run': None}), 200
+    return jsonify({'run': run.to_dict(include_payload=True)}), 200
+
+
+@bp.route('/api/pose-assessment/runs/latest', methods=['DELETE'])
+@jwt_required()
+def delete_latest_pose_assessment_run():
+    """Delete the latest pose assessment run for the current user."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import PoseAssessmentRun, db
+
+    user_id = int(get_jwt_identity())
+    try:
+        run = (
+            PoseAssessmentRun.query
+            .filter_by(user_id=user_id)
+            .order_by(PoseAssessmentRun.created_at.desc())
+            .first()
+        )
+        if not run:
+            return jsonify({'deleted': False, 'message': 'No run found'}), 200
+
+        db.session.delete(run)
+        db.session.commit()
+        return jsonify({'deleted': True}), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting latest pose assessment run: {e}")
+        return jsonify({'deleted': False, 'error': 'Failed to delete latest run'}), 500
+
+
+@bp.route('/api/pose-assessment/runs', methods=['GET'])
+@jwt_required()
+def list_pose_assessment_runs():
+    """List recent pose assessment runs for current user."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import PoseAssessmentRun
+
+    user_id = int(get_jwt_identity())
+    limit_raw = request.args.get('limit', '10')
+    try:
+        limit = max(1, min(50, int(limit_raw)))
+    except Exception:
+        limit = 10
+
+    runs = (
+        PoseAssessmentRun.query
+        .filter_by(user_id=user_id)
+        .order_by(PoseAssessmentRun.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return jsonify({'runs': [r.to_dict(include_payload=False) for r in runs]}), 200
+
+
+@bp.route('/api/pose-assessment/runs/<run_id>', methods=['GET'])
+@jwt_required()
+def get_pose_assessment_run(run_id):
+    """Fetch a specific pose assessment run for current user by run_id."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import PoseAssessmentRun
+
+    user_id = int(get_jwt_identity())
+    run = PoseAssessmentRun.query.filter_by(user_id=user_id, run_id=run_id).first()
+    if not run:
+        return jsonify({'error': 'Run not found'}), 404
+    return jsonify({'run': run.to_dict(include_payload=True)}), 200
 
 @bp.route('/admin')
 def admin_dashboard():
