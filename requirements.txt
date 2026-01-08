@@ -7,15 +7,13 @@ Flask-SQLAlchemy>=3.0.3
 Flask-Migrate>=4.0.0
 Flask-JWT-Extended>=4.6.0
 cryptography>=42.0.0
-boto3>=1.40.64
-awscli==1.42.64
 PyPDF2>=3.0.0
 pytz>=2024.1
 moviepy==1.0.3
 openai-whisper==20231117
 librosa==0.10.0
-numpy==2.2.6
-scipy==1.11.0
+numpy>=1.26.0
+scipy==1.16.3
 pydub==0.25.1
 yt-dlp>=2024.0.0
 opencv-python-headless>=4.8.0

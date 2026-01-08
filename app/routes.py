@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, Response
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, Response, send_from_directory
 from flask_jwt_extended import jwt_required, decode_token
 import os
 import json
@@ -53,6 +53,31 @@ def child_assessment_page():
         return response
     
     return render_template('child_assessment.html')
+
+
+@bp.route('/pose_detection')
+def pose_detection_page():
+    """Render the pose detection page."""
+    token = request.cookies.get('access_token')
+
+    if not token:
+        return redirect(url_for('main.login_page'))
+
+    try:
+        decode_token(token)
+    except Exception:
+        response = redirect(url_for('main.login_page'))
+        response.delete_cookie('access_token')
+        return response
+
+    return render_template('pose_detection.html')
+
+
+@bp.route('/pose_detection/js/<path:filename>')
+def serve_pose_detection_js(filename):
+    """Serve JavaScript files from the pose_detection module."""
+    pose_detection_dir = os.path.join(os.path.dirname(__file__), 'pose_detection')
+    return send_from_directory(pose_detection_dir, filename)
 
 @bp.route('/admin')
 def admin_dashboard():
