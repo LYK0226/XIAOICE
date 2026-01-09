@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>影片上載與分析</title>
+
+    <!-- Reuse existing styles -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/chatbox.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/video_management.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="vm-video-page">
+    <header class="vm-topbar">
+        <div class="vm-topbar__inner">
+            <button class="btn btn-secondary vm-topbar__back" onclick="window.location.href='/'">
+                <i class="fas fa-arrow-left"></i>
+                返回
+            </button>
+        </div>
+    </header>
+
+    <!-- Minimal stub button required by video_management.js -->
+    <button id="videoUploadBtn" style="display:none;"></button>
+
+    <main class="vm-shell">
+        <div class="vm-container">
+            <section class="vm-hero" aria-label="Video upload intro">
+                <div class="vm-hero__content">
+                    <div class="vm-hero__badge">
+                        <span class="vm-hero__dot" aria-hidden="true"></span>
+                        親子小幫手
+                    </div>
+                    <h1 class="vm-hero__title">一起上載影片，讓 AI 幫你整理重點</h1>
+                    <p class="vm-hero__desc">
+                        給家長：快速查看轉錄、時間戳記與分析報告。<br>
+                        給小朋友：只要選影片並按「提交」，其餘交給我們。
+                    </p>
+                    <div class="vm-hero__tips" role="note">
+                        <div class="vm-tip"><span class="vm-tip__icon">✅</span> 建議橫向拍攝、光線充足</div>
+                        <div class="vm-tip"><span class="vm-tip__icon">🔊</span> 聲音清楚會讓轉錄更準</div>
+                        <div class="vm-tip"><span class="vm-tip__icon">🛡️</span> 影片只用於本次分析</div>
+                    </div>
+                </div>
+                <div class="vm-hero__art" aria-hidden="true">
+                    <div class="vm-hero__blob vm-hero__blob--a"></div>
+                    <div class="vm-hero__blob vm-hero__blob--b"></div>
+                    <div class="vm-hero__card">
+                        <div class="vm-hero__cardTitle">小提醒</div>
+                        <div class="vm-hero__cardRow"><span>🎬</span><span>上載後可立即預覽</span></div>
+                        <div class="vm-hero__cardRow"><span>🧠</span><span>分析完成可下載報告</span></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Video Management Modal (reused and shown as full-page) -->
+            <div id="videoModal" class="video-modal vm-modal--page" style="display: flex; position: static;">
+                <div class="video-modal-content vm-modal__content" style="max-width: 1100px; width: 100%; margin: 24px auto;">
+                    <div class="video-modal-header">
+                        <div class="vm-headerTitle">
+                            <div class="vm-headerTitle__kicker">Video Studio</div>
+                            <h2>影片上載與分析</h2>
+                        </div>
+                        <!-- Keep element for JS binding; hide because this page is dedicated -->
+                        <button class="close-video-modal" id="closeVideoModal" style="display:none;">&times;</button>
+                    </div>
+
+                    <div class="video-modal-body">
+                        <!-- Upload Section -->
+                        <section class="vm-card video-upload-section">
+                            <div class="vm-card__header">
+                                <h3>上載影片</h3>
+                                <div class="vm-hint">
+                                    支援 MP4 / MOV / AVI / MKV / WebM / FLV / WMV（最大 500MB）
+                                </div>
+                            </div>
+
+                            <div class="video-upload-zone" id="videoUploadZone" style="cursor: pointer;">
+                                <div class="vm-uploadZone__icon">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                                <div class="vm-uploadZone__text">
+                                    <p>把影片拖到這裡，或點一下開始上載</p>
+                                    <small>家長小提示：鏡頭穩、光線亮、聲音清楚，結果會更準</small>
+                                </div>
+                            </div>
+                            <input type="file" id="videoModalInput" accept="video/*,audio/*" style="display: none;">
+
+                            <!-- Preview area shown after selecting a file -->
+                            <div id="previewArea" class="vm-preview" style="display: none; margin-top: 16px;">
+                                <h4 class="vm-sectionTitle">預覽</h4>
+                                <div class="vm-preview__grid">
+                                    <video id="previewPlayer" controls class="vm-preview__player"></video>
+                                    <div class="vm-preview__meta">
+                                        <div id="previewMeta" class="vm-preview__metaText"></div>
+                                        <div class="vm-actionsRow">
+                                            <button id="submitUploadBtn" class="btn btn-primary" disabled><i class="fas fa-cloud-upload-alt"></i> 提交影片（開始分析準備）</button>
+                                            <button id="cancelPreviewBtn" class="btn btn-secondary"><i class="fas fa-times"></i> 取消</button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div id="uploadProgress" style="display: none; margin-top: 15px;">
+                                <div class="progress-bar">
+                                    <div class="progress-fill"></div>
+                                </div>
+                                <p id="uploadStatus">上載中...</p>
+                            </div>
+                        </section>
+
+                        <!-- Video Details Section -->
+                        <section id="videoDetails" class="vm-card video-details-section" style="display: none; margin-top: 30px;">
+                            <div class="vm-card__header">
+                                <h3>影片詳情</h3>
+                                <div class="vm-hint">播放、查看轉錄進度、並輸出分析報告</div>
+                            </div>
+
+                            <!-- Video Player -->
+                            <div class="video-player-section" style="margin-bottom: 18px;">
+                                <video id="videoPlayer" class="video-player" controls style="width: 100%; max-height: 520px; border-radius: 12px; background: #000;">
+                                    <source id="videoSource" type="video/mp4">
+                                    您的瀏覽器不支援視頻播放
+                                </video>
+                            </div>
+
+                            <div class="video-detail-container">
+                                <div class="detail-row">
+                                    <span class="detail-label">檔名</span>
+                                    <span class="detail-value" id="detailFileName"></span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">檔案大小</span>
+                                    <span class="detail-value" id="detailFileSize"></span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">時長</span>
+                                    <span class="detail-value" id="detailDuration"></span>
+                                </div>
+                                <div class="detail-row">
+                                    <span class="detail-label">轉錄狀態</span>
+                                    <span class="detail-value" id="detailTranscriptionStatus">
+                                        <span id="transcriptionStatusBadge" class="status-badge">等待中</span>
+                                    </span>
+                                </div>
+                            </div>
+
+                            <div class="vm-grid2">
+                                <!-- Real-time Transcription Progress -->
+                                <div class="vm-panel vm-panel--accent">
+                                    <div class="vm-panel__header">
+                                        <div class="vm-panel__title">
+                                            <i class="fas fa-microphone"></i>
+                                            <span>轉錄進度</span>
+                                        </div>
+                                        <span id="transcriptionPercentage" class="vm-panel__stat">0%</span>
+                                    </div>
+                                    <div class="transcription-progress-bar">
+                                        <div id="transcriptionProgressFill" class="transcription-progress-fill" style="width: 0%;"></div>
+                                    </div>
+                                    <p id="transcriptionProgressText" class="vm-panel__hint">等待開始轉錄...</p>
+                                </div>
+
+                                <div class="vm-panel">
+                                    <div class="vm-panel__header">
+                                        <div class="vm-panel__title">
+                                            <i class="fas fa-file-alt"></i>
+                                            <span>轉錄文本</span>
+                                            <span id="wordCount" class="vm-muted">0 字</span>
+                                        </div>
+                                    </div>
+                                    <div id="transcriptionContainer" class="transcription-container">
+                                        <p id="transcriptionText" class="vm-empty">尚未轉錄</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="vm-grid2" style="margin-top: 16px;">
+                                <!-- Timestamps -->
+                                <div class="vm-panel">
+                                    <div class="vm-panel__header">
+                                        <div class="vm-panel__title">
+                                            <i class="fas fa-list"></i>
+                                            <span>時間戳記</span>
+                                        </div>
+                                    </div>
+                                    <div id="timestampsContainer" class="timestamps-container">
+                                        <p class="vm-empty">未有時間戳記</p>
+                                    </div>
+                                </div>
+
+                                <!-- Analysis Report -->
+                                <div class="vm-panel">
+                                    <div class="vm-panel__header">
+                                        <div class="vm-panel__title">
+                                            <i class="fas fa-brain"></i>
+                                            <span>AI 分析報告</span>
+                                        </div>
+                                    </div>
+                                    <div id="analysisContainer" class="analysis-container">
+                                        <p class="vm-empty">未有分析</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Action Buttons -->
+                            <div class="video-action-buttons vm-actions" style="margin-top: 20px;">
+                                <button id="analyzeVideoBtn" class="btn btn-primary"><i class="fas fa-brain"></i> 開始分析</button>
+                                <button id="pauseAnalysisBtn" class="btn btn-warning" style="display: none;"><i class="fas fa-pause"></i> 暫停分析</button>
+                                <button id="resumeAnalysisBtn" class="btn btn-info" style="display: none;"><i class="fas fa-play"></i> 繼續分析</button>
+                                <button id="downloadReportBtn" class="btn btn-secondary"><i class="fas fa-download"></i> 下載報告</button>
+                                <button id="deleteVideoBtn" class="btn btn-danger"><i class="fas fa-trash"></i> 刪除影片</button>
+                                <button id="backToListBtn" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> 返回列表</button>
+                            </div>
+                        </section>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Analysis Result Modal (shown after submit) -->
+    <div id="analysisResultModal" class="analysis-result-modal" style="display:none;">
+        <div class="analysis-result-modal__backdrop" id="analysisResultBackdrop"></div>
+        <div class="analysis-result-modal__dialog" role="dialog" aria-modal="true" aria-labelledby="analysisResultTitle">
+            <div class="analysis-result-modal__header">
+                <h3 id="analysisResultTitle" style="margin:0;">分析結果</h3>
+                <button type="button" class="analysis-result-modal__close" id="analysisResultClose" aria-label="Close">&times;</button>
+            </div>
+            <div id="analysisResultBody" class="analysis-result-modal__body">
+                <p>分析中...</p>
+            </div>
+            <div class="analysis-result-modal__footer">
+                <button type="button" class="btn btn-primary" id="analysisResultOk">確定</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Auth check (same behavior as index)
+        if (!localStorage.getItem('access_token')) {
+            window.location.href = '/login';
+        }
+    </script>
+
+    <script src="{{ url_for('static', filename='js/video_analysis_results.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/video_management.js') }}"></script>
+
+    <script>
+        // Dedicated page behavior:
+        // 1) Keep modal visible (it is already shown)
+        // 2) Auto-focus upload zone so user can immediately upload
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const zone = document.getElementById('videoUploadZone');
+                if (zone) zone.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            } catch (e) {
+                // no-op
+            }
+
+            // VideoManager binds to close button and click-outside. No extra capture handlers here so
+            // the zone's click can bubble to the file input or the module's listeners as expected.
+        });
+    </script>
+</body>
+</html>

@@ -186,7 +186,7 @@
                             <p>拖放影片到此處或點擊上傳</p>
                             <small>支援格式: MP4, AVI, MOV, MKV, WebM, FLV, WMV (最大 500MB)</small>
                         </div>
-                        <input type="file" id="videoInput" accept="video/*,audio/*" style="display: none;">
+                        <input type="file" id="videoModalInput" accept="video/*,audio/*" style="display: none;">
                         
                         <div id="uploadProgress" style="display: none; margin-top: 15px;">
                             <div class="progress-bar">
@@ -360,7 +360,7 @@
                             </div>
 
                             <!-- Upload Video -->
-                            <div class="new-upload-item" onclick="showEvaluationModal()">
+                            <div class="new-upload-item" onclick="window.location.href='/video'">
                                 <div class="new-upload-icon">
                                     <i class="fas fa-video"></i>
                                 </div>
@@ -479,7 +479,7 @@
                         <p>選擇影片檔案</p>
                         <small>或</small>
                     </div>
-                    <input type="file" id="videoInput" accept="video/*" class="hidden" onchange="handleVideoSelect(event)">
+                        <input type="file" id="videoInput" accept="video/*" class="hidden" onchange="handleVideoSelect(event)">
                     <div id="videoFileName" class="file-name-display"></div>
                     <input type="url" class="youtube-input" id="youtubeUrl" placeholder="貼上 YouTube 連結">
                 </div>

@@ -77,6 +77,24 @@ def pose_detection_page():
     return render_template('pose_detection.html')
 
 
+@bp.route('/video')
+def video_management_page():
+    """Render the dedicated video upload + analysis page."""
+    token = request.cookies.get('access_token')
+
+    if not token:
+        return redirect(url_for('main.login_page'))
+
+    try:
+        decode_token(token)
+    except Exception:
+        response = redirect(url_for('main.login_page'))
+        response.delete_cookie('access_token')
+        return response
+
+    return render_template('video_management_page.html')
+
+
 @bp.route('/pose_detection/js/<path:filename>')
 def serve_pose_detection_js(filename):
     """Serve JavaScript files from the pose_detection module."""
@@ -1232,14 +1250,25 @@ def upload_video():
         if file_size > max_size:
             return jsonify({'error': f'File too large. Max 500MB allowed'}), 400
         
-        # Save video file
+        # Save video file into configured upload folder (e.g. app/static/upload)
         upload_folder = current_app.config['UPLOAD_FOLDER']
         os.makedirs(upload_folder, exist_ok=True)
-        
-        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+
+        # Validate and preserve original extension
         secure_name = secure_filename(video_file.filename)
-        name_without_ext = secure_name.rsplit('.', 1)[0] if '.' in secure_name else secure_name
-        unique_filename = f"{name_without_ext}_{timestamp}.mp4"
+        if '.' in secure_name:
+            name_without_ext, ext = secure_name.rsplit('.', 1)
+            ext = ext.lower()
+        else:
+            name_without_ext = secure_name
+            ext = ''
+
+        allowed_exts = current_app.config.get('ALLOWED_VIDEO_EXTENSIONS', {'mp4', 'avi', 'mov', 'mkv', 'webm'})
+        if ext == '' or ext not in allowed_exts:
+            return jsonify({'error': f'不支援的影片格式。允許的格式: {", ".join(sorted(allowed_exts)).upper()}'}), 400
+
+        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+        unique_filename = f"{name_without_ext}_{timestamp}.{ext}"
         
         file_path = os.path.join(upload_folder, unique_filename)
         video_file.save(file_path)
@@ -1272,8 +1301,9 @@ def upload_video():
                     video_record.duration = duration
                     db.session.commit()
                     
-                    # Save audio
-                    audio_path = file_path.replace('.mp4', '.wav')
+                    # Save audio (replace original extension with .wav)
+                    base, _ = os.path.splitext(file_path)
+                    audio_path = f"{base}.wav"
                     video_clip.audio.write_audiofile(audio_path, verbose=False, logger=None)
                     video_clip.close()
                     
@@ -1323,9 +1353,14 @@ def upload_video():
         thread.daemon = True
         thread.start()
         
+        # Public URL for playback via static files
+        video_url = f"/static/upload/{unique_filename}"
+
         return jsonify({
             'success': True,
             'video_id': video_record.id,
+            'video_url': video_url,
+            'file_path': file_path,
             'message': 'Video uploaded. Transcription processing...'
         }), 201
         
