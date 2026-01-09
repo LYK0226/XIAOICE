@@ -3,11 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聊天盒子 - Chatbox</title>
+    <title>聊天盒子</title>
     <!-- Main chat interface styles -->
     <link rel="stylesheet" href="../static/css/chatbox.css">
-    <!-- Sidebar styles -->
-    <link rel="stylesheet" href="../static/css/sidebar.css">
     <!-- Settings modal styles -->
     <link rel="stylesheet" href="../static/css/settings.css">
     <!-- Assessment styles -->
@@ -15,27 +13,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div id="sidebar" style="display: none;">
-        <div class="sidebar-header">
-            <button class="sidebar-toggle" id="sidebarToggle"><i class="fas fa-bars"></i></button>
-            <i class="fas fa-comment"></i>
-            <h2>聊天盒子</h2>
-        </div>
-        
-        <div class="sidebar-section">
-            <h3>聊天</h3>
-            <ul class="chat-list">
-                <li class="empty-state">載入中...</li>
-            </ul>
-        </div>
-        
-        <div class="sidebar-footer">
-            <button class="sidebar-btn" id="newChat"><i class="fas fa-plus"></i> 新對話</button>
-            <button class="sidebar-btn" id="childAssessment"><i class="fas fa-clipboard-list"></i> 兒童評估</button>
-            <button class="sidebar-btn" id="settings"><i class="fas fa-cog"></i> 設定</button>
-            <button class="sidebar-btn" id="logout"><i class="fas fa-sign-out-alt"></i> 登出</button>
-        </div>
-    </div>
+    <!-- sidebar removed -->
     
     <div id="main-content" style="margin-left: 0;">
         <!-- Chat Container -->
@@ -161,7 +139,7 @@
         <!-- Document Preview Panel -->
         <div id="preview-panel" class="preview-panel" style="display: none;">
             <div class="preview-header">
-                <h3 id="preview-title">Document Preview</h3>
+                <h3 id="preview-title">文件預覽</h3>
                 <button class="close-preview" id="closePreview">&times;</button>
             </div>
             <div class="preview-content" id="preview-content">
@@ -306,39 +284,10 @@
     
     <!-- Assessment Container (默認顯示) -->
     <div id="assessment-container" style="display: flex;">
-        <!-- 左側邊欄 -->
-        <div class="assessment-sidebar">
-            <div class="assessment-sidebar-item">
-                <div class="assessment-sidebar-icon">
-                    <i class="fas fa-book"></i>
-                </div>
-                <div class="assessment-sidebar-label">Study Materials</div>
-            </div>
-            
-            <div class="assessment-sidebar-item active">
-                <div class="assessment-sidebar-icon">
-                    <i class="fas fa-clipboard-list"></i>
-                </div>
-                <div class="assessment-sidebar-label">Assessments</div>
-            </div>
-            
-            <div class="assessment-sidebar-item">
-                <div class="assessment-sidebar-icon">
-                    <i class="fas fa-chart-line"></i>
-                </div>
-                <div class="assessment-sidebar-label">Progress</div>
-            </div>
-            
-            <div class="assessment-sidebar-item">
-                <div class="assessment-sidebar-icon">
-                    <i class="fas fa-cog"></i>
-                </div>
-                <div class="assessment-sidebar-label">Settings</div>
-            </div>
-        </div>
+        <!-- 左側邊欄 (已移除) -->
 
         <!-- 主內容區域 -->
-        <div class="assessment-content-area">
+        <div class="assessment-content-area" style="width: 100%;">
             <!-- 貓頭鷹裝飾 -->
             <div class="owl-decoration">🦉</div>
             
@@ -347,16 +296,15 @@
                 <!-- Start Screen -->
                 <div id="startScreen">
                     <div class="new-start-card">
-                        <h1 class="new-card-title">Start New Assessment</h1>
+                        <h1 class="new-card-title">開始新的評估</h1>
                         
                         <div class="new-upload-options">
-                            <!-- Upload PDF -->
-                            <div class="new-upload-item" onclick="handleUploadPDF()">
+                            <!-- Start Assessment (was Upload PDF) -->
+                            <div class="new-upload-item" onclick="showEvaluationModal()">
                                 <div class="new-upload-icon">
-                                    <i class="fas fa-file-lines"></i>
+                                    <i class="fas fa-clipboard-list"></i>
                                 </div>
-                                <div class="new-upload-label">Upload PDF</div>
-                                <input type="file" id="pdfInput" accept=".pdf" class="hidden">
+                                <div class="new-upload-label">開始評估</div>
                             </div>
 
                             <!-- Upload Video -->
@@ -365,22 +313,16 @@
                                     <i class="fas fa-video"></i>
                                 </div>
                                 <div class="new-upload-label">
-                                    Upload Video / YouTube Link<br>
-                                    <small>(for movement evaluation)</small>
+                                    上傳影片<br>
+                                    <small>（用於動作評估）</small>
                                 </div>
                             </div>
                         </div>
                         
                         <!-- 底部按鈕 -->
                         <div class="bottom-buttons">
-                            <button class="bottom-btn" onclick="handleUploadPDF()">
-                                <i class="fas fa-file-pdf"></i> Upload PDF
-                            </button>
-                            <button class="bottom-btn primary" onclick="showEvaluationModal()">
-                                Start Assessment
-                            </button>
                             <button class="bottom-btn primary" onclick="window.location.href='/pose_detection'">
-                                <i class="fas fa-running"></i> Pose Detection Assessment
+                                <i class="fas fa-running"></i> 姿勢檢測評估
                             </button>
                         </div>
                     </div>
@@ -389,12 +331,12 @@
                 <!-- Begin Evaluation Modal -->
                 <div id="evaluationModal" class="evaluation-modal" style="display: none;">
                     <div class="modal-content-evaluation">
-                        <h2 class="modal-title">Begin Evaluation</h2>
+                        <h2 class="modal-title">開始評估</h2>
                         
                         <div class="modal-form">
-                            <label class="modal-label">Select Assessment Type</label>
+                            <label class="modal-label">選擇評估類型</label>
                             <select class="modal-input" id="assessmentType" onchange="updateAssessmentInfo()">
-                                <option value="">Choose assessment...</option>
+                                <option value="">選擇評估…</option>
                             </select>
                             
                             <div id="assessmentInfoBox" class="assessment-info-box" style="display: none;">
@@ -407,14 +349,14 @@
                                 </div>
                             </div>
                             
-                            <label class="modal-label">Child Name</label>
-                            <input type="text" class="modal-input" id="childName" placeholder="Enter child's name">
+                            <label class="modal-label">兒童姓名</label>
+                            <input type="text" class="modal-input" id="childName" placeholder="輸入兒童姓名">
                             
-                            <label class="modal-label">Child Age (months)</label>
-                            <input type="number" class="modal-input" id="childAge" placeholder="e.g., 24" min="0" max="84">
+                            <label class="modal-label">兒童年齡（月數）</label>
+                            <input type="number" class="modal-input" id="childAge" placeholder="例如：24" min="0" max="84">
                             
                             <button class="modal-btn primary" onclick="startEvaluation()">
-                                <i class="fas fa-play"></i> Start Evaluation
+                                <i class="fas fa-play"></i> 開始評估
                             </button>
                         </div>
                         
@@ -500,16 +442,22 @@
             window.location.href = '/login';
         }
 
-        // Handle logout
-        document.getElementById('logout').addEventListener('click', async () => {
-            localStorage.removeItem('access_token');
-            window.location.href = '/login';
-        });
+        // Handle logout (guarded because sidebar was removed)
+        const logoutBtn = document.getElementById('logout');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+            });
+        }
 
-        // Handle child assessment navigation
-        document.getElementById('childAssessment').addEventListener('click', () => {
-            showAssessmentView();
-        });
+        // Handle child assessment navigation (guarded)
+        const childAssessmentBtn = document.getElementById('childAssessment');
+        if (childAssessmentBtn) {
+            childAssessmentBtn.addEventListener('click', () => {
+                showAssessmentView();
+            });
+        }
 
         // Assessment Functions
         function showAssessmentView() {
@@ -518,10 +466,12 @@
             const sidebar = document.getElementById('sidebar');
             const mainContent = document.getElementById('main-content');
             
-            // Hide chat and sidebar
+            // Hide chat (sidebar is removed; guard if exists)
             chatContainer.style.display = 'none';
-            sidebar.style.display = 'none';
-            sidebar.classList.add('hidden');
+            if (sidebar) {
+                sidebar.style.display = 'none';
+                sidebar.classList.add('hidden');
+            }
             
             // Show assessment (full screen)
             assessmentContainer.style.display = 'flex';
@@ -529,7 +479,7 @@
         }
 
         function returnToChat() {
-            console.log('returnToChat() called');
+            console.log('返回聊天視圖');
             const assessmentContainer = document.getElementById('assessment-container');
             const chatContainer = document.getElementById('chat-container');
             const sidebar = document.getElementById('sidebar');
@@ -538,14 +488,15 @@
             // Hide assessment
             assessmentContainer.style.display = 'none';
             
-            // Show chat and sidebar
+            // Show chat (sidebar removed; only restore chat)
             chatContainer.style.display = 'flex';
             chatContainer.style.visibility = 'visible';
             chatContainer.style.opacity = '1';
-            
-            sidebar.style.display = 'flex';
-            sidebar.style.visibility = 'visible';
-            sidebar.classList.remove('hidden');
+            if (sidebar) {
+                sidebar.style.display = 'flex';
+                sidebar.style.visibility = 'visible';
+                sidebar.classList.remove('hidden');
+            }
             
             // Reset main content margin (sidebar width is 280px)
             mainContent.style.marginLeft = '280px';
@@ -568,24 +519,7 @@
             }
         }
 
-        function handleUploadPDF() {
-            document.getElementById('pdfInput').click();
-        }
-
-        document.getElementById('pdfInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                document.getElementById('pdfFileName').textContent = '✓ ' + file.name;
-            }
-        });
-
-        document.getElementById('videoFileInput').addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file) {
-                alert('已選擇影片: ' + file.name);
-                showAssessmentList();
-            }
-        });
+    // PDF upload removed: UI no longer uses pdf input from this page.
 
         function openEvaluationModal(assessmentId) {
             const modal = document.getElementById('evaluationModal');
@@ -621,8 +555,13 @@
 
             // 關閉彈窗並重置表單
             modal.classList.remove('active');
-            event.target.reset();
-            document.getElementById('videoFileName').textContent = '';
+            try {
+                event.target.reset();
+            } catch (e) {
+                // event 可能不是來自表單提交，忽略
+            }
+            const vf = document.getElementById('videoFileName');
+            if (vf) vf.textContent = '';
         }
 
         function submitAssessment() {
@@ -654,8 +593,7 @@
     
     <!-- 先載入 API 模塊 -->
     <script src="../static/js/api_module.js"></script>
-    <!-- 載入側邊欄功能 (在 chatbox 之前，因為 chatbox 會呼叫 sidebar 函數) -->
-    <script src="../static/js/sidebar.js"></script>
+    <!-- sidebar script removed (sidebar HTML was removed above) -->
     <!-- 然後載入主要腳本 -->
     <script src="../static/js/chatbox.js"></script>
     <!-- 載入視頻管理模塊 -->
@@ -749,17 +687,17 @@
             const childAge = document.getElementById('childAge').value;
             
             if (!assessmentType) {
-                alert('Please select an assessment type');
+                alert('請選擇評估類型');
                 return;
             }
             
             if (!childName) {
-                alert('Please enter child\'s name');
+                alert('請輸入兒童姓名');
                 return;
             }
             
             if (!childAge) {
-                alert('Please enter child\'s age');
+                alert('請輸入兒童年齡');
                 return;
             }
             
@@ -772,7 +710,7 @@
                 startTime: new Date().toISOString()
             };
             
-            console.log('Starting evaluation with:', assessmentData);
+            console.log('開始評估，參數：', assessmentData);
             
             // 隱藏彈窗
             hideEvaluationModal();
@@ -781,8 +719,8 @@
             if (typeof ChildAssessmentModule !== 'undefined') {
                 ChildAssessmentModule.startNewAssessment(childName, childAge, null, assessmentType);
             } else {
-                console.error('ChildAssessmentModule not loaded');
-                alert('Assessment module not loaded. Please refresh the page.');
+                console.error('ChildAssessmentModule 未載入');
+                alert('評估模組未載入。請重新整理頁面。');
             }
         }
     </script>
