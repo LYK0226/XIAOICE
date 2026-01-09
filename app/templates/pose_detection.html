@@ -10,23 +10,34 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
-<body>
-    <!-- Header -->
-    <header class="pose-page-header">
-        <div class="header-left">
-            <button class="back-btn" id="backBtn" onclick="window.location.href='/'">
+<body class="vm-video-page">
+    <!-- Decorative animations -->
+    <div class="decorative-stars">
+        <div class="star" style="top: 10%; left: 5%;">⭐</div>
+        <div class="star" style="top: 25%; left: 85%;">✨</div>
+        <div class="star" style="top: 70%; left: 15%;">🌟</div>
+        <div class="star" style="top: 85%; left: 80%;">⭐</div>
+        <div class="cloud" style="top: 15%; left: 10%;">☁️</div>
+        <div class="cloud" style="top: 60%; left: 75%;">☁️</div>
+    </div>
+
+    <!-- Owl Decoration -->
+    <div class="owl-decoration">🦉</div>
+
+    <header class="vm-topbar">
+        <div class="vm-topbar__inner">
+            <button class="btn btn-secondary vm-topbar__back" onclick="window.location.href='/'">
                 <i class="fas fa-arrow-left"></i>
-                <span>返回</span>
+                返回
             </button>
-            <h1 class="page-title">
-                <i class="fas fa-running"></i>
-                姿態分析
-            </h1>
-        </div>
-        <div class="header-right">
-            <button class="theme-toggle" id="themeToggle" title="切換主題">
-                <i class="fas fa-moon"></i>
-            </button>
+            <div class="vm-topbar__title">
+                <span class="vm-topbar__titleText">姿態分析 Pose Detection</span>
+            </div>
+            <div class="vm-topbar__right">
+                <button class="btn btn-secondary" id="themeToggle" title="切換主題">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -107,12 +118,16 @@
                 </div>
 
                 <!-- Detailed evaluation panel (hidden until result available) -->
-                <div class="evaluation-panel" id="evaluationPanel" style="display:none; margin-top:12px;">
-                    <div class="card-label">詳細評估報告</div>
-                    <div id="evaluationSummary" style="margin-top:8px; font-size:0.95rem;"></div>
-                    <button class="test-btn secondary" id="toggleEvalDetailsBtn" style="margin-top:8px; display:none;">顯示詳情</button>
-                    <button class="test-btn secondary" id="clearEvalBtn" style="margin-top:8px; margin-left:8px; display:none; background:#5b6; color:#042;">清除紀錄</button>
-                    <div id="evaluationDetails" style="display:none; margin-top:8px; max-height:320px; overflow:auto; background:#fff; padding:8px; border-radius:6px; border:1px solid #eee;"></div>
+                <div class="evaluation-panel" id="evaluationPanel" style="display:none; margin-top:20px;">
+                    <button class="test-btn" id="showReportBtn" style="width:100%; background: linear-gradient(135deg, #6e8efb, #a777e3); color: white; border: none; font-weight: 700; padding:12px; border-radius:12px; cursor:pointer; box-shadow: 0 4px 15px rgba(110, 142, 251, 0.4);">
+                        <i class="fas fa-file-alt"></i> 查看詳細報告
+                    </button>
+                    <button class="test-btn secondary" id="clearEvalBtn" style="margin-top:12px; width:100%; color: #f44336;">
+                        <i class="fas fa-trash-alt"></i> 清除紀錄
+                    </button>
+                    <!-- Hidden summaries used by JS to store data -->
+                    <div id="evaluationSummary" style="display:none;"></div>
+                    <div id="evaluationDetails" style="display:none;"></div>
                 </div>
             </div>
 
@@ -174,6 +189,19 @@
     <script src="{{ url_for('main.serve_pose_detection_js', filename='movement_detector.js') }}"></script>
     <script src="{{ url_for('main.serve_pose_detection_js', filename='movement_descriptor.js') }}"></script>
     <script src="{{ url_for('main.serve_pose_detection_js', filename='pose_renderer.js') }}"></script>
+
+    <!-- Detailed Report Modal Overlay -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content" id="modalContent">
+            <div class="modal-header">
+                <span class="modal-title">📊 評估診斷報告</span>
+                <button class="close-modal" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Content will be injected by JS -->
+            </div>
+        </div>
+    </div>
 
     <!-- Page-specific script (extracted) -->
     <script src="{{ url_for('static', filename='js/pose_detection.js') }}"></script>

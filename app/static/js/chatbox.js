@@ -1683,7 +1683,7 @@ function startInteractiveQuiz(quizData) {
     // Show quiz start message
     const startMsg = document.createElement('div');
     startMsg.className = 'bot-message-container';
-    startMsg.style.cssText = 'background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; border-radius: 15px; color: white; margin: 10px 0;';
+    startMsg.style.cssText = 'background: linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%); padding: 20px; border-radius: 15px; color: white; margin: 10px 0;';
     startMsg.innerHTML = `
         <h3 style="margin: 0 0 10px 0; font-size: 24px;"><i class="fas fa-clipboard-question"></i> PDF 測驗開始</h3>
         <p style="margin: 0; opacity: 0.9;">共 ${total_questions} 題選擇題</p>
@@ -1720,11 +1720,11 @@ function showNextQuestion(quizState) {
     // Create question container
     const questionContainer = document.createElement('div');
     questionContainer.className = 'bot-message-container';
-    questionContainer.style.cssText = 'background: white; padding: 20px; border-radius: 15px; border: 2px solid #667eea; margin: 10px 0;';
+    questionContainer.style.cssText = 'background: white; padding: 20px; border-radius: 15px; border: 2px solid #9B8AB8; margin: 10px 0;';
     
     // Question header
     const questionHeader = document.createElement('div');
-    questionHeader.style.cssText = 'font-weight: bold; font-size: 18px; color: #667eea; margin-bottom: 15px;';
+    questionHeader.style.cssText = 'font-weight: bold; font-size: 18px; color: #9B8AB8; margin-bottom: 15px;';
     questionHeader.innerHTML = `<i class="fas fa-question-circle"></i> 第 ${questionNumber}/${questions.length} 題`;
     questionContainer.appendChild(questionHeader);
     
@@ -1756,7 +1756,7 @@ function showNextQuestion(quizState) {
         optionBtn.onmouseover = () => {
             if (!optionBtn.disabled) {
                 optionBtn.style.background = '#e8f0fe';
-                optionBtn.style.borderColor = '#667eea';
+                optionBtn.style.borderColor = '#9B8AB8';
             }
         };
         optionBtn.onmouseout = () => {
@@ -1905,7 +1905,7 @@ if (videoUploadZone && videoInput) {
     // Drag and drop support
     videoUploadZone.addEventListener('dragover', (e) => {
         e.preventDefault();
-        videoUploadZone.style.borderColor = '#667eea';
+        videoUploadZone.style.borderColor = '#9B8AB8';
         videoUploadZone.style.background = 'rgba(102, 126, 234, 0.1)';
     });
     

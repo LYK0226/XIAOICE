@@ -1526,7 +1526,7 @@ presetAvatarOptions.forEach(option => {
         // Update the preview
         const preview = document.getElementById('userAvatarPreview');
         preview.innerHTML = `<div style="font-size: 32px;">${avatar}</div>`;
-        preview.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        preview.style.background = 'linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%)';
         
         // Save to localStorage
         localStorage.setItem('userAvatar', avatar);
@@ -1555,7 +1555,7 @@ function loadSavedAvatar() {
     if (savedAvatar && preview) {
         if (avatarType === 'emoji') {
             preview.innerHTML = `<div style="font-size: 32px;">${savedAvatar}</div>`;
-            preview.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            preview.style.background = 'linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%)';
             window.userAvatar = savedAvatar;
             window.userAvatarType = 'emoji';
             
@@ -1697,7 +1697,7 @@ botAvatarOptions.forEach(option => {
         // Update the preview
         const preview = document.getElementById('botAvatarPreview');
         preview.innerHTML = `<div style="font-size: 32px;">${avatar}</div>`;
-        preview.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+        preview.style.background = 'linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%)';
         
         // Save to localStorage
         localStorage.setItem('botAvatar', avatar);
@@ -1728,7 +1728,7 @@ function loadSavedBotAvatar() {
     if (savedAvatar && preview) {
         if (avatarType === 'emoji') {
             preview.innerHTML = `<div style="font-size: 32px;">${savedAvatar}</div>`;
-            preview.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+            preview.style.background = 'linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%)';
             
             // Update globally in chatbox
             if (window.botAvatar !== undefined) {

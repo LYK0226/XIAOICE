@@ -34,17 +34,10 @@ class ChildAssessmentModule {
         const assessmentScreen = document.getElementById('assessmentScreen');
         
         if (startScreen) startScreen.style.display = 'none';
-        if (assessmentScreen) assessmentScreen.style.display = 'block';
-        
-        // Update header
-        const titleEl = document.getElementById('assessmentTitle');
-        const infoEl = document.getElementById('assessmentInfo');
-        
-        if (titleEl) {
-            titleEl.textContent = `評估進行中 - ${childName} (${childAge}個月)`;
-        }
-        if (infoEl) {
-            infoEl.textContent = `評估類型: ${this.getAssessmentTypeLabel(assessmentType)}`;
+        if (assessmentScreen) {
+            assessmentScreen.style.display = 'flex';
+            assessmentScreen.style.justifyContent = 'center';
+            assessmentScreen.style.width = '100%';
         }
         
         // Load assessment questions
@@ -116,55 +109,55 @@ class ChildAssessmentModule {
         document.getElementById('progressFill').style.width = progress + '%';
         
         let html = `
-            <div class="question-container">
-                <h3>
-                    <span style="color: #667eea;">${question.emoji} ${question.domain}</span>
-                </h3>
-                <p style="font-size: 20px; font-weight: bold; margin-bottom: 15px; color: #4A3B5C;">
-                    問題 ${current}/${total}: ${question.question}
-                </p>
-                
-                <!-- 視頻示範區域 -->
-                <div style="background: #f5f7fa; padding: 20px; border-radius: 15px; margin-bottom: 20px;">
-                    <h4 style="margin-bottom: 15px; color: #4A3B5C;">
-                        🎬 觀看熊熊示範影片
-                    </h4>
-                    <video 
-                        id="demoVideo"
-                        controls 
-                        autoplay
-                        loop
-                        style="width: 100%; max-width: 600px; border-radius: 10px; display: block; margin: 0 auto;"
-                    >
-                        <source src="${question.videoUrl}" type="video/mp4">
-                        您的瀏覽器不支持視頻播放。
-                    </video>
+            <div class="question-card">
+                <div class="question-badge-row">
+                    <div class="question-domain-badge">
+                        <span>${question.emoji}</span>
+                        <span>${question.domain}</span>
+                    </div>
+                    <div class="question-count-badge">
+                        ${current} / ${total}
+                    </div>
                 </div>
                 
-                <div style="background: #e8f0f7; padding: 15px; border-radius: 10px; margin-bottom: 25px;">
-                    <p style="margin: 0; color: #666; font-size: 14px;">
-                        <strong>📋 評估說明:</strong> ${question.description}
-                    </p>
-                </div>
-                
-                <!-- 做到/做不到按鈕 -->
-                <div style="text-align: center;">
-                    <p style="font-size: 18px; font-weight: 600; margin-bottom: 20px; color: #4A3B5C;">
-                        您的孩子能做到這個動作嗎？
-                    </p>
-                    <div class="answer-buttons">
-                        <button 
-                            class="answer-btn can-do-btn"
-                            onclick="ChildAssessmentModule.recordAnswer(${question.id}, 'yes')">
-                            <i class="fas fa-check-circle"></i>
-                            <span>✔ 做到</span>
-                        </button>
-                        <button 
-                            class="answer-btn cannot-do-btn"
-                            onclick="ChildAssessmentModule.recordAnswer(${question.id}, 'no')">
-                            <i class="fas fa-times-circle"></i>
-                            <span>✖ 做不到</span>
-                        </button>
+                <div class="question-main-content">
+                    <h3>${question.question}</h3>
+                    
+                    <div class="video-frame-container">
+                        <video 
+                            id="demoVideo"
+                            class="demo-video"
+                            controls 
+                            autoplay
+                            loop
+                            muted
+                        >
+                            <source src="${question.videoUrl}" type="video/mp4">
+                            您的瀏覽器不支持視頻播放。
+                        </video>
+                    </div>
+                    
+                    <div class="desc-info-box">
+                        <h4>📋 評估說明</h4>
+                        <p>${question.description}</p>
+                    </div>
+                    
+                    <div class="action-options">
+                        <p class="action-title">您的孩子能做到這個動作嗎？</p>
+                        <div class="assessment-btns">
+                            <button 
+                                class="action-btn can"
+                                onclick="ChildAssessmentModule.recordAnswer(${question.id}, 'yes')">
+                                <i class="fas fa-check-circle"></i>
+                                <span>做到</span>
+                            </button>
+                            <button 
+                                class="action-btn cannot"
+                                onclick="ChildAssessmentModule.recordAnswer(${question.id}, 'no')">
+                                <i class="fas fa-times-circle"></i>
+                                <span>做不到</span>
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -210,9 +203,13 @@ class ChildAssessmentModule {
             // Show submit button
             document.getElementById('submitBtn').style.display = 'inline-block';
             document.getElementById('assessmentContent').innerHTML = `
-                <div class="question-container" style="background: #e8f5e9; border-left-color: #4caf50; text-align: center;">
-                    <h3 style="color: #2e7d32; margin-bottom: 10px;">✓ 評估完成</h3>
-                    <p style="color: #2e7d32; margin: 0;">所有問題已回答。請點擊下方按鈕提交評估。</p>
+                <div class="question-card finished-card">
+                    <div class="finished-icon">🎉</div>
+                    <h3>評估已完成！</h3>
+                    <p>您已經完成了所有 10 個項目的評估。現在可以查看您的孩子的發育商 (DQ) 報告了。</p>
+                    <div class="finished-info">
+                        <span>已作答: 10 / 10 題</span>
+                    </div>
                 </div>
             `;
         }
@@ -248,36 +245,55 @@ class ChildAssessmentModule {
         const percentage = (yesCount / totalQuestions) * 100;
         
         const resultsHtml = `
-            <div class="question-container" style="text-align: center;">
-                <h2 style="color: #4A3B5C; margin-bottom: 20px;">📊 評估結果</h2>
+            <div class="question-card results-view">
+                <h2 class="results-main-title">📊 評估診斷報告</h2>
                 
-                <div style="background: linear-gradient(135deg, #8B7AA8, #9B8AB8); color: white; border-radius: 20px; padding: 40px; margin: 20px 0;">
-                    <div style="font-size: 72px; font-weight: 700; margin-bottom: 10px;">${dq.toFixed(0)}</div>
-                    <div style="font-size: 24px; margin-bottom: 10px;">發育商 (DQ)</div>
-                    <div style="font-size: 18px; opacity: 0.9;">等級: ${level}</div>
+                <div class="score-display-card">
+                    <div class="dq-score">${dq.toFixed(0)}</div>
+                    <div class="dq-label">發育商 (DQ)</div>
+                    <div class="level-badge">${level}</div>
                 </div>
                 
-                <div style="background: #f5f7fa; padding: 25px; border-radius: 15px; margin: 20px 0; text-align: left;">
-                    <h3 style="margin-bottom: 15px; color: #4A3B5C;">📋 評估詳情</h3>
-                    <p style="margin: 8px 0;"><strong>兒童姓名:</strong> ${this.assessmentData.childName}</p>
-                    <p style="margin: 8px 0;"><strong>年齡:</strong> ${this.assessmentData.childAge} 個月</p>
-                    <p style="margin: 8px 0;"><strong>評估類型:</strong> ${this.getAssessmentTypeLabel(this.assessmentData.assessmentType)}</p>
-                    <p style="margin: 8px 0;"><strong>評估時間:</strong> ${new Date(this.assessmentData.timestamp).toLocaleString('zh-TW')}</p>
-                    <p style="margin: 8px 0;"><strong>完成率:</strong> ${yesCount}/${totalQuestions} 題 (${percentage.toFixed(0)}%)</p>
-                    <p style="margin: 8px 0;"><strong>做到題數:</strong> ✔ ${yesCount} 題</p>
-                    <p style="margin: 8px 0;"><strong>做不到題數:</strong> ✖ ${totalQuestions - yesCount} 題</p>
+                <div class="results-grid">
+                    <div class="result-info-item">
+                        <span class="label">兒童姓名</span>
+                        <span class="value">${this.assessmentData.childName}</span>
+                    </div>
+                    <div class="result-info-item">
+                        <span class="label">年齡</span>
+                        <span class="value">${this.assessmentData.childAge} 個月</span>
+                    </div>
+                    <div class="result-info-item">
+                        <span class="label">評估類型</span>
+                        <span class="value">${this.getAssessmentTypeLabel(this.assessmentData.assessmentType)}</span>
+                    </div>
+                    <div class="result-info-item">
+                        <span class="label">完成率</span>
+                        <span class="value">${percentage.toFixed(0)}% (${yesCount}/${totalQuestions})</span>
+                    </div>
                 </div>
-                
-                <div style="background: #e8f5e9; border-left: 4px solid #4caf50; padding: 20px; border-radius: 10px; margin-bottom: 20px; text-align: left;">
-                    <p style="margin: 0; color: #2e7d32; font-size: 14px; line-height: 1.6;">
-                        <strong>💡 評估說明:</strong><br>
-                        DQ (發育商) 是衡量兒童發育水平的指標，滿分為100分。<br>
-                        • DQ 90-100: 優異<br>
-                        • DQ 80-89: 良好<br>
-                        • DQ 70-79: 中等<br>
-                        • DQ 60-69: 及格<br>
-                        • DQ < 60: 需要關注
-                    </p>
+
+                <div class="results-summary-box">
+                    <h4>💡 專業建議與說明</h4>
+                    <div class="summary-content">
+                        <p>根據本次評估，您的孩子在<strong>${this.getAssessmentTypeLabel(this.assessmentData.assessmentType)}</strong>領域的表現為<strong>${level}</strong>。</p>
+                        <div class="dq-scale-info">
+                            <div class="scale-item"><span class="range">90-100</span> <span class="tag excellent">優異</span></div>
+                            <div class="scale-item"><span class="range">80-89</span> <span class="tag good">良好</span></div>
+                            <div class="scale-item"><span class="range">70-79</span> <span class="tag normal">中等</span></div>
+                            <div class="scale-item"><span class="range">60-69</span> <span class="tag fair">及格</span></div>
+                            <div class="scale-item"><span class="range">&lt; 60</span> <span class="tag concern">關注</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="result-actions">
+                    <button class="result-btn primary" onclick="ChildAssessmentModule.exportResults()">
+                        <i class="fas fa-file-export"></i> 導出報告
+                    </button>
+                    <button class="result-btn secondary" onclick="ChildAssessmentModule.reset()">
+                        <i class="fas fa-undo"></i> 重新評估
+                    </button>
                 </div>
             </div>
         `;
@@ -290,6 +306,10 @@ class ChildAssessmentModule {
         // Hide progress bar
         const progressBar = document.querySelector('.progress-bar');
         if (progressBar) progressBar.style.display = 'none';
+        
+        // Hide submit button if visible
+        const submitBtn = document.getElementById('submitBtn');
+        if (submitBtn) submitBtn.style.display = 'none';
     }
     
     /**

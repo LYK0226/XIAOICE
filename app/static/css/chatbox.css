@@ -75,7 +75,7 @@ body {
     height: 100vh;
     display: flex;
     overflow: hidden;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%);
     color: #333;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
@@ -118,14 +118,14 @@ body.dark-theme #chat-container {
     justify-content: space-between;
     align-items: center;
     padding: 15px 20px;
-    border-bottom: 3px solid #667eea;
+    border-bottom: 3px solid #9B8AB8;
     background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
     transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
 body.dark-theme #chat-header {
     background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
-    border-bottom-color: #667eea;
+    border-bottom-color: #9B8AB8;
 }
 
 .chat-title {
@@ -134,7 +134,7 @@ body.dark-theme #chat-header {
     gap: 10px;
     font-size: 18px;
     font-weight: 700;
-    color: #667eea;
+    color: #9B8AB8;
     animation: slideInLeft 0.5s ease;
 }
 
@@ -303,7 +303,7 @@ body.dark-theme .message-content {
 }
 
 .user-message-container .message-content {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%);
     color: white;
     border-radius: 20px;
 }
@@ -352,7 +352,7 @@ body.dark-theme #input-container {
 
 .toolbar-btn {
     border: none;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%);
     cursor: pointer;
     padding: 10px;
     border-radius: 12px;
@@ -367,7 +367,7 @@ body.dark-theme .toolbar-btn {
 }
 
 .toolbar-btn:hover {
-    background: linear-gradient(135deg, #764ba2 0%, #667eea 100%);
+    background: linear-gradient(135deg, #B8A8D8 0%, #9B8AB8 100%);
     transform: translateY(-2px);
     box-shadow: 0 4px 12px rgba(102, 126, 234, 0.5);
 }
@@ -402,7 +402,7 @@ body.dark-theme #messageInput {
 }
 
 #messageInput:focus {
-    border-color: #667eea;
+    border-color: #9B8AB8;
     box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
 }
 
@@ -410,7 +410,7 @@ body.dark-theme #messageInput {
     width: 44px;
     height: 44px;
     border: none;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%);
     color: white;
     border-radius: 50%;
     cursor: pointer;
@@ -647,7 +647,7 @@ body.dark-theme .emoji-item:hover {
     justify-content: center;
     height: 100%;
     font-size: 30px;
-    color: #667eea;
+    color: #9B8AB8;
 }
 
 .file-preview-item .file-name {
@@ -805,7 +805,7 @@ body.dark-theme .webcam-content {
 }
 
 .webcam-action-btn.primary {
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%);
     color: white;
     border-color: transparent;
 }

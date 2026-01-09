@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>聊天盒子</title>
     <!-- Assessment styles -->
-     <link rel="stylesheet" href="../static/css/assessment.css">
+     <link rel="stylesheet" href="../static/css/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -58,7 +58,7 @@
                 </div>
 
                 <!-- Begin Evaluation Modal -->
-                <div id="evaluationModal" class="evaluation-modal" style="display: none;">
+                <div id="evaluationModal" class="evaluation-modal">
                     <div class="modal-content-evaluation">
                         <h2 class="modal-title">開始評估</h2>
                         
@@ -97,11 +97,6 @@
                 <!-- Assessment Screen (評估進行中) -->
                 <div id="assessmentScreen" style="display: none;">
                     <div class="assessment-screen">
-                        <div class="assessment-header">
-                            <h2 id="assessmentTitle">評估進行中</h2>
-                            <p id="assessmentInfo">請根據影片示範，觀察孩子是否能完成動作</p>
-                        </div>
-                        
                         <div class="progress-bar">
                             <div class="progress-fill" id="progressFill"></div>
                         </div>
@@ -326,6 +321,7 @@
     <script src="../static/js/assessment_config.js"></script>
     <!-- 載入評估題庫 -->
     <script src="../static/js/assessment_questions.js"></script>
+    <script src="../static/js/child_assessment.js"></script>
     
     <script>
         // 頁面載入時初始化評估選項
@@ -389,11 +385,11 @@
         
         // 新設計的彈窗控制
         function showEvaluationModal() {
-            document.getElementById('evaluationModal').style.display = 'block';
+            document.getElementById('evaluationModal').classList.add('active');
         }
         
         function hideEvaluationModal() {
-            document.getElementById('evaluationModal').style.display = 'none';
+            document.getElementById('evaluationModal').classList.remove('active');
             // 重置表單
             document.getElementById('assessmentType').value = '';
             document.getElementById('childName').value = '';

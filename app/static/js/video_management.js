@@ -76,6 +76,10 @@
             .replaceAll("'", '&#039;');
     }
 
+    function sleep(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+    }
+
     function openResultModal(html) {
         const modal = $('analysisResultModal');
         const body = $('analysisResultBody');
@@ -86,6 +90,22 @@
     function closeResultModal() {
         const modal = $('analysisResultModal');
         if (modal) modal.style.display = 'none';
+    }
+
+    async function showAnalysisResultWithDelay(html, { delayMs = 5000, animationText = '正在整理分析結果...' } = {}) {
+        const modal = $('analysisResultModal');
+        const animationMarkup = `
+            <div class="analysis-animation">
+                <div class="analysis-animation__circle" aria-hidden="true"></div>
+                <p>${escapeHtml(animationText)}</p>
+                <span class="analysis-animation__hint">即將顯示分析結果</span>
+            </div>
+        `;
+        openResultModal(animationMarkup);
+        await sleep(delayMs);
+        if (!modal || modal.style.display === 'none') return;
+        const body = $('analysisResultBody');
+        if (body) body.innerHTML = html;
     }
 
     async function fetchVideoDetails(videoId) {
@@ -237,7 +257,10 @@
                     ? window.getAnalysisResult(filename)
                     : '<p>✅ 分析完成！請重新整理頁面以查看結果。</p>';
                 
-                openResultModal(analysisResult);
+                await showAnalysisResultWithDelay(analysisResult, {
+                    delayMs: 5000,
+                    animationText: '正在準備分析結果...',
+                });
 
                 const input = $('videoModalInput');
                 if (input) input.value = '';

@@ -11,15 +11,17 @@ const body = document.body;
 const savedTheme = localStorage.getItem('theme') || 'light';
 if (savedTheme === 'dark') {
 	body.classList.add('dark-theme');
-	themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
+	if (themeToggle) themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
 }
 
-themeToggle.addEventListener('click', () => {
-	body.classList.toggle('dark-theme');
-	const isDark = body.classList.contains('dark-theme');
-	themeToggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-	localStorage.setItem('theme', isDark ? 'dark' : 'light');
-});
+if (themeToggle) {
+	themeToggle.addEventListener('click', () => {
+		body.classList.toggle('dark-theme');
+		const isDark = body.classList.contains('dark-theme');
+		themeToggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
+		localStorage.setItem('theme', isDark ? 'dark' : 'light');
+	});
+}
 
 // 3D Pose Detection System with Multi-Person Support
 let poseDetector3D = null;
@@ -134,22 +136,6 @@ const ASSESSMENT_STEPS = [
 		repsTarget: 6
 	},
 	{
-		key: 'bend_forward',
-		nameZh: '向前彎腰',
-		instruction: '向前彎腰，保持 1.5 秒。',
-		type: 'hold_any',
-		actionIds: ['bending_forward'],
-		holdMs: 1500
-	},
-	{
-		key: 'bend_backward',
-		nameZh: '向後彎腰',
-		instruction: '向後彎腰（後仰），保持 1.5 秒。',
-		type: 'hold_any',
-		actionIds: ['bending_backward'],
-		holdMs: 1500
-	},
-	{
 		key: 'bend_left',
 		nameZh: '向左彎腰',
 		instruction: '身體向左側彎，保持 1.5 秒。',
@@ -234,7 +220,7 @@ async function submitPoseAssessmentRun(payload) {
 
 		// If evaluation exists, show it immediately
 		if (data.run && data.run.evaluation) {
-			renderEvaluation(data.run.evaluation);
+			await renderEvaluation(data.run.evaluation);
 		}
 
 		return data.run || null;
@@ -246,23 +232,137 @@ async function submitPoseAssessmentRun(payload) {
 	}
 }
 
+// Fetch child information to display in the report
+async function fetchChildInfo() {
+	try {
+		const response = await fetch('/api/child-assessment/history', {
+			method: 'GET',
+			headers: _getAuthHeaders()
+		});
+		if (!response.ok) return null;
+		const data = await response.json().catch(() => ({}));
+		if (data.assessments && data.assessments.length > 0) {
+			return data.assessments[0]; // Return the latest one
+		}
+	} catch (e) {
+		console.warn('Failed to fetch child info:', e);
+	}
+	return null;
+}
+
 // Render evaluation summary and details into the UI
-function renderEvaluation(evaluation) {
+async function renderEvaluation(evaluation) {
 	if (!evaluation) return;
+	
 	const panel = document.getElementById('evaluationPanel');
-	const summary = document.getElementById('evaluationSummary');
-	const detailsBtn = document.getElementById('toggleEvalDetailsBtn');
-	const details = document.getElementById('evaluationDetails');
-
-	if (!panel || !summary || !detailsBtn || !details) return;
-
-	// Show panel
-	panel.style.display = 'block';
-	detailsBtn.style.display = 'inline-block';
+	const showReportBtn = document.getElementById('showReportBtn');
 	const clearBtn = document.getElementById('clearEvalBtn');
-	if (clearBtn) clearBtn.style.display = 'inline-block';
+	const modalBody = document.getElementById('modalBody');
 
-	// Clear button handler (delete latest run on backend)
+	if (!panel || !showReportBtn || !modalBody) return;
+
+	// Show the evaluation panel (which now only contains "Show Report" and "Clear" buttons)
+	panel.style.display = 'block';
+
+	// Fetch child info for the report cards
+	const childInfo = await fetchChildInfo();
+	const childName = childInfo ? childInfo.child_name : '—';
+	const childAge = childInfo ? `${childInfo.child_age_months} 個月` : '—';
+	
+	let assessmentType = '大運動評估 (動態)';
+	if (childInfo && childInfo.child_age_months) {
+		const age = childInfo.child_age_months;
+		if (age <= 12) assessmentType = '大運動評估 (6-12個月)';
+		else if (age <= 24) assessmentType = '大運動評估 (12-24個月)';
+		else assessmentType = '大運動評估 (2歲以上)';
+	}
+	
+	// Calculate DQ score
+	const s = evaluation.score || {completed:0, total: ASSESSMENT_STEPS.length, percent:0};
+	const dqScore = s.percent || 0;
+	
+	// Create badge based on score
+	let badgeText = '優異';
+	let badgeColor = '#4caf50';
+	if (dqScore >= 90) { badgeText = '優異'; badgeColor = '#4caf50'; }
+	else if (dqScore >= 80) { badgeText = '良好'; badgeColor = '#8bc34a'; }
+	else if (dqScore >= 70) { badgeText = '中等'; badgeColor = '#ffc107'; }
+	else if (dqScore >= 60) { badgeText = '及格'; badgeColor = '#ff9800'; }
+	else { badgeText = '需注意'; badgeColor = '#f44336'; }
+
+	// Prepare the Report Content HTML matching the image style
+	let reportHtml = `
+		<div class="report-score-card">
+			<div class="report-dq-value">${dqScore}</div>
+			<div class="report-dq-label">發育商 (DQ)</div>
+			<div class="report-badge">${badgeText}</div>
+		</div>
+
+		<div class="report-grid">
+			<div class="report-grid-card">
+				<div class="report-card-label">兒童姓名</div>
+				<div class="report-card-value">${childName}</div>
+			</div>
+			<div class="report-grid-card">
+				<div class="report-card-label">年齡</div>
+				<div class="report-card-value">${childAge}</div>
+			</div>
+			<div class="report-grid-card">
+				<div class="report-card-label">評估類型</div>
+				<div class="report-card-value">${assessmentType}</div>
+			</div>
+			<div class="report-grid-card">
+				<div class="report-card-label">完成率</div>
+				<div class="report-card-value">${dqScore}% (${s.completed}/${s.total})</div>
+			</div>
+		</div>
+
+		<div class="report-advice-section">
+			<div class="report-advice-title">💡 專業建議與說明</div>
+			<div class="report-advice-text">
+				${evaluation.summaryZh || `根據本次大運動評估，您的孩子在整體領域的表現為${badgeText}。建議平時多進行相關動作練習，增強肢體協調能力。`}
+			</div>
+			<div class="report-legend">
+				<span class="legend-item" style="background:#4caf50;">90-100 優異</span>
+				<span class="legend-item" style="background:#8bc34a;">80-89 良好</span>
+				<span class="legend-item" style="background:#ffc107;">70-79 中等</span>
+				<span class="legend-item" style="background:#ff9800;">60-69 及格</span>
+				<span class="legend-item" style="background:#f44336;">&lt;60 需注意</span>
+			</div>
+		</div>
+	`;
+
+	// Add detailed steps if available (optional, but good for completeness)
+	if (evaluation.steps && evaluation.steps.length > 0) {
+		reportHtml += `
+			<div style="margin-top: 24px; padding: 0 10px;">
+				<div style="font-size: 18px; font-weight: 800; color: #3d2e52; margin-bottom: 16px;">動作執行詳情</div>
+				<div style="display: flex; flex-direction: column; gap: 12px;">
+		`;
+		for (const p of evaluation.steps) {
+			const passed = p.passed;
+			reportHtml += `
+				<div style="background: white; padding: 16px; border-radius: 16px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(0,0,0,0.03);">
+					<div>
+						<div style="font-weight: 700; color: #3d2e52;">${p.nameZh || p.key}</div>
+						<div style="font-size: 13px; color: #9b8ab8;">${p.notes && p.notes.length ? p.notes[0] : '正常執行'}</div>
+					</div>
+					<div style="color: ${passed ? '#4caf50' : '#f44336'}; font-weight: 800; font-size: 15px;">
+						${passed ? '● 通過' : '○ 未通過'}
+					</div>
+				</div>
+			`;
+		}
+		reportHtml += `</div></div>`;
+	}
+
+	modalBody.innerHTML = reportHtml;
+
+	// Button handlers
+	showReportBtn.onclick = () => {
+		openEvaluationModal();
+	};
+
 	if (clearBtn) {
 		clearBtn.onclick = async () => {
 			if (!confirm('確定要刪除上一筆評估紀錄嗎？此動作無法復原。')) return;
@@ -273,11 +373,8 @@ function renderEvaluation(evaluation) {
 				});
 				const data = await resp.json().catch(() => ({}));
 				if (resp.ok && data.deleted) {
-					// hide panel and details
 					panel.style.display = 'none';
-					details.style.display = 'none';
-					detailsBtn.style.display = 'none';
-					clearBtn.style.display = 'none';
+					closeEvaluationModal();
 					if (testHint) testHint.textContent = '已清除先前紀錄';
 				} else {
 					alert('清除失敗：' + (data.message || data.error || '請稍後再試'));
@@ -288,51 +385,6 @@ function renderEvaluation(evaluation) {
 			}
 		};
 	}
-
-	// Summary text
-	const s = evaluation.score || {completed:0,total:0,percent:0};
-	const level = evaluation.level || '—';
-	const summaryZh = evaluation.summaryZh || '';
-	summary.innerHTML = `<strong>分數：</strong>${s.completed} / ${s.total}（${s.percent}%） &nbsp; <strong>等級：</strong>${level} <div style="margin-top:6px; color:#333">${summaryZh}</div>`;
-
-	// Build details HTML
-	let html = '';
-
-	if (evaluation.steps && evaluation.steps.length > 0) {
-		html += '<ol style="padding-left:18px; margin:0 0 8px 0">';
-		for (const p of evaluation.steps) {
-			html += `<li style="margin-bottom:6px;"><strong>${p.nameZh || p.key}</strong> — <em>${p.passed ? '通過' : '未通過'}</em>`;
-			if (p.notes && p.notes.length) {
-				html += `<div style="color:#444; margin-top:4px; font-size:0.9rem">說明：${p.notes.join('；')}</div>`;
-			}
-			if (p.advice && p.advice.length) {
-				html += `<div style="color:#a00; margin-top:4px; font-size:0.9rem">建議：${p.advice.join('；')}</div>`;
-			}
-			html += '</li>';
-		}
-		html += '</ol>';
-	}
-
-	if (evaluation.recommendations && evaluation.recommendations.length) {
-		html += `<div style="margin-top:8px;"><strong>綜合建議：</strong><ul style="margin:6px 0 0 18px">`;
-		for (const r of evaluation.recommendations) {
-			html += `<li style="margin-bottom:6px">${r}</li>`;
-		}
-		html += '</ul></div>';
-	}
-
-	details.innerHTML = html || '<div>沒有更多細節。</div>';
-
-	// Toggle button
-	detailsBtn.onclick = () => {
-		if (details.style.display === 'none') {
-			details.style.display = 'block';
-			detailsBtn.textContent = '隱藏詳情';
-		} else {
-			details.style.display = 'none';
-			detailsBtn.textContent = '顯示詳情';
-		}
-	};
 }
 
 // Fetch latest run on load and render evaluation if present
@@ -346,7 +398,7 @@ async function fetchLatestPoseAssessmentRun() {
 		if (!response.ok) return;
 		const data = await response.json().catch(() => ({}));
 		if (data.run && data.run.evaluation) {
-			renderEvaluation(data.run.evaluation);
+			await renderEvaluation(data.run.evaluation);
 		}
 	} catch (e) {
 		console.warn('Failed to fetch latest pose assessment run:', e);
@@ -469,8 +521,6 @@ function updateCurrentTestActionCard() {
 		else if (step.key === 'right_leg_stand') icon = '🦵';
 		else if (step.key === 'jumping_jack') icon = '⭐';
 		else if (step.key === 'high_knees') icon = '🏃';
-		else if (step.key === 'bend_forward') icon = '🙇';
-		else if (step.key === 'bend_backward') icon = '🧎';
 		else if (step.key === 'bend_left') icon = '↙️';
 		else if (step.key === 'bend_right') icon = '↘️';
 		else if (step.key === 'squat') icon = '🏋️';
@@ -853,15 +903,36 @@ async function startDetection() {
 			const videoRect = videoElement.getBoundingClientRect();
 			const wrapperRect = videoWrapper.getBoundingClientRect();
 
-			// Set canvas internal resolution to match video intrinsic size
-			canvasElement.width = videoElement.videoWidth;
-			canvasElement.height = videoElement.videoHeight;
+			// Set canvas internal resolution to match video intrinsic size (fallback to element size if metadata missing)
+			const intrinsicVideoWidth = videoElement.videoWidth || videoRect.width;
+			const intrinsicVideoHeight = videoElement.videoHeight || videoRect.height;
+			canvasElement.width = intrinsicVideoWidth;
+			canvasElement.height = intrinsicVideoHeight;
 
-			// Set canvas display size and position to match video element
-			canvasElement.style.width = videoRect.width + 'px';
-			canvasElement.style.height = videoRect.height + 'px';
-			canvasElement.style.left = (videoRect.left - wrapperRect.left) + 'px';
-			canvasElement.style.top = (videoRect.top - wrapperRect.top) + 'px';
+			// Adjust the overlay to follow the actual displayed video content inside the element
+			let displayWidth = videoRect.width;
+			let displayHeight = videoRect.height;
+			let offsetX = 0;
+			let offsetY = 0;
+
+			if (intrinsicVideoWidth && intrinsicVideoHeight && videoRect.width && videoRect.height) {
+				const videoAspect = intrinsicVideoWidth / intrinsicVideoHeight;
+				const elementAspect = videoRect.width / videoRect.height;
+				if (videoAspect > elementAspect) {
+					// Video is wider than the container: letterbox top/bottom
+					displayHeight = videoRect.width / videoAspect;
+					offsetY = (videoRect.height - displayHeight) / 2;
+				} else {
+					// Video is taller than the container: letterbox left/right
+					displayWidth = videoRect.height * videoAspect;
+					offsetX = (videoRect.width - displayWidth) / 2;
+				}
+			}
+
+			canvasElement.style.width = `${displayWidth}px`;
+			canvasElement.style.height = `${displayHeight}px`;
+			canvasElement.style.left = `${Math.round(videoRect.left - wrapperRect.left + offsetX)}px`;
+			canvasElement.style.top = `${Math.round(videoRect.top - wrapperRect.top + offsetY)}px`;
 		}
 
 		// Initial sync
@@ -1173,6 +1244,23 @@ function showError(title, message) {
 	errorContainer.classList.add('show');
 }
 
+// Modal control functions
+function openEvaluationModal() {
+	const modal = document.getElementById('modalOverlay');
+	if (modal) {
+		modal.style.display = 'flex';
+		document.body.style.overflow = 'hidden';
+	}
+}
+
+function closeEvaluationModal() {
+	const modal = document.getElementById('modalOverlay');
+	if (modal) {
+		modal.style.display = 'none';
+		document.body.style.overflow = '';
+	}
+}
+
 // Event listeners
 startBtn.addEventListener('click', startDetection);
 stopBtn.addEventListener('click', stopDetection);
@@ -1181,6 +1269,29 @@ resetBtn.addEventListener('click', resetSelection);
 if (startTestBtn) startTestBtn.addEventListener('click', startAssessment);
 if (skipTestBtn) skipTestBtn.addEventListener('click', skipCurrentStep);
 if (resetTestBtn) resetTestBtn.addEventListener('click', () => resetAssessmentState({ keepDetection: true }));
+
+// Modal event listeners
+const closeModalBtn = document.getElementById('closeModalBtn');
+const modalOverlay = document.getElementById('modalOverlay');
+
+if (closeModalBtn) {
+	closeModalBtn.addEventListener('click', closeEvaluationModal);
+}
+
+if (modalOverlay) {
+	modalOverlay.addEventListener('click', (e) => {
+		if (e.target === modalOverlay) {
+			closeEvaluationModal();
+		}
+	});
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', (e) => {
+	if (e.key === 'Escape') {
+		closeEvaluationModal();
+	}
+});
 
 // Init assessment UI
 updateAssessmentUI();
