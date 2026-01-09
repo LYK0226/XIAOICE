@@ -11,6 +11,7 @@
 class PoseDetector3D {
     /**
      * Initialize PoseDetector3D (Holistic) with configuration
+
      * 
      * @param {Object} config - Configuration object
      * @param {number} config.modelComplexity - Model complexity (0, 1, or 2). Default: 1
@@ -253,13 +254,14 @@ class PoseDetector3D {
 
         } catch (error) {
             console.error('❌ Error detecting pose:', error);
-            
+
             // 為了優雅降級回傳空結果，而非拋出錯誤
             return {
                 keypoints: [],
                 faceLandmarks: [],
                 leftHandLandmarks: [],
                 rightHandLandmarks: [],
+
                 detected: false,
                 timestamp: Date.now(),
                 error: error.message || 'Unknown error during pose detection'
@@ -410,6 +412,7 @@ class PoseDetector3D {
                 }
 
                 // 將值限制在 0.0-1.0 範圍以處理浮點誤差
+
                 kp.z_normalized = Math.max(0.0, Math.min(1.0, kp.z_normalized));
             } else {
                 kp.z_normalized = 0.5;
@@ -498,6 +501,7 @@ class PoseDetector3D {
      * 取得目前設定
      * 
      * @returns {Object} 目前的設定物件
+
      */
     getConfig() {
         return { ...this.config };
@@ -507,6 +511,7 @@ class PoseDetector3D {
      * Update configuration
      * 
      * Updates the holistic detection configuration. Changes take effect on next detection.
+
      * 
      * @param {Object} newConfig - Partial configuration object to update
      */

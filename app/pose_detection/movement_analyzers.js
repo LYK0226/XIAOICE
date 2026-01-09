@@ -87,6 +87,7 @@ class FixedActionAnalyzer {
     }
 
     /**
+<<<<<<< HEAD
      * 依類別取得動作
      */
     getActionsByCategory(category) {
@@ -124,3 +125,4 @@ class FixedActionAnalyzer {
 
 // 匯出供其他模組使用
 window.FixedActionAnalyzer = FixedActionAnalyzer;
+

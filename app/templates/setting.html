@@ -1,0 +1,294 @@
+<!-- Profile Settings Modal -->
+<div id="avatarModal" class="modal">
+    <div class="modal-content settings-modal">
+        <div class="settings-layout">
+            <!-- Left Sidebar with Groups -->
+            <div class="settings-sidebar">
+                <span class="close-avatar">&times;</span>
+                <div class="settings-group active" data-group="avatar">
+                    <i class="fas fa-user-circle"></i>
+                    <span data-i18n="settings.profile">個人資料</span>
+                </div>
+                <div class="settings-group" data-group="personalization">
+                    <i class="fas fa-palette"></i>
+                    <span data-i18n="settings.personalization">個人化</span>
+                </div>
+                <div class="settings-group" data-group="advanced">
+                    <i class="fa-solid fa-key"></i>
+                    <span data-i18n="settings.advanced">高級</span>
+                </div>
+            </div>
+            
+            <!-- Right Panel with Options -->
+            <div class="settings-panel">
+                <!-- Profile Settings -->
+                <div class="settings-content active" id="avatarTab">
+                    <div class="settings-header">
+                        <h3><i class="fas fa-user-circle"></i> <span data-i18n="settings.profile.title">個人資料</span></h3>
+                        <p class="settings-description" data-i18n="settings.profile.description">管理您的個人資料和帳戶設定</p>
+                    </div>
+                    <div class="profile-settings">
+                        <!-- Avatar Field -->
+                        <div class="profile-item">
+                            <label class="field-label" data-i18n="settings.profile.avatar">頭像</label>
+                            <div class="field-content">
+                                <div class="avatar-preview" id="userAvatarPreview">
+                                    <i class="fas fa-user"></i>
+                                </div>
+                                <input type="file" id="userAvatarInput" accept="image/*" style="display: none;">
+                            </div>
+                            <div class="field-actions">
+                                <button class="edit-btn" onclick="document.getElementById('userAvatarInput').click()">
+                                    <i class="fas fa-edit"></i> <span data-i18n="settings.profile.edit">編輯</span>
+                                </button>
+                                <button class="clear-btn" id="clearUserAvatar">
+                                    <i class="fas fa-times"></i> <span data-i18n="settings.profile.clear">清除</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Username Field -->
+                        <div class="profile-item">
+                            <label class="field-label" data-i18n="settings.profile.username">用戶名稱</label>
+                            <div class="field-content">
+                                <input type="text" id="profileUsername" readonly>
+                            </div>
+                            <div class="field-actions">
+                                <button class="edit-btn" id="editUsernameBtn">
+                                    <i class="fas fa-edit"></i> <span data-i18n="settings.profile.edit">編輯</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Email Field -->
+                        <div class="profile-item">
+                            <label class="field-label" data-i18n="settings.profile.email">電子郵件</label>
+                            <div class="field-content">
+                                <input type="email" id="profileEmail" readonly>
+                            </div>
+                            <div class="field-actions">
+                                <button class="edit-btn" id="editEmailBtn">
+                                    <i class="fas fa-edit"></i> <span data-i18n="settings.profile.edit">編輯</span>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Password Field -->
+                        <div class="profile-item">
+                            <label class="field-label" data-i18n="settings.profile.password">密碼</label>
+                            <div class="field-content">
+                                <input type="password" id="profilePassword" placeholder="********" readonly>
+                            </div>
+                            <div class="field-actions">
+                                <button class="edit-btn" id="editPasswordBtn">
+                                    <i class="fas fa-edit"></i> <span data-i18n="settings.profile.edit">編輯</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Personalization Settings -->
+                <div class="settings-content" id="personalizationTab">
+                    <div class="settings-header">
+                        <h3><i class="fas fa-palette"></i> <span data-i18n="settings.personalization.title">個人化設定</span></h3>
+                        <p class="settings-description" data-i18n="settings.personalization.description">自訂您的個人化偏好設定</p>
+                    </div>
+                    <div class="setting-item">
+                        <label data-i18n="settings.personalization.theme">主題模式</label>
+                        <div class="theme-selector">
+                            <button class="theme-btn active" data-theme="light"><i class="fas fa-sun"></i> <span data-i18n="settings.personalization.theme.light">淺色</span></button>
+                            <button class="theme-btn" data-theme="dark"><i class="fas fa-moon"></i> <span data-i18n="settings.personalization.theme.dark">深色</span></button>
+                            <button class="theme-btn" data-theme="auto"><i class="fas fa-circle-half-stroke"></i> <span data-i18n="settings.personalization.theme.auto">自動</span></button>
+                        </div>
+                    </div>
+                    <div class="setting-item">
+                        <label data-i18n="settings.personalization.language">界面語言</label>
+                        <div class="language-grid">
+                            <div class="lang-option active" data-lang="zh-TW">
+                                <i class="fas fa-circle"></i>
+                                <span>繁體中文</span>
+                            </div>
+                            <div class="lang-option" data-lang="en">
+                                <i class="fas fa-check-circle"></i>
+                                <span>English</span>
+                            </div>
+                            <div class="lang-option" data-lang="ja">
+                                <i class="fas fa-circle"></i>
+                                <span>日本語</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Advanced Settings -->
+                <div class="settings-content" id="advancedTab">
+                    <div class="settings-header">
+                        <h3><i class="fa-solid fa-key"></i> <span data-i18n="settings.advanced.title">API 金鑰管理</span></h3>
+                        <p class="settings-description" data-i18n="settings.advanced.description">管理您的 Google AI API 金鑰</p>
+                    </div>
+                    <!-- AI Model Selection -->
+                    <div class="setting-item">
+                        <label data-i18n="settings.advanced.model">AI 模型選擇</label>
+                        <div class="model-selection">
+                            <select id="aiModelSelect" class="setting-select">
+                                <option value="gemini-2.5-flash" data-i18n="settings.advanced.model.gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                <option value="gemini-2.5-pro" data-i18n="settings.advanced.model.gemini-2.5-pro">Gemini 2.5 Pro</option>
+                                <option value="gemini-3-flash-preview" data-i18n="settings.advanced.model.gemini-3-flash">Gemini 3 Flash</option>
+                                <option value="gemini-3-pro-preview" data-i18n="settings.advanced.model.gemini-3-pro">Gemini 3 Pro</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- API Key Management -->
+                    <div class="setting-item">
+                        <label data-i18n="settings.advanced.api_key">API 金鑰 / API Key</label>
+                        <p class="setting-description" style="font-size: 15px;" data-i18n="settings.advanced.api_key.description">您可以添加多個 API 金鑰以分散使用量</p>
+                        <div class="api-key-section">
+                            <div class="api-key-list" id="apiKeyList">
+                                <!-- API keys will be loaded here -->
+                            </div>
+                            
+                            <button class="add-api-key-btn" id="addApiKeyBtn">
+                                <i class="fas fa-plus"></i> <span data-i18n="settings.advanced.api_key.add">添加 API 金鑰</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Alert Modal -->
+<div id="customAlertModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <p id="customAlertMessage" style="margin: 20px 0; text-align: center;"></p>
+        <button id="customAlertCloseBtn" class="sidebar-btn" style="width: 50%; margin: 0 auto; text-align: center; display: block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold;" data-i18n="alert.confirm">确定</button>
+    </div>
+</div>
+
+<!-- Custom Confirm Modal -->
+<div id="customConfirmModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <p id="customConfirmMessage" style="margin: 20px 0; text-align: center;"></p>
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="customConfirmOkBtn" class="sidebar-btn" style="flex: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold;" data-i18n="alert.confirm">确定</button>
+            <button id="customConfirmCancelBtn" class="sidebar-btn" style="flex: 1; background: #6c757d; color: white;" data-i18n="alert.cancel">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Prompt Modal -->
+<div id="customPromptModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <p id="customPromptMessage" style="margin: 20px 0; text-align: center;"></p>
+        <input type="text" id="customPromptInput" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px;">
+        <div style="display: flex; gap: 10px; justify-content: center;">
+            <button id="customPromptOkBtn" class="sidebar-btn" style="flex: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold;" data-i18n="alert.confirm">确定</button>
+            <button id="customPromptCancelBtn" class="sidebar-btn" style="flex: 1; background: #6c757d; color: white;" data-i18n="alert.cancel">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- Webcam Modal -->
+<div id="webcamModal" class="modal">
+    <div class="modal-content">
+        <span class="close-webcam">&times;</span>
+        <h2>Webcam Input</h2>
+        <video id="webcamFeed" autoplay style="width: 100%; border-radius: 8px;"></video>
+        <button id="captureBtn" class="sidebar-btn" style="width: 100%; margin-top: 10px;"><i class="fas fa-camera"></i> Capture & Send</button>
+    </div>
+</div>
+
+<!-- API Key Modal -->
+<div id="apiKeyModal" class="modal">
+    <div class="modal-content" style="max-width: 500px;">
+        
+        <div class="api-key-form">
+            <div class="form-group">
+                <label for="apiKeyName" data-i18n="api_key_modal.name_label">金鑰名稱</label>
+                <input type="text" id="apiKeyName" placeholder="例如：我的 Google API" required>
+            </div>
+            
+            <div class="form-group">
+                <label for="apiKeyValue" data-i18n="api_key_modal.key_label">API 金鑰</label>
+                <input type="password" id="apiKeyValue" placeholder="輸入您的 Google AI API 金鑰" required>
+                <small class="form-hint" data-i18n="api_key_modal.hint">您的 API 金鑰將被加密存儲</small>
+            </div>
+            
+            <div class="form-actions">
+                <button id="saveApiKeyBtn" class="sidebar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                    <i class="fas fa-save"></i> <span data-i18n="api_key_modal.save">保存</span>
+                </button>
+                <button id="cancelApiKeyBtn" class="sidebar-btn" style="background: #6c757d;">
+                    <i class="fas fa-times"></i> <span data-i18n="api_key_modal.cancel">取消</span>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Username Modal -->
+<div id="editUsernameModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <h3 style="margin-bottom: 20px; text-align: center;" data-i18n="settings.profile.edit_username">編輯用戶名稱</h3>
+        <div class="form-group">
+            <label for="editUsernameInput" data-i18n="settings.profile.username">用戶名稱</label>
+            <input type="text" id="editUsernameInput" placeholder="輸入新的用戶名稱" required>
+        </div>
+        <div class="form-actions">
+            <button id="saveUsernameBtn" class="sidebar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <i class="fas fa-save"></i> <span data-i18n="settings.profile.save">保存</span>
+            </button>
+            <button id="cancelUsernameBtn" class="sidebar-btn" style="background: #6c757d;">
+                <i class="fas fa-times"></i> <span data-i18n="settings.profile.cancel">取消</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Email Modal -->
+<div id="editEmailModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <h3 style="margin-bottom: 20px; text-align: center;" data-i18n="settings.profile.edit_email">編輯電子郵件</h3>
+        <div class="form-group">
+            <label for="editEmailInput" data-i18n="settings.profile.email">電子郵件</label>
+            <input type="email" id="editEmailInput" placeholder="輸入新的電子郵件地址" required>
+        </div>
+        <div class="form-actions">
+            <button id="saveEmailBtn" class="sidebar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <i class="fas fa-save"></i> <span data-i18n="settings.profile.save">保存</span>
+            </button>
+            <button id="cancelEmailBtn" class="sidebar-btn" style="background: #6c757d;">
+                <i class="fas fa-times"></i> <span data-i18n="settings.profile.cancel">取消</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Change Password Modal -->
+<div id="changePasswordModal" class="modal">
+    <div class="modal-content" style="max-width: 450px;">
+        <h3 style="margin-bottom: 20px; text-align: center;" data-i18n="settings.profile.change_password">變更密碼</h3>
+        <div class="form-group">
+            <label for="oldPasswordInput" data-i18n="settings.profile.old_password">舊密碼</label>
+            <input type="password" id="oldPasswordInput" placeholder="輸入舊密碼" required>
+        </div>
+        <div class="form-group">
+            <label for="newPasswordInput" data-i18n="settings.profile.new_password">新密碼</label>
+            <input type="password" id="newPasswordInput" placeholder="輸入新密碼" required>
+        </div>
+        <div class="form-group">
+            <label for="confirmPasswordInput" data-i18n="settings.profile.confirm_password">確認新密碼</label>
+            <input type="password" id="confirmPasswordInput" placeholder="再次輸入新密碼" required>
+        </div>
+        <div class="form-actions">
+            <button id="savePasswordBtn" class="sidebar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+                <i class="fas fa-save"></i> <span data-i18n="settings.profile.save">保存</span>
+            </button>
+            <button id="cancelPasswordBtn" class="sidebar-btn" style="background: #6c757d;">
+                <i class="fas fa-times"></i> <span data-i18n="settings.profile.cancel">取消</span>
+            </button>
+        </div>
+    </div>
+</div>

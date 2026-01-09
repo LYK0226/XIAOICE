@@ -272,6 +272,7 @@ class PoseRenderer {
      * @returns {string} RGBA color string
      */
     getDepthColor(z, minZ, maxZ) {
+
         // 根據最小/最大值將 z 正規化為 0-1 範圍
         let normalizedZ;
         if (maxZ === minZ) {

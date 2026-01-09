@@ -4,6 +4,7 @@
     "features": {
         "ghcr.io/devcontainers/features/docker-in-docker": {}
     },
+
     "postStartCommand": "docker compose -f .devcontainer/docker-compose.yml up -d && grep -q '# auto-activate .venv' /home/vscode/.bashrc || printf '\n# auto-activate .venv\nif git rev-parse --show-toplevel >/dev/null 2>&1; then\n  repo_root=$(git rev-parse --show-toplevel)\n  if [ -f $repo_root/.venv/bin/activate ]; then\n    source $repo_root/.venv/bin/activate\n  fi\nelif [ -f ${PWD}/.venv/bin/activate ]; then\n  source ${PWD}/.venv/bin/activate\nfi\n' >> /home/vscode/.bashrc",
     "portsAttributes": {
         "5050": {

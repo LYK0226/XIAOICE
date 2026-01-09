@@ -1779,4 +1779,3 @@ def stream_video_analysis():
     except Exception as e:
         current_app.logger.error(f"Error in video analysis: {e}")
         return jsonify({'error': f'影片分析失敗: {str(e)}'}), 500
-

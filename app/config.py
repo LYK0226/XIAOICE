@@ -46,3 +46,4 @@ class Config:
     JWT_COOKIE_SAMESITE = os.environ.get('JWT_COOKIE_SAMESITE', 'Lax')
     # Disable CSRF protection for cookie-based JWTs since we pair them with Authorization headers
     JWT_COOKIE_CSRF_PROTECT = os.environ.get('JWT_COOKIE_CSRF_PROTECT', 'false').lower() == 'true'
+
