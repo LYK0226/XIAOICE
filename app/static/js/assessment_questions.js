@@ -180,7 +180,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否用拇指和食指捏取小物品？',
             description: '觀察兒童是否能用拇指和食指精準捏取小珠子。',
-            videoUrl: '/static/upload/videos/bear_pincer_grasp.mp4'
+            videoUrl: '/static/videos_quesyions/video/12-24 months/拇指和食指精準捏取小珠子 ture.mp4'
         },
         {
             id: 2,
@@ -188,7 +188,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否堆疊積木？',
             description: '觀察兒童是否能堆疊2-3塊積木。',
-            videoUrl: '/static/upload/videos/bear_stack_blocks.mp4'
+            videoUrl: '/static/videos_quesyions/video/12-24 months/堆疊積木 ture.mp4'
         },
         {
             id: 3,
@@ -196,7 +196,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否塗鴉？',
             description: '觀察兒童是否能握筆在紙上塗鴉。',
-            videoUrl: '/static/upload/videos/bear_scribble.mp4'
+            videoUrl: '/static/videos_quesyions/video/12-24 months/握筆在紙上塗鴉  ture.mp4'
         },
         {
             id: 4,
@@ -204,7 +204,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否翻薄頁書？',
             description: '觀察兒童是否能翻動普通書的頁面。',
-            videoUrl: '/static/upload/videos/bear_turn_thin_pages.mp4'
+            videoUrl: '/static/videos_quesyions/video/12-24 months/翻書頁(12-24) ture.mp4'
         },
         {
             id: 5,
@@ -212,7 +212,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否用勺子進食？',
             description: '觀察兒童是否能用勺子舀食物送到嘴裡。',
-            videoUrl: '/static/upload/videos/bear_use_spoon.mp4'
+            videoUrl: '/static/videos_quesyions/video/12-24 months/勺子進食 ture.mp4'
         },
         {
             id: 6,
@@ -220,7 +220,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否脫襪子？',
             description: '觀察兒童是否能自己脫掉襪子。',
-            videoUrl: '/static/upload/videos/bear_remove_socks.mp4'
+            videoUrl: '/static/videos_quesyions/video/12-24 months/脫襪子  ture.mp4'
         },
         {
             id: 7,
@@ -228,7 +228,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否拉開拉鍊？',
             description: '觀察兒童是否能拉開大拉鍊。',
-            videoUrl: '/static/upload/videos/bear_pull_zipper.mp4'
+            videoUrl: '/static/videos_quesyions/video/12-24 months/拉開拉鍊 ture.mp4'
         },
         {
             id: 8,
@@ -236,7 +236,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否轉動門把？',
             description: '觀察兒童是否能轉動圓形門把。',
-            videoUrl: '/static/upload/videos/bear_turn_knob.mp4'
+            videoUrl: '/static/videos_quesyions/video/12-24 months/轉動圓形門把 ture.mp4'
         },
         {
             id: 9,
@@ -244,7 +244,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否投球？',
             description: '觀察兒童是否能將球投向目標。',
-            videoUrl: '/static/upload/videos/bear_throw_ball.mp4'
+            videoUrl: '/static/videos_quesyions/video/12-24 months/投球 ture.mp4'
         },
         {
             id: 10,
@@ -252,7 +252,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否模仿畫圓？',
             description: '觀察兒童是否能模仿畫出圓形。',
-            videoUrl: '/static/upload/videos/bear_draw_circle.mp4'
+            videoUrl: '/static/videos_quesyions/video/12-24 months/畫出圓形 ture.mp4'
         }
     ],
 
@@ -264,7 +264,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否說出簡單詞彙？',
             description: '觀察兒童是否能說"媽媽"、"爸爸"等詞。',
-            videoUrl: '/static/upload/videos/bear_say_words.mp4'
+           
         },
         {
             id: 2,
@@ -272,7 +272,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否指認身體部位？',
             description: '觀察兒童是否能指出眼睛、鼻子等部位。',
-            videoUrl: '/static/upload/videos/bear_point_body_parts.mp4'
+            
         },
         {
             id: 3,
@@ -280,7 +280,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否執行簡單指令？',
             description: '觀察兒童是否能遵從"拿球"等簡單指令。',
-            videoUrl: '/static/upload/videos/bear_follow_command.mp4'
+           
         },
         {
             id: 4,
@@ -288,7 +288,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否模仿聲音？',
             description: '觀察兒童是否能模仿動物叫聲或簡單聲音。',
-            videoUrl: '/static/upload/videos/bear_imitate_sounds.mp4'
+           
         },
         {
             id: 5,
@@ -296,7 +296,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否說出物品名稱？',
             description: '觀察兒童是否能說出常見物品的名稱。',
-            videoUrl: '/static/upload/videos/bear_name_objects.mp4'
+            
         },
         {
             id: 6,
@@ -304,7 +304,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否用手勢表達需求？',
             description: '觀察兒童是否會用手勢表示"要"或"不要"。',
-            videoUrl: '/static/upload/videos/bear_gesture_needs.mp4'
+           
         },
         {
             id: 7,
@@ -312,7 +312,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否說兩個詞的短句？',
             description: '觀察兒童是否能說"要水"等兩詞組合。',
-            videoUrl: '/static/upload/videos/bear_two_word_phrase.mp4'
+           
         },
         {
             id: 8,
@@ -320,7 +320,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否回應自己的名字？',
             description: '觀察兒童聽到名字時是否會回應或轉頭。',
-            videoUrl: '/static/upload/videos/bear_respond_name.mp4'
+            
         },
         {
             id: 9,
@@ -328,7 +328,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否指認圖片中的物品？',
             description: '觀察兒童是否能在圖片中指出被問到的物品。',
-            videoUrl: '/static/upload/videos/bear_identify_pictures.mp4'
+           
         },
         {
             id: 10,
@@ -336,7 +336,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否表達"還要"的意思？',
             description: '觀察兒童是否會用語言或手勢表示還要。',
-            videoUrl: '/static/upload/videos/bear_more.mp4'
+            
         }
     ],
 
@@ -348,7 +348,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否與其他孩子一起玩？',
             description: '觀察兒童是否願意與其他孩子互動玩耍。',
-            videoUrl: '/static/upload/videos/bear_play_together.mp4'
+            
         },
         {
             id: 2,
@@ -356,7 +356,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否分享玩具？',
             description: '觀察兒童是否願意與他人分享玩具。',
-            videoUrl: '/static/upload/videos/bear_share_toys.mp4'
+            
         },
         {
             id: 3,
@@ -364,7 +364,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否表達情感？',
             description: '觀察兒童是否能表達開心、難過等情感。',
-            videoUrl: '/static/upload/videos/bear_express_emotions.mp4'
+            
         },
         {
             id: 4,
@@ -372,7 +372,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否輪流等待？',
             description: '觀察兒童是否能在遊戲中輪流等待。',
-            videoUrl: '/static/upload/videos/bear_take_turns.mp4'
+            
         },
         {
             id: 5,
@@ -380,7 +380,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否安慰他人？',
             description: '觀察兒童看到他人哭泣時是否會表示關心。',
-            videoUrl: '/static/upload/videos/bear_comfort_others.mp4'
+            
         },
         {
             id: 6,
@@ -388,7 +388,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否遵守簡單規則？',
             description: '觀察兒童是否能遵守遊戲的簡單規則。',
-            videoUrl: '/static/upload/videos/bear_follow_rules.mp4'
+            
         },
         {
             id: 7,
@@ -396,7 +396,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否主動打招呼？',
             description: '觀察兒童是否會主動向熟人打招呼。',
-            videoUrl: '/static/upload/videos/bear_greet.mp4'
+            
         },
         {
             id: 8,
@@ -404,7 +404,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否參與假裝遊戲？',
             description: '觀察兒童是否會玩假裝遊戲（如扮家家酒）。',
-            videoUrl: '/static/upload/videos/bear_pretend_play.mp4'
+            
         },
         {
             id: 9,
@@ -412,7 +412,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否尋求幫助？',
             description: '觀察兒童遇到困難時是否會尋求成人幫助。',
-            videoUrl: '/static/upload/videos/bear_seek_help.mp4'
+            
         },
         {
             id: 10,
@@ -420,7 +420,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否理解"我的"和"你的"？',
             description: '觀察兒童是否理解物品所有權的概念。',
-            videoUrl: '/static/upload/videos/bear_mine_yours.mp4'
+            
         }
     ],
 
@@ -432,7 +432,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否數數1-5？',
             description: '觀察兒童是否能正確數數到5。',
-            videoUrl: '/static/upload/videos/bear_count_five.mp4'
+            
         },
         {
             id: 2,
@@ -440,7 +440,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否辨認顏色？',
             description: '觀察兒童是否能辨認並說出基本顏色。',
-            videoUrl: '/static/upload/videos/bear_identify_colors.mp4'
+            
         },
         {
             id: 3,
@@ -448,7 +448,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否辨認形狀？',
             description: '觀察兒童是否能辨認圓形、方形、三角形。',
-            videoUrl: '/static/upload/videos/bear_identify_shapes.mp4'
+            
         },
         {
             id: 4,
@@ -456,7 +456,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否分類物品？',
             description: '觀察兒童是否能按顏色或大小分類物品。',
-            videoUrl: '/static/upload/videos/bear_sort_objects.mp4'
+            
         },
         {
             id: 5,
@@ -464,7 +464,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否完成簡單拼圖？',
             description: '觀察兒童是否能完成4-6塊的拼圖。',
-            videoUrl: '/static/upload/videos/bear_solve_puzzle.mp4'
+            
         },
         {
             id: 6,
@@ -472,7 +472,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否理解大小概念？',
             description: '觀察兒童是否能區分大和小。',
-            videoUrl: '/static/upload/videos/bear_big_small.mp4'
+            
         },
         {
             id: 7,
@@ -480,7 +480,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否記住簡單序列？',
             description: '觀察兒童是否能記住3個動作的序列。',
-            videoUrl: '/static/upload/videos/bear_sequence.mp4'
+            
         },
         {
             id: 8,
@@ -488,7 +488,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否理解因果關係？',
             description: '觀察兒童是否理解簡單的因果關係。',
-            videoUrl: '/static/upload/videos/bear_cause_effect.mp4'
+            
         },
         {
             id: 9,
@@ -496,7 +496,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否找出缺失的物品？',
             description: '觀察兒童是否能發現一組物品中缺少什麼。',
-            videoUrl: '/static/upload/videos/bear_find_missing.mp4'
+            
         },
         {
             id: 10,
@@ -504,7 +504,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否配對相同物品？',
             description: '觀察兒童是否能將相同的物品配對。',
-            videoUrl: '/static/upload/videos/bear_match_objects.mp4'
+            
         }
     ]
 };
