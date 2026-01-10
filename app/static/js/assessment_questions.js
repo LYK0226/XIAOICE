@@ -12,7 +12,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否抬頭？',
             description: '觀察兒童俯臥時是否能抬起頭部，保持幾秒鐘。',
-            videoUrl: '/static/upload/videos/bear_lift_head.mp4'
+            videoUrl: '/static/videos_quesyions/video/伸手取物 ture.mp4'
         },
         {
             id: 2,
@@ -20,7 +20,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否翻身？',
             description: '觀察兒童是否能從仰臥翻到俯臥或相反。',
-            videoUrl: '/static/upload/videos/bear_roll_over.mp4'
+            videoUrl: '/static/videos_quesyions/video/翻身 ture.mp4'
         },
         {
             id: 3,
@@ -28,7 +28,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否用手肘支撐？',
             description: '觀察兒童俯臥時是否能用手肘支撐上半身。',
-            videoUrl: '/static/upload/videos/bear_elbow_support.mp4'
+            videoUrl: '/static/videos_quesyions/video/手肘支撑(0-6) ture.mp4'
         },
         {
             id: 4,
@@ -36,7 +36,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否伸腿踢踏？',
             description: '觀察兒童仰臥時是否能伸腿做踢踏動作。',
-            videoUrl: '/static/upload/videos/bear_kick_legs.mp4'
+            videoUrl: '/static/videos_quesyions/video/伸腿踢踏(0-6) ture.mp4'
         },
         {
             id: 5,
@@ -44,7 +44,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否抓握物品？',
             description: '觀察兒童是否能抓住並握住物品。',
-            videoUrl: '/static/upload/videos/bear_grasp_object.mp4'
+            videoUrl: '/static/videos_quesyions/video/抓握物品(0-6) ture.mp4'
         },
         {
             id: 6,
@@ -52,7 +52,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否坐起時保持頭部穩定？',
             description: '觀察被扶起坐時頭部是否穩定，不會搖晃。',
-            videoUrl: '/static/upload/videos/bear_head_control.mp4'
+            videoUrl: '/static/videos_quesyions/video/保持頭部穩定(0-6)ture.mp4'
         },
         {
             id: 7,
@@ -60,7 +60,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否移動身體？',
             description: '觀察兒童是否能通過扭動身體改變位置。',
-            videoUrl: '/static/upload/videos/bear_body_movement.mp4'
+            videoUrl: '/static/videos_quesyions/video/移動身體 ture.mp4'
         },
         {
             id: 8,
@@ -68,7 +68,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否用手支撐坐？',
             description: '觀察兒童坐著時是否能用手支撐身體。',
-            videoUrl: '/static/upload/videos/bear_sit_support.mp4'
+            videoUrl: '/static/videos_quesyions/video/手支撐坐(0-6)ture.mp4'
         },
         {
             id: 9,
@@ -76,7 +76,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否彎曲膝蓋？',
             description: '觀察兒童是否能主動彎曲並伸展膝蓋。',
-            videoUrl: '/static/upload/videos/bear_bend_knees.mp4'
+            videoUrl: '/static/videos_quesyions/video/彎曲膝蓋(0-6)ture.mp4'
         },
         {
             id: 10,
@@ -84,7 +84,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否伸手取物？',
             description: '觀察兒童是否能伸手去抓取面前的物品。',
-            videoUrl: '/static/upload/videos/bear_reach_object.mp4'
+            videoUrl: '/static/videos_quesyions/video/伸手取物 (0-6) ture.mp4'
         }
     ],
 
@@ -96,7 +96,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否獨立坐？',
             description: '觀察兒童是否能不需要支撐獨立坐著。',
-            videoUrl: '/static/upload/videos/bear_sit_alone.mp4'
+            videoUrl: '/static/videos_quesyions/video_(6-12)/獨立坐 ture.mp4'
         },
         {
             id: 2,
@@ -104,7 +104,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否爬行？',
             description: '觀察兒童是否能用手膝爬行移動。',
-            videoUrl: '/static/upload/videos/bear_crawl.mp4'
+            videoUrl: '/static/videos_quesyions/video_(6-12)/爬行 ture.mp4'
         },
         {
             id: 3,
@@ -112,7 +112,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否扶站？',
             description: '觀察兒童是否能扶著家具站立。',
-            videoUrl: '/static/upload/videos/bear_pull_to_stand.mp4'
+            videoUrl: '/static/videos_quesyions/video_(6-12)/扶站  ture.mp4'
         },
         {
             id: 4,
@@ -120,7 +120,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否扶走？',
             description: '觀察兒童是否能扶著家具橫向移動。',
-            videoUrl: '/static/upload/videos/bear_cruise.mp4'
+            videoUrl: '/static/videos_quesyions/video_(6-12)/扶走 ture.mp4'
         },
         {
             id: 5,
@@ -128,7 +128,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否拍手？',
             description: '觀察兒童是否能雙手合拍。',
-            videoUrl: '/static/upload/videos/bear_clap_hands.mp4'
+            videoUrl: '/static/videos_quesyions/video_(6-12)/拍手 ture.mp4'
         },
         {
             id: 6,
@@ -136,7 +136,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否揮手？',
             description: '觀察兒童是否能做出揮手再見的動作。',
-            videoUrl: '/static/upload/videos/bear_wave_bye.mp4'
+            videoUrl: '/static/videos_quesyions/video_(6-12)/揮手 ture.mp4'
         },
         {
             id: 7,
@@ -144,7 +144,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否用食指指東西？',
             description: '觀察兒童是否能用食指指向物品。',
-            videoUrl: '/static/upload/videos/bear_point.mp4'
+            videoUrl: '/static/videos_quesyions/video_(6-12)/食指指向物品 ture.mp4'
         },
         {
             id: 8,
@@ -152,7 +152,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否把物品放進容器？',
             description: '觀察兒童是否能把小物品放入容器中。',
-            videoUrl: '/static/upload/videos/bear_put_in_container.mp4'
+            videoUrl: '/static/videos_quesyions/video_(6-12)/物品放進容器 ture.mp4'
         },
         {
             id: 9,
@@ -160,7 +160,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否翻書頁？',
             description: '觀察兒童是否能翻動厚紙板書的頁面。',
-            videoUrl: '/static/upload/videos/bear_turn_pages.mp4'
+            videoUrl: '/static/videos_quesyions/video_(6-12)/翻書頁 ture.mp4'
         },
         {
             id: 10,
@@ -168,7 +168,7 @@ const AssessmentQuestions = {
             emoji: '🐻',
             question: '兒童能否短暫獨立站立？',
             description: '觀察兒童是否能不扶任何東西獨立站幾秒。',
-            videoUrl: '/static/upload/videos/bear_stand_alone.mp4'
+            videoUrl: '/static/videos_quesyions/video_(6-12)/短暫獨立站立 ture.mp4'
         }
     ],
 

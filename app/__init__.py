@@ -1,5 +1,5 @@
 import os
-from flask import Flask
+from flask import Flask, send_from_directory
 from dotenv import load_dotenv
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
@@ -41,6 +41,13 @@ def create_app():
     from . import auth
     app.register_blueprint(routes.bp)
     app.register_blueprint(auth.auth_bp)
+    
+    # Register additional static routes for video questions
+    videos_quesyions_path = os.path.join(os.path.dirname(__file__), 'videos_quesyions')
+    if os.path.exists(videos_quesyions_path):
+        @app.route('/static/videos_quesyions/<path:filename>')
+        def serve_videos_quesyions(filename):
+            return send_from_directory(videos_quesyions_path, filename)
 
     # Optionally create tables on startup (development convenience)
     if app.config.get('CREATE_DB_ON_STARTUP'):
