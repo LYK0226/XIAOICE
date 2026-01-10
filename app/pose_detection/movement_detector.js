@@ -1,323 +1,205 @@
 /**
- * Movement Detector Module
+ * 動作偵測模組 (Movement Detector)
  * 
- * This module detects and classifies body part movements from 3D keypoint sequences.
- * It maintains a history of keypoints and uses registered analyzers to detect
- * specific movements like raising arms, turning head, etc.
+ * 此模組使用 ActionDetector 偵測固定動作/姿勢。
+ * 支援即時偵測並顯示結果。
  * 
- * Requirements: 2.1, 2.2, 2.3, 2.4, 2.5
+ * 可偵測的動作包括：
+ * - 手臂動作：舉手、T字姿勢、雙手叉腰等
+ * - 腿部動作：抬腿、深蹲、跪姿等
+ * - 身體動作：彎腰、傾斜、扭轉等
+ * - 頭部動作：轉頭、點頭、抬頭等
+ * - 組合動作：開合跳、勝利姿勢等
  */
 
 class MovementDetector {
     /**
-     * Initialize MovementDetector with configuration
+     * 使用設定初始化 MovementDetector
      * 
-     * @param {Object} config - Configuration object
-     * @param {number} config.movementThreshold - Minimum movement magnitude to detect. Default: 0.02
-     * @param {number} config.historySize - Number of frames to keep in history. Default: 5
-     * @param {number} config.confidenceThreshold - Minimum confidence for reporting movements. Default: 0.5
+     * @param {Object} config - 設定物件
+     * @param {number} config.confidenceThreshold - 報告動作的最小信心值（預設: 0.5）
+     * @param {boolean} config.enableSmoothing - 啟用信心度平滑化（預設: true）
+     * @param {number} config.smoothingFrames - 平滑化影格數（預設: 3）
+     * @param {string} config.language - 顯示語言（預設: 'zh'）
      */
     constructor(config = {}) {
         this.config = {
-            movementThreshold: config.movementThreshold !== undefined ? config.movementThreshold : 0.02,
-            historySize: config.historySize !== undefined ? config.historySize : 5,
-            confidenceThreshold: config.confidenceThreshold !== undefined ? config.confidenceThreshold : 0.5
+            confidenceThreshold: config.confidenceThreshold !== undefined ? config.confidenceThreshold : 0.5,
+            enableSmoothing: config.enableSmoothing !== false,
+            smoothingFrames: config.smoothingFrames || 3,
+            language: config.language || 'zh'
         };
 
-        // Keypoint history for delta calculations
-        this.keypointHistory = [];
+        // 固定動作偵測器
+        this.actionDetector = null;
+        this.descriptorGenerator = null;
 
-        // Movement history for consistency tracking
-        this.movementHistory = {};
+        // 最新偵測結果
+        this.lastActions = [];
 
-        // Initialize body part movement analyzers
-        this.analyzers = [
-            new HeadMovementAnalyzer(),
-            new ArmMovementAnalyzer('left'),
-            new ArmMovementAnalyzer('right'),
-            new LegMovementAnalyzer('left'),
-            new LegMovementAnalyzer('right'),
-            new TorsoMovementAnalyzer()
-        ];
+        // 初始化
+        this.initialize();
     }
 
     /**
-     * Detect all significant movements from current keypoints
+     * 初始化偵測系統
+     */
+    initialize() {
+        // 初始化 ActionDetector
+        if (typeof ActionDetector !== 'undefined') {
+            this.actionDetector = new ActionDetector({
+                confidenceThreshold: this.config.confidenceThreshold,
+                enableSmoothing: this.config.enableSmoothing,
+                smoothingFrames: this.config.smoothingFrames
+            });
+            console.log('✅ MovementDetector: ActionDetector initialized');
+        } else {
+            console.error('❌ MovementDetector: ActionDetector not available');
+        }
+
+        // 初始化描述生成器
+        if (typeof MovementDescriptorGenerator !== 'undefined') {
+            this.descriptorGenerator = new MovementDescriptorGenerator({
+                language: this.config.language,
+                showIcon: true
+            });
+        }
+    }
+
+    /**
+     * 偵測動作
      * 
-     * Evaluates all registered analyzers and returns detected movements
-     * that exceed the movement threshold and confidence threshold.
-     * 
-     * @param {Array<Object>} keypoints - Current frame keypoints with x, y, z, visibility
-     * @returns {Array<Object>} Array of detected movements with descriptors and confidence
+     * @param {Array<Object>} keypoints - 關鍵點陣列 (含 x, y, z, visibility)
+     * @returns {Object} 偵測結果 { actions, primaryAction, summary }
      */
     detectMovements(keypoints) {
-        // Handle empty or invalid keypoints
+        // 處理空或無效的關鍵點
         if (!keypoints || keypoints.length === 0) {
-            return [];
+            return { actions: [], fixedActions: [], primaryAction: null, summary: '' };
         }
 
-        // Handle low confidence keypoints gracefully
+        // 過濾低可見度關鍵點
         const validKeypoints = keypoints.filter(kp => kp && kp.visibility > 0.1);
         if (validKeypoints.length < 10) {
-            // Too few visible keypoints for reliable movement detection
-            console.warn('⚠️ Insufficient visible keypoints for movement detection');
-            return [];
+            console.warn('⚠️ 可見關鍵點不足，無法進行動作偵測');
+            return { actions: [], fixedActions: [], primaryAction: null, summary: '' };
         }
 
-        // Update history with current keypoints
-        this.updateHistory(keypoints);
-
-        // Handle insufficient history for movement detection
-        if (this.keypointHistory.length < 2) {
-            console.debug('ℹ️ Building keypoint history... (' + this.keypointHistory.length + '/' + this.config.historySize + ')');
-            return [];
+        // 偵測動作
+        let actions = [];
+        if (this.actionDetector) {
+            actions = this.actionDetector.detectActions(keypoints);
+            this.lastActions = actions;
         }
 
-        const movements = [];
-
-        // Evaluate each analyzer
-        this.analyzers.forEach(analyzer => {
-            try {
-                const analyzerMovements = analyzer.analyze(
-                    keypoints,
-                    this.keypointHistory[this.keypointHistory.length - 2],
-                    this.config.movementThreshold
-                );
-
-                // Adjust confidence based on movement consistency and filter by threshold
-                if (analyzerMovements && Array.isArray(analyzerMovements)) {
-                    analyzerMovements.forEach(movement => {
-                        // Validate movement object
-                        if (!movement || typeof movement.confidence !== 'number') {
-                            console.warn('⚠️ Invalid movement object from analyzer:', analyzer.constructor.name);
-                            return;
-                        }
-
-                        // Adjust confidence based on movement consistency across frames
-                        const adjustedConfidence = this.adjustConfidenceForConsistency(movement);
-                        movement.confidence = adjustedConfidence;
-
-                        // Filter by confidence threshold
-                        if (movement.confidence >= this.config.confidenceThreshold) {
-                            movements.push(movement);
-                        }
-                    });
-                }
-            } catch (error) {
-                console.error(`❌ Error in analyzer ${analyzer.constructor.name}:`, error);
-                // Continue with other analyzers instead of failing completely
-            }
-        });
-
-        return movements;
-    }
-
-    /**
-     * Update keypoint history for delta calculations
-     * 
-     * Maintains a sliding window of keypoint frames for movement analysis.
-     * Older frames are removed when history exceeds configured size.
-     * 
-     * @param {Array<Object>} keypoints - Current frame keypoints
-     */
-    updateHistory(keypoints) {
-        if (!keypoints || keypoints.length === 0) {
-            return;
-        }
-
-        // Add current keypoints to history
-        this.keypointHistory.push(keypoints);
-
-        // Maintain history size limit
-        while (this.keypointHistory.length > this.config.historySize) {
-            this.keypointHistory.shift();
-        }
-    }
-
-    /**
-     * Calculate 3D position change between two keypoints
-     * 
-     * Computes the delta vector (change in x, y, z) between two keypoint positions.
-     * 
-     * @param {Object} kp1 - First keypoint with x, y, z coordinates
-     * @param {Object} kp2 - Second keypoint with x, y, z coordinates
-     * @returns {Object} Delta object with x, y, z components
-     */
-    calculateDelta(kp1, kp2) {
-        if (!kp1 || !kp2) {
-            return { x: 0, y: 0, z: 0 };
+        // 生成摘要
+        let summary = '';
+        let primaryAction = null;
+        if (this.descriptorGenerator && actions.length > 0) {
+            summary = this.descriptorGenerator.generateSummary(actions);
+            primaryAction = this.descriptorGenerator.getPrimaryAction(actions);
         }
 
         return {
-            x: (kp2.x || 0) - (kp1.x || 0),
-            y: (kp2.y || 0) - (kp1.y || 0),
-            z: (kp2.z || 0) - (kp1.z || 0)
+            actions: actions,
+            fixedActions: actions,  // Alias for backward compatibility
+            primaryAction: primaryAction,
+            summary: summary
         };
     }
 
     /**
-     * Calculate magnitude of 3D movement vector
+     * 只偵測動作（不更新顯示）
      * 
-     * Computes the Euclidean distance (magnitude) of a 3D delta vector.
-     * 
-     * @param {Object} delta - Delta object with x, y, z components
-     * @returns {number} Magnitude of the movement vector
+     * @param {Array<Object>} keypoints - 關鍵點陣列
+     * @returns {Array<Object>} 動作陣列
      */
-    calculateMagnitude(delta) {
-        if (!delta) {
-            return 0;
+    detectActionsOnly(keypoints) {
+        if (!this.actionDetector || !keypoints || keypoints.length === 0) {
+            return [];
         }
 
-        const x = delta.x || 0;
-        const y = delta.y || 0;
-        const z = delta.z || 0;
-
-        return Math.sqrt(x * x + y * y + z * z);
+        return this.actionDetector.detectActions(keypoints);
     }
 
     /**
-     * Register a new movement analyzer
-     * 
-     * Allows adding custom analyzers without modifying existing code.
-     * 
-     * @param {MovementAnalyzer} analyzer - Analyzer instance to register
+     * 取得最後偵測到的動作
      */
-    registerAnalyzer(analyzer) {
-        if (!analyzer || typeof analyzer.analyze !== 'function') {
-            console.error('Invalid analyzer: must have analyze() method');
-            return;
-        }
-
-        this.analyzers.push(analyzer);
+    getLastActions() {
+        return this.lastActions;
     }
 
     /**
-     * Unregister a movement analyzer
-     * 
-     * Removes an analyzer by name or instance.
-     * 
-     * @param {string|Object} analyzerNameOrInstance - Analyzer name or instance to remove
+     * 取得所有可偵測的動作定義
      */
-    unregisterAnalyzer(analyzerNameOrInstance) {
-        if (typeof analyzerNameOrInstance === 'string') {
-            // Remove by class name
-            this.analyzers = this.analyzers.filter(
-                analyzer => analyzer.constructor.name !== analyzerNameOrInstance
-            );
-        } else {
-            // Remove by instance
-            const index = this.analyzers.indexOf(analyzerNameOrInstance);
-            if (index > -1) {
-                this.analyzers.splice(index, 1);
+    getActionDefinitions() {
+        if (this.actionDetector) {
+            return this.actionDetector.getActionDefinitions();
+        }
+        return [];
+    }
+
+    /**
+     * 依類別取得動作定義
+     */
+    getActionsByCategory(category) {
+        if (this.actionDetector) {
+            return this.actionDetector.getActionsByCategory(category);
+        }
+        return [];
+    }
+
+    /**
+     * 設定語言
+     */
+    setLanguage(language) {
+        this.config.language = language;
+        if (this.descriptorGenerator) {
+            this.descriptorGenerator.setLanguage(language);
+        }
+    }
+
+    /**
+     * 更新設定
+     */
+    updateConfig(newConfig) {
+        if (newConfig.confidenceThreshold !== undefined) {
+            this.config.confidenceThreshold = newConfig.confidenceThreshold;
+            if (this.actionDetector) {
+                this.actionDetector.config.confidenceThreshold = newConfig.confidenceThreshold;
             }
         }
-    }
-
-    /**
-     * Get all registered analyzers
-     * 
-     * @returns {Array<MovementAnalyzer>} Array of registered analyzers
-     */
-    getAnalyzers() {
-        return [...this.analyzers];
-    }
-
-    /**
-     * Adjust confidence based on movement consistency across frames
-     * 
-     * Tracks movement patterns over time and boosts confidence for consistent
-     * movements while reducing confidence for sporadic movements.
-     * 
-     * @param {Object} movement - Movement object with bodyPart, movementType, confidence
-     * @returns {number} Adjusted confidence score (0.0-1.0)
-     */
-    adjustConfidenceForConsistency(movement) {
-        if (!movement || typeof movement.confidence !== 'number') {
-            return 0;
+        if (newConfig.language !== undefined) {
+            this.setLanguage(newConfig.language);
         }
-
-        // Create a unique key for this movement type
-        const movementKey = `${movement.bodyPart}_${movement.movementType}`;
-
-        // Initialize movement history for this key if it doesn't exist
-        if (!this.movementHistory[movementKey]) {
-            this.movementHistory[movementKey] = {
-                count: 0,
-                totalConfidence: 0,
-                lastSeen: Date.now()
-            };
-        }
-
-        const history = this.movementHistory[movementKey];
-        const currentTime = Date.now();
-        const timeSinceLastSeen = currentTime - history.lastSeen;
-
-        // If movement hasn't been seen recently (>1 second), reset history
-        if (timeSinceLastSeen > 1000) {
-            history.count = 0;
-            history.totalConfidence = 0;
-        }
-
-        // Update history
-        history.count++;
-        history.totalConfidence += movement.confidence;
-        history.lastSeen = currentTime;
-
-        // Calculate consistency bonus based on how many consecutive frames
-        // this movement has been detected
-        // Bonus increases with consistency, up to 20% boost
-        const consistencyBonus = Math.min(0.2, (history.count - 1) * 0.05);
-
-        // Calculate adjusted confidence
-        // Base confidence from visibility + consistency bonus
-        let adjustedConfidence = movement.confidence + consistencyBonus;
-
-        // Ensure confidence stays in 0.0-1.0 range
-        adjustedConfidence = Math.max(0.0, Math.min(1.0, adjustedConfidence));
-
-        return adjustedConfidence;
     }
 
     /**
-     * Clear keypoint history
-     * 
-     * Resets the history buffer. Useful when starting a new detection session.
-     */
-    clearHistory() {
-        this.keypointHistory = [];
-        this.movementHistory = {};
-    }
-
-    /**
-     * Get current configuration
-     * 
-     * @returns {Object} Current configuration object
+     * 取得設定
      */
     getConfig() {
         return { ...this.config };
     }
 
     /**
-     * Update configuration
-     * 
-     * @param {Object} newConfig - Partial configuration object to update
+     * 清除歷史
      */
-    updateConfig(newConfig) {
-        if (!newConfig || typeof newConfig !== 'object') {
-            return;
+    clearHistory() {
+        this.lastActions = [];
+        if (this.actionDetector) {
+            this.actionDetector.clearHistory();
         }
+    }
 
-        if (newConfig.movementThreshold !== undefined) {
-            this.config.movementThreshold = newConfig.movementThreshold;
-        }
-        if (newConfig.historySize !== undefined) {
-            this.config.historySize = newConfig.historySize;
-        }
-        if (newConfig.confidenceThreshold !== undefined) {
-            this.config.confidenceThreshold = newConfig.confidenceThreshold;
-        }
+    /**
+     * 銷毀偵測器
+     */
+    destroy() {
+        this.clearHistory();
+        this.actionDetector = null;
+        this.descriptorGenerator = null;
     }
 }
 
-// Export for use in other modules
+// 匯出供其他模組使用
 window.MovementDetector = MovementDetector;

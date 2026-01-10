@@ -8,6 +8,9 @@ from werkzeug.utils import secure_filename
 from . import gcp_bucket
 import io
 
+# Evaluation logic moved to dedicated module to keep routes lightweight
+from .pose_assessment import evaluate_pose_assessment
+
 bp = Blueprint('main', __name__)
 
 @bp.route("/")
@@ -32,10 +35,46 @@ def index():
 def login_page():
     """Render the login/signup page."""
     return render_template('login_signup.html')
+
+@bp.route('/chatbox')
+def chatbox_page():
+    """Render the chatbox page."""
+    token = request.cookies.get('access_token')
+
+    if not token:
+        return redirect(url_for('main.login_page'))
+
+    try:
+        decode_token(token)
+    except Exception:
+        response = redirect(url_for('main.login_page'))
+        response.delete_cookie('access_token')
+        return response
+
+    return render_template('chatbox.html')
+
 @bp.route('/forgot_password')
 def forgot_password_page():
     """Render the forgot password page."""
     return render_template('forget_password.html')
+
+
+@bp.route('/child_assessment')
+def child_assessment_page():
+    """Render the child assessment page."""
+    token = request.cookies.get('access_token')
+
+    if not token:
+        return redirect(url_for('main.login_page'))
+
+    try:
+        decode_token(token)
+    except Exception:
+        response = redirect(url_for('main.login_page'))
+        response.delete_cookie('access_token')
+        return response
+
+    return render_template('child_assessment.html')
 
 @bp.route('/pose_detection')
 def pose_detection_page():
@@ -53,6 +92,42 @@ def pose_detection_page():
         return response
 
     return render_template('pose_detection.html')
+
+
+@bp.route('/video')
+def video_management_page():
+    """Render the dedicated video upload + analysis page."""
+    token = request.cookies.get('access_token')
+
+    if not token:
+        return redirect(url_for('main.login_page'))
+
+    try:
+        decode_token(token)
+    except Exception:
+        response = redirect(url_for('main.login_page'))
+        response.delete_cookie('access_token')
+        return response
+
+    return render_template('video_management_page.html')
+
+
+@bp.route('/admin')
+def admin_dashboard():
+    """Render the admin dashboard page."""
+    token = request.cookies.get('access_token')
+
+    if not token:
+        return redirect(url_for('main.login_page'))
+
+    try:
+        decode_token(token)
+    except Exception:
+        response = redirect(url_for('main.login_page'))
+        response.delete_cookie('access_token')
+        return response
+
+    return render_template('admin_dashboard.html')
 
 @bp.route('/pose_detection/js/<path:filename>')
 def serve_pose_detection_js(filename):
@@ -160,7 +235,10 @@ def chat_stream():
 
     except Exception as e:
         current_app.logger.error(f"Error in chat stream endpoint: {e}")
-        return jsonify({'error': 'An error occurred while processing your request.'}), 500# ===== API Key Management Routes =====
+        return jsonify({'error': 'An error occurred while processing your request.'}), 500
+
+
+# ===== API Key Management Routes =====
 
 @bp.route('/api/keys', methods=['GET'])
 @jwt_required()
@@ -746,9 +824,9 @@ def upload_file_websocket():
         # Create user message with file attachments
         user_message = Message(
             conversation_id=conversation_id,
-            role='user',
+            sender='user',
             content=message_content or '[File attachment]',
-            timestamp=datetime.utcnow()
+            uploaded_files=uploaded_urls
         )
         db.session.add(user_message)
         db.session.commit()
@@ -774,7 +852,7 @@ def upload_file_websocket():
             'role': 'user',
             'content': user_message.content,
             'files': uploaded_urls,
-            'timestamp': user_message.timestamp.isoformat(),
+            'timestamp': user_message.created_at.isoformat() if user_message.created_at else None,
             'conversation_id': conversation_id
         }, room=room)
         
@@ -789,3 +867,937 @@ def upload_file_websocket():
         db.session.rollback()
         current_app.logger.error(f"Error uploading file: {e}")
         return jsonify({'error': f'Failed to upload file: {str(e)}'}), 500
+
+
+# ==================== Pose/Action Assessment Endpoints ====================
+
+
+@bp.route('/api/pose-assessment/runs', methods=['POST'])
+@jwt_required()
+def create_pose_assessment_run():
+    """Receive pose assessment test data from frontend, score it, and store it."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import PoseAssessmentRun, db
+
+    user_id = int(get_jwt_identity())
+    data = request.get_json(silent=True) or {}
+
+    steps = data.get('steps')
+    if not isinstance(steps, list) or len(steps) == 0:
+        return jsonify({'error': 'steps is required and must be a non-empty array'}), 400
+
+    evaluation = evaluate_pose_assessment(data)
+
+    try:
+        run = PoseAssessmentRun(user_id=user_id, payload=data, evaluation=evaluation)
+        db.session.add(run)
+        db.session.commit()
+        return jsonify({'run': run.to_dict(include_payload=False)}), 201
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating pose assessment run: {e}")
+        return jsonify({'error': 'Failed to store pose assessment run'}), 500
+
+
+@bp.route('/api/pose-assessment/runs/latest', methods=['GET'])
+@jwt_required()
+def get_latest_pose_assessment_run():
+    """Fetch latest pose assessment run for current user."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import PoseAssessmentRun
+
+    user_id = int(get_jwt_identity())
+    run = (
+        PoseAssessmentRun.query
+        .filter_by(user_id=user_id)
+        .order_by(PoseAssessmentRun.created_at.desc())
+        .first()
+    )
+
+    if not run:
+        return jsonify({'run': None}), 200
+    return jsonify({'run': run.to_dict(include_payload=True)}), 200
+
+
+@bp.route('/api/pose-assessment/runs/latest', methods=['DELETE'])
+@jwt_required()
+def delete_latest_pose_assessment_run():
+    """Delete the latest pose assessment run for the current user."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import PoseAssessmentRun, db
+
+    user_id = int(get_jwt_identity())
+    try:
+        run = (
+            PoseAssessmentRun.query
+            .filter_by(user_id=user_id)
+            .order_by(PoseAssessmentRun.created_at.desc())
+            .first()
+        )
+        if not run:
+            return jsonify({'deleted': False, 'message': 'No run found'}), 200
+
+        db.session.delete(run)
+        db.session.commit()
+        return jsonify({'deleted': True}), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting latest pose assessment run: {e}")
+        return jsonify({'deleted': False, 'error': 'Failed to delete latest run'}), 500
+
+
+@bp.route('/api/pose-assessment/runs', methods=['GET'])
+@jwt_required()
+def list_pose_assessment_runs():
+    """List recent pose assessment runs for current user."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import PoseAssessmentRun
+
+    user_id = int(get_jwt_identity())
+    limit_raw = request.args.get('limit', '10')
+    try:
+        limit = max(1, min(50, int(limit_raw)))
+    except Exception:
+        limit = 10
+
+    runs = (
+        PoseAssessmentRun.query
+        .filter_by(user_id=user_id)
+        .order_by(PoseAssessmentRun.created_at.desc())
+        .limit(limit)
+        .all()
+    )
+
+    return jsonify({'runs': [r.to_dict(include_payload=False) for r in runs]}), 200
+
+
+@bp.route('/api/pose-assessment/runs/<run_id>', methods=['GET'])
+@jwt_required()
+def get_pose_assessment_run(run_id):
+    """Fetch a specific pose assessment run for current user by run_id."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import PoseAssessmentRun
+
+    user_id = int(get_jwt_identity())
+    run = PoseAssessmentRun.query.filter_by(user_id=user_id, run_id=run_id).first()
+    if not run:
+        return jsonify({'error': 'Run not found'}), 404
+    return jsonify({'run': run.to_dict(include_payload=True)}), 200
+
+
+# ===== Quiz/Questionnaire Routes =====
+
+
+@bp.route('/api/quiz/generate', methods=['POST'])
+@jwt_required()
+def generate_quiz():
+    """根据 PDF 生成测验题目"""
+    from flask_jwt_extended import get_jwt_identity
+    from app.adk import PDFQuestionnaire
+
+    user_id = get_jwt_identity()
+
+    try:
+        data = request.get_json() or {}
+        pdf_path = data.get('pdf_path')
+        num_questions = data.get('num_questions', 5)
+        question_type = data.get('question_type', 'choice')
+
+        # 如果没有提供 PDF 路径，使用最新上传的
+        if not pdf_path:
+            upload_dir = current_app.config['UPLOAD_FOLDER']
+            pdf_files = [f for f in os.listdir(upload_dir) if f.lower().endswith('.pdf')]
+            if not pdf_files:
+                return jsonify({'error': '没有找到 PDF 文件，请先上传 PDF'}), 400
+
+            # 按时间排序，取最新的
+            pdf_files_sorted = sorted(
+                pdf_files,
+                key=lambda x: os.path.getmtime(os.path.join(upload_dir, x)),
+                reverse=True
+            )
+            pdf_path = os.path.join(upload_dir, pdf_files_sorted[0])
+
+        # 生成问卷
+        qnr = PDFQuestionnaire(
+            pdf_path=pdf_path,
+            user_id=str(user_id),
+            max_questions=num_questions,
+            question_type=question_type
+        )
+
+        # 返回问题
+        return jsonify({
+            'success': True,
+            'test_id': qnr.test_id,
+            'questions': qnr.questions,
+            'total_questions': len(qnr.questions),
+            'question_type': question_type
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error generating quiz: {e}")
+        return jsonify({'error': f'生成测验失败: {str(e)}'}), 500
+
+
+@bp.route('/api/quiz/submit', methods=['POST'])
+@jwt_required()
+def submit_quiz():
+    """提交测验答案"""
+    from flask_jwt_extended import get_jwt_identity
+    from datetime import datetime
+
+    user_id = get_jwt_identity()
+
+    try:
+        data = request.get_json() or {}
+        test_id = data.get('test_id')
+        answers = data.get('answers', [])  # [{question_index, answer, ...}]
+
+        # 计算分数（如果是选择题）
+        correct_count = 0
+        total = len(answers)
+
+        for ans in answers:
+            if ans.get('is_correct'):
+                correct_count += 1
+
+        score = (correct_count / total * 100) if total > 0 else 0
+
+        result = {
+            'test_id': test_id,
+            'user_id': user_id,
+            'answers': answers,
+            'score': f"{score:.1f}%",
+            'correct_count': correct_count,
+            'total_questions': total,
+            'submitted_at': datetime.now().isoformat()
+        }
+
+        return jsonify({
+            'success': True,
+            'result': result
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error submitting quiz: {e}")
+        return jsonify({'error': f'提交失败: {str(e)}'}), 500
+
+
+# ==================== Child Development Assessment Endpoints ====================
+
+
+@bp.route('/api/child-assessment/generate', methods=['POST'])
+@jwt_required()
+def generate_child_assessment():
+    """Generate child development assessment questions from PDF (WS/T 580—2017)."""
+    from flask_jwt_extended import get_jwt_identity
+    from app.child_assessment import ChildDevelopmentAssessmentWST580
+    from app.models import ChildDevelopmentAssessmentRecord, db
+    import uuid
+
+    user_id = get_jwt_identity()
+
+    try:
+        data = request.get_json() or {}
+        child_name = data.get('child_name', 'Unknown')
+        child_age_months = data.get('child_age_months', 24.0)
+        pdf_path = data.get('pdf_path')
+
+        # Validate age (0-84 months = 0-6 years)
+        if not (0 <= float(child_age_months) <= 84):
+            return jsonify({'error': '孩子年齡應在 0-84 個月之間 (0-6 歲)'}), 400
+
+        assessment = ChildDevelopmentAssessmentWST580(
+            child_name=child_name,
+            child_age_months=float(child_age_months),
+            pdf_path=pdf_path
+        )
+
+        questions = assessment.generate_assessment_questions()
+        if not questions:
+            return jsonify({'error': '無法為該年齡生成評估項目'}), 400
+
+        assessment_id = str(uuid.uuid4())
+
+        record = ChildDevelopmentAssessmentRecord(
+            assessment_id=assessment_id,
+            user_id=user_id,
+            child_name=child_name,
+            child_age_months=float(child_age_months),
+            questions=questions,
+            pdf_filename=pdf_path.split('/')[-1] if pdf_path else None,
+            is_completed=False
+        )
+
+        db.session.add(record)
+        db.session.commit()
+
+        current_app.logger.info(f"Generated assessment {assessment_id} for user {user_id}")
+
+        return jsonify({
+            'success': True,
+            'assessment_id': assessment_id,
+            'child_name': child_name,
+            'child_age_months': child_age_months,
+            'total_questions': len(questions),
+            'questions': questions[:5]
+        }), 201
+
+    except Exception as e:
+        current_app.logger.error(f"Error generating assessment: {e}", exc_info=True)
+        return jsonify({'error': f'生成評估失敗: {str(e)}'}), 500
+
+
+@bp.route('/api/child-assessment/<assessment_id>/submit', methods=['POST'])
+@jwt_required()
+def submit_child_assessment(assessment_id):
+    """Submit child development assessment answers and calculate results."""
+    from flask_jwt_extended import get_jwt_identity
+    from app.child_assessment import ChildDevelopmentAssessmentWST580
+    from app.models import ChildDevelopmentAssessmentRecord, db
+    from datetime import datetime
+
+    user_id = get_jwt_identity()
+
+    try:
+        record = ChildDevelopmentAssessmentRecord.query.filter_by(
+            assessment_id=assessment_id,
+            user_id=user_id
+        ).first()
+
+        if not record:
+            return jsonify({'error': '評估記錄不存在'}), 404
+
+        data = request.get_json() or {}
+        answers = data.get('answers', {})
+
+        assessment = ChildDevelopmentAssessmentWST580(
+            child_name=record.child_name,
+            child_age_months=record.child_age_months,
+            pdf_path=None
+        )
+
+        for item_id, passed in answers.items():
+            assessment.record_answer(item_id, bool(passed))
+
+        results = assessment.calculate_assessment_results()
+        recommendations = assessment.generate_recommendations()
+
+        record.answers = answers
+        record.overall_dq = results.get('dq')
+        record.dq_level = results.get('dq_level')
+        record.total_mental_age = results.get('total_mental_age')
+        record.area_results = results.get('area_results')
+        record.recommendations = recommendations
+        record.is_completed = True
+        record.completed_at = datetime.utcnow()
+
+        db.session.commit()
+
+        current_app.logger.info(f"Completed assessment {assessment_id} with DQ: {results.get('dq')}")
+
+        return jsonify({
+            'success': True,
+            'assessment_id': assessment_id,
+            'results': {
+                'dq': results.get('dq'),
+                'dq_level': results.get('dq_level'),
+                'dq_description': results.get('dq_description'),
+                'total_mental_age': results.get('total_mental_age'),
+                'area_results': results.get('area_results'),
+                'recommendations': recommendations
+            }
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error submitting assessment: {e}", exc_info=True)
+        return jsonify({'error': f'提交評估失敗: {str(e)}'}), 500
+
+
+@bp.route('/api/child-assessment/history', methods=['GET'])
+@jwt_required()
+def get_assessment_history():
+    """Get all previous assessment records for the user."""
+    from flask_jwt_extended import get_jwt_identity
+    from app.models import ChildDevelopmentAssessmentRecord
+
+    user_id = get_jwt_identity()
+
+    try:
+        records = ChildDevelopmentAssessmentRecord.query.filter_by(
+            user_id=user_id
+        ).order_by(ChildDevelopmentAssessmentRecord.created_at.desc()).all()
+
+        history = [record.to_dict() for record in records]
+
+        return jsonify({
+            'success': True,
+            'total_assessments': len(history),
+            'assessments': history
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error fetching assessment history: {e}")
+        return jsonify({'error': f'獲取評估歷史失敗: {str(e)}'}), 500
+
+
+@bp.route('/api/child-assessment/<assessment_id>/detail', methods=['GET'])
+@jwt_required()
+def get_assessment_detail(assessment_id):
+    """Get detailed assessment results including recommendations and export options."""
+    from flask_jwt_extended import get_jwt_identity
+    from app.models import ChildDevelopmentAssessmentRecord
+
+    user_id = get_jwt_identity()
+
+    try:
+        record = ChildDevelopmentAssessmentRecord.query.filter_by(
+            assessment_id=assessment_id,
+            user_id=user_id
+        ).first()
+
+        if not record:
+            return jsonify({'error': '評估記錄不存在'}), 404
+
+        if not record.is_completed:
+            return jsonify({'error': '評估尚未完成'}), 400
+
+        return jsonify({
+            'success': True,
+            'assessment': record.to_dict(include_answers=True)
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error fetching assessment detail: {e}")
+        return jsonify({'error': f'獲取評估詳情失敗: {str(e)}'}), 500
+
+
+@bp.route('/api/child-assessment/<assessment_id>/export', methods=['GET'])
+@jwt_required()
+def export_assessment_report(assessment_id):
+    """Export assessment results as JSON."""
+    from flask_jwt_extended import get_jwt_identity
+    from app.models import ChildDevelopmentAssessmentRecord
+    import json as _json
+
+    user_id = get_jwt_identity()
+
+    try:
+        record = ChildDevelopmentAssessmentRecord.query.filter_by(
+            assessment_id=assessment_id,
+            user_id=user_id
+        ).first()
+
+        if not record:
+            return jsonify({'error': '評估記錄不存在'}), 404
+
+        if not record.is_completed:
+            return jsonify({'error': '評估尚未完成'}), 400
+
+        export_data = {
+            'assessment_id': record.assessment_id,
+            'child_info': {
+                'name': record.child_name,
+                'age_months': record.child_age_months
+            },
+            'assessment_date': record.created_at.isoformat() if record.created_at else None,
+            'standard': record.standard,
+            'results': {
+                'dq': record.overall_dq,
+                'dq_level': record.dq_level,
+                'total_mental_age': record.total_mental_age,
+                'area_results': record.area_results
+            },
+            'recommendations': record.recommendations
+        }
+
+        response = Response(
+            _json.dumps(export_data, ensure_ascii=False, indent=2),
+            mimetype='application/json'
+        )
+        response.headers['Content-Disposition'] = f'attachment; filename=assessment_{assessment_id}.json'
+        return response
+
+    except Exception as e:
+        current_app.logger.error(f"Error exporting assessment: {e}")
+        return jsonify({'error': f'導出評估失敗: {str(e)}'}), 500
+
+
+@bp.route('/api/upload-pdf', methods=['POST'])
+@jwt_required()
+def upload_pdf_for_assessment():
+    """Upload PDF file for child assessment. Supports PDF files up to 10MB."""
+    try:
+        if 'file' not in request.files:
+            return jsonify({'error': '沒有選擇文件'}), 400
+
+        file = request.files['file']
+        if file.filename == '':
+            return jsonify({'error': '沒有選擇文件'}), 400
+
+        if not file.filename.lower().endswith('.pdf'):
+            return jsonify({'error': '只支持 PDF 文件'}), 400
+
+        file.seek(0, os.SEEK_END)
+        file_size = file.tell()
+        file.seek(0)
+
+        max_size = 10 * 1024 * 1024
+        if file_size > max_size:
+            return jsonify({'error': f'文件太大，最大支持 10MB，實際大小 {file_size / 1024 / 1024:.2f}MB'}), 400
+
+        upload_folder = current_app.config['UPLOAD_FOLDER']
+        os.makedirs(upload_folder, exist_ok=True)
+
+        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+        secure_name = secure_filename(file.filename)
+        name_without_ext = secure_name.rsplit('.', 1)[0] if '.' in secure_name else secure_name
+        unique_filename = f"{name_without_ext}_{timestamp}.pdf"
+
+        file_path = os.path.join(upload_folder, unique_filename)
+        file.save(file_path)
+
+        current_app.logger.info(f"PDF uploaded successfully: {unique_filename}")
+
+        return jsonify({
+            'success': True,
+            'file_path': file_path,
+            'filename': unique_filename,
+            'file_size': file_size
+        }), 201
+
+    except Exception as e:
+        current_app.logger.error(f"Error uploading PDF: {e}")
+        return jsonify({'error': f'PDF 上傳失敗: {str(e)}'}), 500
+
+
+# ==================== Video Management Endpoints ====================
+
+
+@bp.route('/api/upload-video', methods=['POST'])
+@jwt_required()
+def upload_video():
+    """Upload a video file for transcription and analysis (stored in GCS)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import db, VideoRecord, UserProfile
+    import threading
+
+    user_id = int(get_jwt_identity())
+
+    try:
+        if 'video' not in request.files:
+            return jsonify({'error': 'No video file provided'}), 400
+
+        video_file = request.files['video']
+        if not video_file.filename:
+            return jsonify({'error': 'No selected file'}), 400
+
+        # Validate file size (max 500MB)
+        video_file.seek(0, os.SEEK_END)
+        file_size = video_file.tell()
+        video_file.seek(0)
+
+        max_size = 500 * 1024 * 1024
+        if file_size > max_size:
+            return jsonify({'error': 'File too large. Max 500MB allowed'}), 400
+
+        secure_name = secure_filename(video_file.filename)
+        if '.' in secure_name:
+            name_without_ext, ext = secure_name.rsplit('.', 1)
+            ext = ext.lower()
+        else:
+            name_without_ext = secure_name
+            ext = ''
+
+        allowed_exts = current_app.config.get('ALLOWED_VIDEO_EXTENSIONS', {'mp4', 'avi', 'mov', 'mkv', 'webm'})
+        if ext == '' or ext not in allowed_exts:
+            return jsonify({'error': f'不支援的影片格式。允許的格式: {", ".join(sorted(allowed_exts)).upper()}'}), 400
+
+        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+        unique_filename = f"{name_without_ext}_{timestamp}.{ext}"
+
+        # Upload to GCS (namespace by user)
+        gcs_object_name = f"videos/{user_id}/{unique_filename}"
+        gcs_url = gcp_bucket.upload_file_to_gcs(video_file, gcs_object_name)
+
+        # Ensure stream is at end after upload; reset for safety
+        try:
+            video_file.seek(0)
+        except Exception:
+            pass
+
+        video_record = VideoRecord(
+            user_id=user_id,
+            filename=unique_filename,
+            original_filename=video_file.filename,
+            file_path=gcs_url,
+            file_size=file_size,
+            transcription_status='pending',
+            analysis_status='pending'
+        )
+
+        db.session.add(video_record)
+        db.session.commit()
+
+        # Prepare auth/user settings for background work
+        user_profile = UserProfile.query.filter_by(user_id=user_id).first()
+        api_key = None
+        if user_profile and user_profile.selected_api_key:
+            api_key = user_profile.selected_api_key.get_decrypted_key()
+
+        ai_model = user_profile.ai_model if (user_profile and user_profile.ai_model) else 'gemini-2.5-flash'
+        mime_type = video_file.content_type or gcp_bucket.get_content_type_from_url(gcs_url)
+
+        app_obj = current_app._get_current_object()
+        video_id = video_record.id
+
+        def transcribe_video_background():
+            from .models import VideoRecord, db
+
+            with app_obj.app_context():
+                try:
+                    video = VideoRecord.query.get(video_id)
+                    if not video:
+                        return
+
+                    video.transcription_status = 'processing'
+                    db.session.commit()
+
+                    prompt = (
+                        "請將此影片中的語音逐字轉錄成純文字。\n"
+                        "- 若影片沒有語音，請回答：『（無語音）』\n"
+                        "- 請不要加上多餘的前言或標題。"
+                    )
+
+                    chunks = []
+                    for chunk in agent.generate_streaming_response(
+                        prompt,
+                        image_path=gcs_url,
+                        image_mime_type=mime_type,
+                        history=None,
+                        api_key=api_key,
+                        model_name=ai_model,
+                        user_id=str(user_id),
+                        conversation_id=None
+                    ):
+                        if chunk:
+                            chunks.append(chunk)
+
+                    transcript = ''.join(chunks).strip()
+                    if not transcript:
+                        video.transcription_status = 'failed'
+                    else:
+                        video.full_transcription = transcript
+                        video.transcription_status = 'completed'
+
+                    db.session.commit()
+                except Exception as e:
+                    current_app.logger.error(f"Error transcribing video: {e}")
+                    try:
+                        video = VideoRecord.query.get(video_id)
+                        if video:
+                            video.transcription_status = 'failed'
+                            db.session.commit()
+                    except Exception:
+                        pass
+
+        thread = threading.Thread(target=transcribe_video_background, daemon=True)
+        thread.start()
+
+        # Provide an authenticated playback URL; server will redirect to GCS
+        video_url = f"/api/video-file/{unique_filename}"
+
+        return jsonify({
+            'success': True,
+            'video_id': video_record.id,
+            'video_url': video_url,
+            'file_path': gcs_url,
+            'message': 'Video uploaded. Transcription processing...'
+        }), 201
+
+    except Exception as e:
+        current_app.logger.error(f"Error uploading video: {e}")
+        return jsonify({'error': f'Video upload failed: {str(e)}'}), 500
+
+
+@bp.route('/api/videos', methods=['GET'])
+@jwt_required()
+def get_videos():
+    """Get user's uploaded videos."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import VideoRecord
+
+    try:
+        user_id = int(get_jwt_identity())
+        videos = VideoRecord.query.filter_by(user_id=user_id).order_by(VideoRecord.created_at.desc()).all()
+
+        return jsonify({
+            'success': True,
+            'videos': [video.to_dict() for video in videos]
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error fetching videos: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/video/<int:video_id>', methods=['GET'])
+@jwt_required()
+def get_video(video_id):
+    """Get video details."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import VideoRecord
+
+    try:
+        user_id = int(get_jwt_identity())
+        video = VideoRecord.query.filter_by(id=video_id, user_id=user_id).first()
+
+        if not video:
+            return jsonify({'error': 'Video not found'}), 404
+
+        return jsonify({
+            'success': True,
+            'video': video.to_dict(include_timestamps=True)
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error fetching video: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/video/<int:video_id>/analyze', methods=['POST'])
+@jwt_required()
+def analyze_video(video_id):
+    """Analyze video content based on transcription."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import db, VideoRecord, UserProfile
+    import threading
+    import json as _json
+
+    user_id = int(get_jwt_identity())
+
+    try:
+        video = VideoRecord.query.filter_by(id=video_id, user_id=user_id).first()
+        if not video:
+            return jsonify({'error': 'Video not found'}), 404
+
+        if (video.transcription_status or '').lower() != 'completed' or not (video.full_transcription or '').strip():
+            return jsonify({'error': 'Transcription not yet completed'}), 400
+
+        user_profile = UserProfile.query.filter_by(user_id=user_id).first()
+        api_key = None
+        if user_profile and user_profile.selected_api_key:
+            api_key = user_profile.selected_api_key.get_decrypted_key()
+        ai_model = user_profile.ai_model if (user_profile and user_profile.ai_model) else 'gemini-2.5-flash'
+
+        app_obj = current_app._get_current_object()
+
+        def analyze_background():
+            from .models import db, VideoRecord
+
+            with app_obj.app_context():
+                try:
+                    v = VideoRecord.query.filter_by(id=video_id, user_id=user_id).first()
+                    if not v:
+                        return
+
+                    v.analysis_status = 'processing'
+                    db.session.commit()
+
+                    prompt = (
+                        "請根據以下逐字稿，輸出一個 JSON 物件（只輸出 JSON，不要其他文字）。\n"
+                        "JSON 欄位：summary（摘要）, key_points（重點陣列）, suggestions（建議陣列）, risks（注意事項陣列）。\n\n"
+                        f"逐字稿：\n{v.full_transcription}"
+                    )
+
+                    chunks = []
+                    for chunk in agent.generate_streaming_response(
+                        prompt,
+                        history=None,
+                        api_key=api_key,
+                        model_name=ai_model,
+                        user_id=str(user_id),
+                        conversation_id=None
+                    ):
+                        if chunk:
+                            chunks.append(chunk)
+
+                    raw = ''.join(chunks).strip()
+                    try:
+                        analysis_json = _json.loads(raw)
+                    except Exception:
+                        analysis_json = {'raw': raw}
+
+                    v.analysis_report = analysis_json
+                    v.analysis_status = 'completed'
+                    db.session.commit()
+                except Exception as e:
+                    current_app.logger.error(f"Error analyzing video: {e}")
+                    try:
+                        v = VideoRecord.query.filter_by(id=video_id, user_id=user_id).first()
+                        if v:
+                            v.analysis_status = 'failed'
+                            db.session.commit()
+                    except Exception:
+                        pass
+
+        thread = threading.Thread(target=analyze_background, daemon=True)
+        thread.start()
+
+        return jsonify({'success': True, 'message': 'Analysis started'}), 202
+
+    except Exception as e:
+        current_app.logger.error(f"Error starting analysis: {e}")
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/video/<int:video_id>', methods=['DELETE'])
+@jwt_required()
+def delete_video(video_id):
+    """Delete video and associated files."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import db, VideoRecord
+
+    try:
+        user_id = int(get_jwt_identity())
+        video = VideoRecord.query.filter_by(id=video_id, user_id=user_id).first()
+        if not video:
+            return jsonify({'error': 'Video not found'}), 404
+
+        # Delete from GCS if applicable
+        if isinstance(video.file_path, str) and video.file_path.startswith('https://storage.googleapis.com/'):
+            gcp_bucket.delete_file_from_gcs(video.file_path)
+
+        db.session.delete(video)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Video deleted'}), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error deleting video: {e}")
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/videos/clear-all', methods=['POST'])
+@jwt_required()
+def clear_all_videos():
+    """Clear all user videos."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import db, VideoRecord
+
+    try:
+        user_id = int(get_jwt_identity())
+        videos = VideoRecord.query.filter_by(user_id=user_id).all()
+
+        deleted_count = 0
+        for video in videos:
+            if isinstance(video.file_path, str) and video.file_path.startswith('https://storage.googleapis.com/'):
+                gcp_bucket.delete_file_from_gcs(video.file_path)
+            db.session.delete(video)
+            deleted_count += 1
+
+        db.session.commit()
+
+        return jsonify({
+            'success': True,
+            'message': f'已清除 {deleted_count} 個影片',
+            'deleted_count': deleted_count
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error clearing videos: {e}")
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/video-file/<filename>')
+@jwt_required()
+def serve_video(filename):
+    """Serve video files for the current user (auth-gated redirect to GCS URL)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import VideoRecord
+
+    user_id = int(get_jwt_identity())
+
+    video = VideoRecord.query.filter_by(user_id=user_id, filename=filename).first()
+    if not video:
+        return jsonify({'error': 'Video not found'}), 404
+
+    if isinstance(video.file_path, str) and video.file_path.startswith('https://storage.googleapis.com/'):
+        return redirect(video.file_path)
+
+    return jsonify({'error': 'File not available'}), 404
+
+
+@bp.route('/video/analyze', methods=['POST'])
+@jwt_required()
+def analyze_video_upload():
+    """Analyze uploaded video and extract frames for AI analysis."""
+    from flask_jwt_extended import get_jwt_identity
+    from .video_processor import VideoProcessor
+
+    _ = int(get_jwt_identity())
+
+    try:
+        video_processor = VideoProcessor(current_app.config['UPLOAD_FOLDER'])
+        video_path = None
+        video_info = {}
+
+        if 'video' in request.files:
+            video_file = request.files['video']
+            if not video_file.filename:
+                return jsonify({'error': '沒有選擇文件'}), 400
+
+            filename = secure_filename(video_file.filename)
+            if not filename:
+                return jsonify({'error': '無效的文件名'}), 400
+
+            ext = filename.rsplit('.', 1)[1].lower() if '.' in filename else ''
+            if ext not in current_app.config.get('ALLOWED_VIDEO_EXTENSIONS', {'mp4', 'avi', 'mov', 'mkv', 'webm'}):
+                return jsonify({'error': '不支援的影片格式。允許的格式: MP4, AVI, MOV, MKV, WebM'}), 400
+
+            upload_folder = current_app.config['UPLOAD_FOLDER']
+            os.makedirs(upload_folder, exist_ok=True)
+
+            timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+            unique_filename = f"video_{timestamp}.{ext}"
+            video_path = os.path.join(upload_folder, unique_filename)
+            video_file.save(video_path)
+
+            current_app.logger.info(f"Saved uploaded video: {video_path}")
+        else:
+            return jsonify({'error': '請上傳影片文件'}), 400
+
+        if not video_info:
+            video_info = video_processor.get_video_info(video_path)
+
+        interval = current_app.config.get('VIDEO_FRAME_INTERVAL', 5)
+        max_frames = current_app.config.get('VIDEO_MAX_FRAMES', 20)
+        frames = video_processor.extract_frames(video_path, interval, max_frames)
+
+        current_app.logger.info(f"Extracted {len(frames)} frames from video")
+
+        video_filename = os.path.basename(video_path)
+        video_url = f"/static/upload/{video_filename}"
+
+        return jsonify({
+            'success': True,
+            'video_info': video_info,
+            'video_url': video_url,
+            'video_path': video_path,
+            'frames': frames,
+            'is_youtube': False,
+            'message': f'成功提取 {len(frames)} 個關鍵幀進行分析'
+        }), 200
+
+    except Exception as e:
+        current_app.logger.error(f"Error analyzing video: {e}")
+        return jsonify({'error': f'影片分析失敗: {str(e)}'}), 500
+
+
+@bp.route('/video/stream-analysis', methods=['POST'])
+@jwt_required()
+def stream_video_analysis():
+    """Stream AI analysis of video frames (not yet implemented in main2)."""
+    return jsonify({'error': 'video frame streaming analysis is not implemented in this build'}), 501
