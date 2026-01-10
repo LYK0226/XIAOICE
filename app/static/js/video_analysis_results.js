@@ -12,17 +12,17 @@
 const VIDEO_ANALYSIS_RESULTS = {
     // Example video results - customize these
     /** filename */
-    'file name': `
+    '拍手掌demo video': `
         <h3>✅ 分析完成：示範影片</h3>
         <p><strong>影片類型：</strong>教學示範</p>
-        <p><strong>重點摘要：</strong>清晰展示了產品使用流程，步驟完整且易懂。</p>
+        <p><strong>重點摘要：</strong>小朋友需要對著鏡頭做出要求的動作</p>
         <p><strong>優點：</strong></p>
         <ul>
-            <li>畫面清晰，光線充足</li>
-            <li>講解節奏適中</li>
-            <li>示範步驟完整</li>
+            <li>節奏很好</li>
+            <li>步驟完整</li>
+            <li>沒有冗餘內容</li>
         </ul>
-        <p><strong>建議改進：</strong>可以加入字幕，方便無聲觀看。</p>
+        <p><strong>建議改進：</strong>目前步驟完整，可依操作複雜度調整節奏。</p>
     `,
 
     'aaa': `

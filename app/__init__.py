@@ -1,9 +1,8 @@
 import os
-from flask import Flask
+from flask import Flask, send_from_directory
 from dotenv import load_dotenv
 from flask_migrate import Migrate
 from flask_jwt_extended import JWTManager
-from flask_socketio import SocketIO
 
 # Load environment variables from .env file
 load_dotenv()
@@ -12,7 +11,6 @@ load_dotenv()
 from .models import db, User
 migrate = Migrate()
 jwt = JWTManager()
-socketio = SocketIO(cors_allowed_origins="*", async_mode='threading')
 
 def create_app():
     """Create and configure an instance of the Flask application."""
@@ -33,9 +31,6 @@ def create_app():
     
     # Initialize Flask-JWT-Extended
     jwt.init_app(app)
-    
-    # Initialize SocketIO
-    socketio.init_app(app)
 
     # Create an uploads folder if it doesn't exist
     if not os.path.exists(app.config['UPLOAD_FOLDER']):
@@ -47,8 +42,12 @@ def create_app():
     app.register_blueprint(routes.bp)
     app.register_blueprint(auth.auth_bp)
     
-    # Register SocketIO events
-    from . import socket_events
+    # Register additional static routes for video questions
+    videos_quesyions_path = os.path.join(os.path.dirname(__file__), 'videos_quesyions')
+    if os.path.exists(videos_quesyions_path):
+        @app.route('/static/videos_quesyions/<path:filename>')
+        def serve_videos_quesyions(filename):
+            return send_from_directory(videos_quesyions_path, filename)
 
     # Optionally create tables on startup (development convenience)
     if app.config.get('CREATE_DB_ON_STARTUP'):
