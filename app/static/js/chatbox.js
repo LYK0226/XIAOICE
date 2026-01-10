@@ -39,185 +39,82 @@ let isRecording = false;
 let conversationHistory = [];
 let activeConversationId = null;
 
-// ============================================
-// CUTE DOG SVG GENERATOR
-// ============================================
-function getDogSVG() {
-    return `
-        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <!-- Left Ear (Orange with pink inner) -->
-            <g class="dog-left-ear">
-                <ellipse cx="25" cy="15" rx="10" ry="18" fill="#E8A76D" stroke="#1a1a1a" stroke-width="1.5"/>
-                <ellipse cx="25" cy="17" rx="6" ry="14" fill="#FFB3A8" stroke="none"/>
-            </g>
-            
-            <!-- Right Ear (Orange with pink inner) -->
-            <g class="dog-right-ear">
-                <ellipse cx="75" cy="15" rx="10" ry="18" fill="#E8A76D" stroke="#1a1a1a" stroke-width="1.5"/>
-                <ellipse cx="75" cy="17" rx="6" ry="14" fill="#FFB3A8" stroke="none"/>
-            </g>
-            
-            <!-- Head (White) -->
-            <circle cx="50" cy="50" r="32" fill="#FFFFFF" stroke="#1a1a1a" stroke-width="1.5"/>
-            
-            <!-- Orange patches (side of head) -->
-            <ellipse cx="28" cy="45" rx="12" ry="14" fill="#E8A76D" stroke="none"/>
-            <ellipse cx="72" cy="45" rx="12" ry="14" fill="#E8A76D" stroke="none"/>
-            
-            <!-- Eyes (Large black with white highlight) -->
-            <circle class="dog-eyes" cx="36" cy="44" r="6" fill="#1a1a1a" stroke="#000" stroke-width="0.5"/>
-            <circle cx="37" cy="42" r="2" fill="#FFF"/>
-            
-            <circle class="dog-eyes" cx="64" cy="44" r="6" fill="#1a1a1a" stroke="#000" stroke-width="0.5"/>
-            <circle cx="65" cy="42" r="2" fill="#FFF"/>
-            
-            <!-- Black nose -->
-            <ellipse cx="50" cy="58" rx="5" ry="6" fill="#1a1a1a" stroke="#000" stroke-width="0.5"/>
-            
-            <!-- Mouth area (smile) -->
-            <path class="dog-mouth" d="M 50 60 Q 45 68 40 66" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
-            <path class="dog-mouth" d="M 50 60 Q 55 68 60 66" stroke="#1a1a1a" stroke-width="2" fill="none" stroke-linecap="round"/>
-            
-            <!-- Tongue (pink, out when talking) -->
-            <ellipse class="dog-mouth" cx="50" cy="72" rx="4" ry="5" fill="#FFB3A8" stroke="#FF8FA3" stroke-width="0.5"/>
-            
-            <!-- Paw pads (cute detail) -->
-            <circle cx="20" cy="80" r="2.5" fill="#FFB3A8" stroke="#1a1a1a" stroke-width="0.5"/>
-            <circle cx="80" cy="80" r="2.5" fill="#FFB3A8" stroke="#1a1a1a" stroke-width="0.5"/>
-        </svg>
-    `;
+// Dynamic data loading
+let emojiCategories = {};
+let translations = {};
+let dataLoaded = false; // Track if data has been loaded
+let dataLoadPromise = null; // Promise that resolves when data is loaded
+
+// Load emoji data from JSON
+async function loadEmojiData() {
+    try {
+        const response = await fetch('/static/data/emojis.json');
+        if (!response.ok) throw new Error('Failed to load emojis');
+        emojiCategories = await response.json();
+        console.log('Emoji data loaded successfully');
+        return true;
+    } catch (error) {
+        console.error('Error loading emoji data:', error);
+        // Fallback to minimal emoji set
+        emojiCategories = {
+            smileys: ["😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂"]
+        };
+        return false;
+    }
 }
 
-// Emoji categories
-const emojiCategories = {
-    smileys: ['😀', '😃', '😄', '😁', '😆', '😅', '🤣', '😂', '🙂', '🙃', '😉', '😊', '😇', '🥰', '😍', '🤩', '😘', '😗', '😚', '😙', '😋', '😛', '😜', '🤪', '😝', '🤑', '🤗', '🤭', '🤫', '🤔', '🤐', '🤨', '😐', '😑', '😶', '😏', '😒', '🙄', '😬', '🤥', '😌', '😔', '😪', '🤤', '😴', '😷', '🤒', '🤕', '🤢', '🤮', '🤧', '🥵', '🥶', '😵', '🤯', '🤠', '🥳', '😎', '🤓', '🧐'],
-    gestures: ['👋', '🤚', '🖐️', '✋', '🖖', '👌', '🤏', '✌️', '🤞', '🤟', '🤘', '🤙', '👈', '👉', '👆', '🖕', '👇', '☝️', '👍', '👎', '✊', '👊', '🤛', '🤜', '👏', '🙌', '👐', '🤲', '🤝', '🙏', '✍️', '💅', '🤳', '💪', '🦾', '🦿', '🦵', '🦶', '👂', '🦻', '👃', '🧠', '🦷', '🦴', '👀', '👁️', '👅', '👄'],
-    animals: ['🐶', '🐱', '🐭', '🐹', '🐰', '🦊', '🐻', '🐼', '🐨', '🐯', '🦁', '🐮', '🐷', '🐽', '🐸', '🐵', '🙈', '🙉', '🙊', '🐒', '🐔', '🐧', '🐦', '🐤', '🐣', '🐥', '🦆', '🦅', '🦉', '🦇', '🐺', '🐗', '🐴', '🦄', '🐝', '🐛', '🦋', '🐌', '🐞', '🐜', '🦟', '🦗', '🕷️', '🦂', '🐢', '🐍', '🦎', '🦖', '🦕', '🐙', '🦑', '🦐', '🦞', '🦀', '🐡', '🐠', '🐟', '🐬', '🐳', '🐋', '🦈', '🐊', '🐅', '🐆', '🦓', '🦍', '🦧', '🐘', '🦛', '🦏', '🐪', '🐫', '🦒', '🦘', '🐃', '🐂', '🐄', '🐎', '🐖', '🐏', '🐑', '🦙', '🐐', '🦌', '🐕', '🐩', '🦮', '🐕‍🦺', '🐈', '🐓', '🦃', '🦚', '🦜', '🦢', '🦩', '🕊️', '🐇', '🦝', '🦨', '🦡', '🦦', '🦥', '🐁', '🐀', '🐿️', '🦔'],
-    food: ['🍇', '🍈', '🍉', '🍊', '🍋', '🍌', '🍍', '🥭', '🍎', '🍏', '🍐', '🍑', '🍒', '🍓', '🥝', '🍅', '🥥', '🥑', '🍆', '🥔', '🥕', '🌽', '🌶️', '🥒', '🥬', '🥦', '🧄', '🧅', '🍄', '🥜', '🌰', '🍞', '🥐', '🥖', '🥨', '🥯', '🥞', '🧇', '🧀', '🍖', '🍗', '🥩', '🥓', '🍔', '🍟', '🍕', '🌭', '🥪', '🌮', '🌯', '🥙', '🧆', '🥚', '🍳', '🥘', '🍲', '🥣', '🥗', '🍿', '🧈', '🧂', '🥫', '🍱', '🍘', '🍙', '🍚', '🍛', '🍜', '🍝', '🍠', '🍢', '🍣', '🍤', '🍥', '🥮', '🍡', '🥟', '🥠', '🥡', '🦀', '🦞', '🦐', '🦑', '🦪', '🍦', '🍧', '🍨', '🍩', '🍪', '🎂', '🍰', '🧁', '🥧', '🍫', '🍬', '🍭', '🍮', '🍯', '🍼', '🥛', '☕', '🍵', '🍶', '🍾', '🍷', '🍸', '🍹', '🍺', '🍻', '🥂', '🥃', '🥤', '🧃', '🧉', '🧊'],
-    activities: ['⚽', '🏀', '🏈', '⚾', '🥎', '🎾', '🏐', '🏉', '🥏', '🎱', '🪀', '🏓', '🏸', '🏒', '🏑', '🥍', '🏏', '🥅', '⛳', '🪁', '🏹', '🎣', '🤿', '🥊', '🥋', '🎽', '🛹', '🛷', '⛸️', '🥌', '🎿', '⛷️', '🏂', '🪂', '🏋️', '🤼', '🤸', '🤺', '⛹️', '🤾', '🏌️', '🏇', '🧘', '🏊', '🤽', '🚣', '🧗', '🚴', '🚵', '🎪', '🎭', '🎨', '🎬', '🎤', '🎧', '🎼', '🎹', '🥁', '🎷', '🎺', '🎸', '🪕', '🎻', '🎲', '♟️', '🎯', '🎳', '🎮', '🎰', '🧩'],
-    travel: ['🚗', '🚕', '🚙', '🚌', '🚎', '🏎️', '🚓', '🚑', '🚒', '🚐', '🚚', '🚛', '🚜', '🦯', '🦽', '🦼', '🛴', '🚲', '🛵', '🏍️', '🛺', '🚨', '🚔', '🚍', '🚘', '🚖', '🚡', '🚠', '🚟', '🚃', '🚋', '🚞', '🚝', '🚄', '🚅', '🚈', '🚂', '🚆', '🚇', '🚊', '🚉', '✈️', '🛫', '🛬', '🛩️', '💺', '🛰️', '🚀', '🛸', '🚁', '🛶', '⛵', '🚤', '🛥️', '🛳️', '⛴️', '🚢', '⚓', '⛽', '🚧', '🚦', '🚥', '🚏', '🗺️', '🗿', '🗽', '🗼', '🏰', '🏯', '🏟️', '🎡', '🎢', '🎠', '⛲', '⛱️', '🏖️', '🏝️', '🏜️', '🌋', '⛰️', '🏔️', '🗻', '🏕️', '⛺', '🏠', '🏡', '🏘️', '🏚️', '🏗️', '🏭', '🏢', '🏬', '🏣', '🏤', '🏥', '🏦', '🏨', '🏪', '🏫', '🏩', '💒', '🏛️', '⛪', '🕌', '🕍', '🛕', '🕋'],
-    objects: ['⌚', '📱', '📲', '💻', '⌨️', '🖥️', '🖨️', '🖱️', '🖲️', '🕹️', '🗜️', '💾', '💿', '📀', '📼', '📷', '📸', '📹', '🎥', '📽️', '🎞️', '📞', '☎️', '📟', '📠', '📺', '📻', '🎙️', '🎚️', '🎛️', '🧭', '⏱️', '⏲️', '⏰', '🕰️', '⌛', '⏳', '📡', '🔋', '🔌', '💡', '🔦', '🕯️', '🪔', '🧯', '🛢️', '💸', '💵', '💴', '💶', '💷', '💰', '💳', '💎', '⚖️', '🧰', '🔧', '🔨', '⚒️', '🛠️', '⛏️', '🔩', '⚙️', '🧱', '⛓️', '🧲', '🔫', '💣', '🧨', '🪓', '🔪', '🗡️', '⚔️', '🛡️', '🚬', '⚰️', '⚱️', '🏺', '🔮', '📿', '🧿', '💈', '⚗️', '🔭', '🔬', '🕳️', '🩹', '🩺', '💊', '💉', '🩸', '🧬', '🦠', '🧫', '🧪', '🌡️', '🧹', '🧺', '🧻', '🚽', '🚰', '🚿', '🛁', '🛀', '🧼', '🪒', '🧽', '🧴', '🛎️', '🔑', '🗝️', '🚪', '🪑', '🛋️', '🛏️', '🛌', '🧸', '🖼️', '🛍️', '🛒', '🎁', '🎈', '🎏', '🎀', '🎊', '🎉', '🎎', '🏮', '🎐', '🧧', '✉️', '📩', '📨', '📧', '💌', '📥', '📤', '📦', '🏷️', '📪', '📫', '📬', '📭', '📮', '📯', '📜', '📃', '📄', '📑', '🧾', '📊', '📈', '📉', '🗒️', '🗓️', '📆', '📅', '🗑️', '📇', '🗃️', '🗳️', '🗄️', '📋', '📁', '📂', '🗂️', '🗞️', '📰', '📓', '📔', '📒', '📕', '📗', '📘', '📙', '📚', '📖', '🔖', '🧷', '🔗', '📎', '🖇️', '📐', '📏', '🧮', '📌', '📍', '✂️', '🖊️', '🖋️', '✒️', '🖌️', '🖍️', '📝', '✏️', '🔍', '🔎', '🔏', '🔐', '🔒', '🔓'],
-    symbols: ['❤️', '🧡', '💛', '💚', '💙', '💜', '🖤', '🤍', '🤎', '💔', '❣️', '💕', '💞', '💓', '💗', '💖', '💘', '💝', '💟', '☮️', '✝️', '☪️', '🕉️', '☸️', '✡️', '🔯', '🕎', '☯️', '☦️', '🛐', '⛎', '♈', '♉', '♊', '♋', '♌', '♍', '♎', '♏', '♐', '♑', '♒', '♓', '🆔', '⚛️', '🉑', '☢️', '☣️', '📴', '📳', '🈶', '🈚', '🈸', '🈺', '🈷️', '✴️', '🆚', '💮', '🉐', '㊙️', '㊗️', '🈴', '🈵', '🈹', '🈲', '🅰️', '🅱️', '🆎', '🆑', '🅾️', '🆘', '❌', '⭕', '🛑', '⛔', '📛', '🚫', '💯', '💢', '♨️', '🚷', '🚯', '🚳', '🚱', '🔞', '📵', '🚭', '❗', '❕', '❓', '❔', '‼️', '⁉️', '🔅', '🔆', '〽️', '⚠️', '🚸', '🔱', '⚜️', '🔰', '♻️', '✅', '🈯', '💹', '❇️', '✳️', '❎', '🌐', '💠', 'Ⓜ️', '🌀', '💤', '🏧', '🚾', '♿', '🅿️', '🈳', '🈂️', '🛂', '🛃', '🛄', '🛅', '🚹', '🚺', '🚼', '🚻', '🚮', '🎦', '📶', '🈁', '🔣', 'ℹ️', '🔤', '🔡', '🔠', '🆖', '🆗', '🆙', '🆒', '🆕', '🆓', '0️⃣', '1️⃣', '2️⃣', '3️⃣', '4️⃣', '5️⃣', '6️⃣', '7️⃣', '8️⃣', '9️⃣', '🔟', '🔢', '#️⃣', '*️⃣', '⏏️', '▶️', '⏸️', '⏯️', '⏹️', '⏺️', '⏭️', '⏮️', '⏩', '⏪', '⏫', '⏬', '◀️', '🔼', '🔽', '➡️', '⬅️', '⬆️', '⬇️', '↗️', '↘️', '↙️', '↖️', '↕️', '↔️', '↪️', '↩️', '⤴️', '⤵️', '🔀', '🔁', '🔂', '🔄', '🔃', '🎵', '🎶', '➕', '➖', '➗', '✖️', '♾️', '💲', '💱', '™️', '©️', '®️', '〰️', '➰', '➿', '🔚', '🔙', '🔛', '🔝', '🔜', '✔️', '☑️', '🔘', '🔴', '🟠', '🟡', '🟢', '🔵', '🟣', '⚫', '⚪', '🟤', '🔺', '🔻', '🔸', '🔹', '🔶', '🔷', '🔳', '🔲', '▪️', '▫️', '◾', '◽', '◼️', '◻️', '🟥', '🟧', '🟨', '🟩', '🟦', '🟪', '⬛', '⬜', '🟫', '🔈', '🔇', '🔉', '🔊', '🔔', '🔕', '📣', '📢', '👁️‍🗨️', '💬', '💭', '🗯️', '♠️', '♣️', '♥️', '♦️', '🃏', '🎴', '🀄', '🕐', '🕑', '🕒', '🕓', '🕔', '🕕', '🕖', '🕗', '🕘', '🕙', '🕚', '🕛', '🕜', '🕝', '🕞', '🕟', '🕠', '🕡', '🕢', '🕣', '🕤', '🕥', '🕦', '🕧', '⭐', '🌟', '✨', '⚡', '☄️', '💥', '🔥', '🌈', '☀️', '🌤️', '⛅', '🌥️', '☁️', '🌦️', '🌧️', '⛈️', '🌩️', '🌨️', '❄️', '☃️', '⛄', '🌬️', '💨', '💧', '💦', '☔']
-};
+// Load translation data from JSON
+async function loadTranslations() {
+    const languages = ['zh-TW', 'en', 'ja'];
+    const promises = languages.map(async (lang) => {
+        try {
+            const response = await fetch(`/static/i18n/${lang}.json`);
+            if (!response.ok) throw new Error(`Failed to load ${lang} translations`);
+            translations[lang] = await response.json();
+        } catch (error) {
+            console.error(`Error loading ${lang} translations:`, error);
+            // Fallback to basic English
+            translations[lang] = {
+                chatbox: "Chatbox",
+                placeholder: "Type your question here...",
+                welcomeMsg: "Hello! I am your assistant.",
+                errorMsg: "An error occurred."
+            };
+        }
+    });
+    
+    await Promise.all(promises);
+    console.log('Translations loaded successfully');
+    return true;
+}
 
-// Bot responses in Simplified Chinese, Traditional Chinese, and English
-const botResponses = {
-    'zh-TW': [
-        "我在這裡幫助您！您想了解什麼？",
-        "這是一個有趣的問題。讓我想想...",
-        "我明白您的意思。我可以告訴您...",
-        "好問題！根據您告訴我的...",
-        "我可以幫您解決這個問題。讓我提供一些資訊...",
-        "這是一個很好的觀點。您考慮過...",
-        "我正在處理您的請求。這是我的回覆...",
-        "您好！我是您的智能助手，很高興為您服務。",
-        "明白了，讓我為您詳細解答。",
-        "這個問題很有意思，讓我們一起探討一下。"
-    ],
-    'en': [
-        "I'm here to help! What would you like to know?",
-        "That's an interesting question. Let me think about that...",
-        "I understand what you're asking. Here's what I can tell you...",
-        "Great question! Based on what you've told me...",
-        "I can help you with that. Let me provide some information...",
-        "That's a good point. Have you considered...",
-        "I'm processing your request. Here's my response..."
-    ]
-};
-
-// UI Translations
-const translations = {
-    'zh-TW': {
-        chatbox: '聊天盒子',
-        chat: '聊天',
-        newChat: '新對話',
-        settings: '設定',
-        placeholder: '在這裡輸入您的問題...',
-        typing: '正在輸入...',
-        analyzing: '正在分析圖片...',
-        analyzeImage: '請分析這張圖片',
-        welcomeMsg: '您好！我是您的智能助手。我可以通過回答您的問題來幫助您。您也可以問我任何問題。',
-        settingsComingSoon: '設定面板即將推出！',
-        langSwitched: '語言已切換為繁體中文',
-        logout: '登出',
-        voiceRecording: '正在錄音...',
-        voiceNotSupported: '您的瀏覽器不支持語音識別',
-        micPermissionDenied: '麥克風權限被拒絕，請在瀏覽器設定中允許訪問麥克風',
-        webcamPermissionDenied: '無法訪問攝像頭，請在瀏覽器設定中允許訪問攝像頭',
-        errorMsg: '抱歉，發生了錯誤。請稍後再試。',
-        renameAction: '重新命名',
-        deleteAction: '刪除',
-        pinAction: '置頂',
-        unpinAction: '取消置頂',
-        openAction: '打開',
-        renamePrompt: '輸入新的對話標題',
-        renameError: '重新命名失敗，請稍後再試。',
-        deleteConfirm: '確定要刪除此對話嗎？刪除後無法恢復。',
-        deleteError: '刪除對話失敗，請稍後再試。',
-        pinError: '更新置頂狀態失敗，請稍後再試。'
-    },
-    'en': {
-        chatbox: 'Chatbox',
-        chat: 'Chat',
-        newChat: 'New Chat',
-        settings: 'Settings',
-        placeholder: 'Type your question here...',
-        typing: 'Typing...',
-        analyzing: 'Analyzing image...',
-        analyzeImage: 'Please analyze this image',
-        welcomeMsg: 'Hello! I am your smart assistant. I can help you by answering your questions. You can also ask me anything.',
-        settingsComingSoon: 'Settings panel coming soon!',
-        langSwitched: 'Language switched to English',
-        logout: 'Logout',
-        voiceRecording: 'Recording...',
-        voiceNotSupported: 'Your browser does not support speech recognition',
-        micPermissionDenied: 'Microphone permission denied. Please allow microphone access in browser settings.',
-        webcamPermissionDenied: 'Cannot access webcam. Please allow camera access in browser settings.',
-        errorMsg: 'Sorry, an error occurred. Please try again later.',
-        renameAction: 'Rename',
-        deleteAction: 'Delete',
-        pinAction: 'Pin',
-        unpinAction: 'Unpin',
-        openAction: 'Open',
-        renamePrompt: 'Enter a new conversation title',
-        renameError: 'Unable to rename the conversation. Please try again.',
-        deleteConfirm: 'Delete this conversation? This action cannot be undone.',
-        deleteError: 'Unable to delete the conversation. Please try again.',
-        pinError: 'Unable to update pin status. Please try again.'
-    },
-    'ja': {
-        chatbox: 'チャットボックス',
-        chat: 'チャット',
-        newChat: '新しい会話',
-        settings: '設定',
-        placeholder: 'ここに質問を入力してください...',
-        typing: '入力中...',
-        analyzing: '画像を分析中...',
-        analyzeImage: 'この画像を分析してください',
-        welcomeMsg: 'こんにちは！私はあなたのスマートアシスタントです。質問にお答えすることで、お手伝いできます。',
-        settingsComingSoon: '設定パネルは近日公開！',
-        langSwitched: '言語が日本語に切り替わりました',
-        logout: 'ログアウト',
-        voiceRecording: '録音中...',
-        voiceNotSupported: 'お使いのブラウザは音声認識をサポートしていません',
-        micPermissionDenied: 'マイクの許可が拒否されました。ブラウザの設定でマイクへのアクセスを許可してください。',
-        webcamPermissionDenied: 'カメラにアクセスできません。ブラウザの設定でカメラへのアクセスを許可してください。',
-        errorMsg: '申し訳ありませんが、エラーが発生しました。後でもう一度お試しください。',
-        renameAction: '名前を変更',
-        deleteAction: '削除',
-        pinAction: 'ピン留め',
-        unpinAction: 'ピン留めを解除',
-        openAction: '開く',
-        renamePrompt: '新しい会話名を入力してください',
-        renameError: '会話名を変更できませんでした。後でもう一度お試しください。',
-        deleteConfirm: 'この会話を削除しますか？削除すると元に戻せません。',
-        deleteError: '会話を削除できませんでした。後でもう一度お試しください。',
-        pinError: 'ピン留め状態を更新できませんでした。後でもう一度お試しください。'
+// Initialize data loading
+async function initializeData() {
+    if (!dataLoadPromise) {
+        dataLoadPromise = Promise.all([
+            loadEmojiData(),
+            loadTranslations()
+        ]).then(() => {
+            dataLoaded = true;
+            // Expose translations globally for settings.js
+            window.translations = translations;
+            console.log('All data initialized successfully');
+            return true;
+        });
     }
-};
+    return dataLoadPromise;
+}
+
+// UI Translations - Loaded from JSON files (see initializeData function)
 
 // Function to update UI language
-function updateUILanguage(lang) {
+async function updateUILanguage(lang) {
+    // Wait for data to load if not ready
+    if (!dataLoaded) {
+        console.log('Waiting for translations to load...');
+        await initializeData();
+    }
+    
     // Validate language
     if (!translations[lang]) {
         console.warn(`Language ${lang} not found, using zh-TW as fallback`);
@@ -225,6 +122,11 @@ function updateUILanguage(lang) {
     }
     
     const t = translations[lang];
+    if (!t) {
+        console.error('Translation object is undefined');
+        return;
+    }
+    
     currentLanguage = lang;
     
     // Update UI elements safely
@@ -311,7 +213,7 @@ function createMessage(text, isUser = false) {
     const avatar = document.createElement('div');
     avatar.className = isUser ? 'avatar user-avatar' : 'avatar bot-avatar';
     
-    // Use custom avatar if available, otherwise use default
+    // Use custom avatar if available, otherwise use default icon
     if (isUser && window.userAvatar) {
         avatar.style.backgroundImage = `url(${window.userAvatar})`;
         avatar.style.backgroundSize = 'cover';
@@ -320,11 +222,8 @@ function createMessage(text, isUser = false) {
         avatar.style.backgroundImage = `url(${botAvatar})`;
         avatar.style.backgroundSize = 'cover';
         avatar.style.backgroundPosition = 'center';
-    } else if (!isUser) {
-        // Create cute Corgi-style dog SVG for bot
-        avatar.innerHTML = getDogSVG();
     } else {
-        avatar.innerHTML = '<i class="fas fa-user"></i>';
+        avatar.innerHTML = isUser ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
     }
     
     const messageContent = document.createElement('div');
@@ -368,14 +267,6 @@ function speakMessage(text, buttonElement = null) {
     utterance.onstart = () => {
         if (buttonElement) {
             updateSpeakButtonState(buttonElement, true);
-            // Add talking animation to the dog avatar in the same message
-            const messageContainer = buttonElement.closest('.bot-message-container');
-            if (messageContainer) {
-                const avatar = messageContainer.querySelector('.avatar');
-                if (avatar) {
-                    avatar.classList.add('talking');
-                }
-            }
         }
     };
 
@@ -383,14 +274,6 @@ function speakMessage(text, buttonElement = null) {
     utterance.onend = () => {
         if (buttonElement) {
             updateSpeakButtonState(buttonElement, false);
-            // Remove talking animation
-            const messageContainer = buttonElement.closest('.bot-message-container');
-            if (messageContainer) {
-                const avatar = messageContainer.querySelector('.avatar');
-                if (avatar) {
-                    avatar.classList.remove('talking');
-                }
-            }
         }
     };
 
@@ -398,14 +281,6 @@ function speakMessage(text, buttonElement = null) {
     utterance.onerror = () => {
         if (buttonElement) {
             updateSpeakButtonState(buttonElement, false);
-            // Remove talking animation
-            const messageContainer = buttonElement.closest('.bot-message-container');
-            if (messageContainer) {
-                const avatar = messageContainer.querySelector('.avatar');
-                if (avatar) {
-                    avatar.classList.remove('talking');
-                }
-            }
         }
     };
 
@@ -443,11 +318,8 @@ function createImageMessage(imageData, text, isUser = true) {
         avatar.style.backgroundImage = `url(${botAvatar})`;
         avatar.style.backgroundSize = 'cover';
         avatar.style.backgroundPosition = 'center';
-    } else if (!isUser) {
-        // Create Corgi-style dog SVG
-        avatar.innerHTML = getDogSVG();
     } else {
-        avatar.innerHTML = '<i class="fas fa-user"></i>';
+        avatar.innerHTML = isUser ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
     }
     
     const messageContent = document.createElement('div');
@@ -455,21 +327,16 @@ function createImageMessage(imageData, text, isUser = true) {
     
     // Add image
     const img = document.createElement('img');
-    img.src = imageData;
+    img.src = imageData; // Set the source of the image
     img.className = 'message-image';
-    img.style.maxWidth = '100%';
-    img.style.borderRadius = '8px';
-    img.style.marginBottom = '10px';
     
     // Add click to view full image
     img.addEventListener('click', () => {
         const modal = document.createElement('div');
         modal.className = 'image-modal';
-        modal.style.cssText = 'position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.9); z-index: 2000; display: flex; align-items: center; justify-content: center; cursor: pointer;';
         
         const fullImg = document.createElement('img');
         fullImg.src = imageData;
-        fullImg.style.cssText = 'max-width: 90%; max-height: 90%; border-radius: 8px;';
         
         modal.appendChild(fullImg);
         document.body.appendChild(modal);
@@ -501,15 +368,13 @@ function createTypingIndicator(text) {
     const indicatorText = text || translations[currentLanguage].typing;
     
     const botAvatarEl = document.createElement('div');
-    botAvatarEl.className = 'avatar bot-avatar talking';
-    
+    botAvatarEl.className = 'avatar bot-avatar';
     if (botAvatar) {
         botAvatarEl.style.backgroundImage = `url(${botAvatar})`;
         botAvatarEl.style.backgroundSize = 'cover';
         botAvatarEl.style.backgroundPosition = 'center';
     } else {
-        // Create Corgi-style dog SVG for typing indicator
-        botAvatarEl.innerHTML = getDogSVG();
+        botAvatarEl.innerHTML = '<i class="fas fa-robot"></i>';
     }
 
     indicator.appendChild(botAvatarEl);
@@ -524,205 +389,11 @@ function createTypingIndicator(text) {
     return indicator;
 }
 
-// Simulated test paper detection and question extraction
-function detectTestPaper(imageData) {
-    // In a real application, this would use OCR (like Tesseract.js) and AI to detect questions
-    // For now, we'll simulate detecting a test paper with questions
+// Load saved language preference and initialize data on page load
+window.addEventListener('DOMContentLoaded', async () => {
+    // Load JSON data first
+    await initializeData();
     
-    // Randomly determine if it's a test paper (for demo purposes, let's say 70% chance)
-    const isTestPaper = Math.random() > 0.3;
-    
-    if (!isTestPaper) {
-        return null; // Not a test paper, use regular image analysis
-    }
-    
-    // Simulate extracted questions based on language
-    const sampleQuestions = {
-        'zh-TW': [
-            {
-                number: 1,
-                question: "下列哪個選項正確描述了光合作用的過程？",
-                options: ["A. 植物吸收二氧化碳釋放氧氣", "B. 植物吸收氧氣釋放二氧化碳", "C. 植物不需要光照", "D. 以上都不對"]
-            },
-            {
-                number: 2,
-                question: "計算: 25 × 4 + 16 ÷ 2 = ?",
-                options: null
-            },
-            {
-                number: 3,
-                question: "請解釋「水循環」的基本過程。",
-                options: null
-            }
-        ],
-        'en': [
-            {
-                number: 1,
-                question: "Which of the following correctly describes the process of photosynthesis?",
-                options: ["A. Plants absorb CO2 and release O2", "B. Plants absorb O2 and release CO2", "C. Plants don't need light", "D. None of the above"]
-            },
-            {
-                number: 2,
-                question: "Calculate: 25 × 4 + 16 ÷ 2 = ?",
-                options: null
-            },
-            {
-                number: 3,
-                question: "Explain the basic process of the water cycle.",
-                options: null
-            }
-        ]
-    };
-    
-    return sampleQuestions[currentLanguage] || sampleQuestions['en'];
-}
-
-// Generate answers for questions
-function generateAnswer(question, questionNumber) {
-    const answers = {
-        'zh-TW': {
-            1: "正確答案是 A。光合作用是植物利用光能，將二氧化碳和水轉化為葡萄糖和氧氣的過程。這個過程主要發生在葉綠體中，是植物生存和地球生態系統的基礎。",
-            2: "讓我們一步步計算：\n1. 首先計算乘法：25 × 4 = 100\n2. 然後計算除法：16 ÷ 2 = 8\n3. 最後相加：100 + 8 = 108\n\n答案是 108。",
-            3: "水循環的基本過程包括：\n1. 蒸發：太陽加熱地表水，使其變成水蒸氣\n2. 凝結：水蒸氣上升冷卻，形成雲\n3. 降水：雲中的水滴聚集變重，以雨、雪等形式降落\n4. 徑流：降水流入河流、湖泊或滲入地下\n5. 重複循環"
-        },
-        'en': {
-            1: "The correct answer is A. Photosynthesis is the process by which plants use light energy to convert carbon dioxide and water into glucose and oxygen. This process mainly occurs in chloroplasts and is fundamental to plant survival and Earth's ecosystem.",
-            2: "Let's calculate step by step:\n1. First, multiply: 25 × 4 = 100\n2. Then, divide: 16 ÷ 2 = 8\n3. Finally, add: 100 + 8 = 108\n\nThe answer is 108.",
-            3: "The basic process of the water cycle includes:\n1. Evaporation: Sun heats surface water, turning it into vapor\n2. Condensation: Water vapor rises and cools, forming clouds\n3. Precipitation: Water droplets in clouds gather and fall as rain, snow, etc.\n4. Runoff: Precipitation flows into rivers, lakes, or seeps underground\n5. The cycle repeats"
-        }
-    };
-    
-    return answers[currentLanguage][questionNumber];
-}
-
-// Simulated image recognition function
-function analyzeImage(imageData) {
-    // In a real application, this would call an AI API like Google Vision, Azure Computer Vision, or OpenAI Vision
-    // For now, we'll simulate the response
-    
-    const responses = {
-        'zh-TW': [
-            "這是一張很有趣的圖片！我看到了一些色彩豐富的元素。圖片中似乎包含了多個物體或場景。",
-            "根據我的分析，這張圖片展示了一個清晰的場景。我可以識別出其中的主要元素和構圖。",
-            "圖片質量很好！我能夠看到圖片中的細節。這看起來像是一張精心拍攝的照片。"
-        ],
-        'en': [
-            "This is an interesting image! I can see some colorful elements. The image seems to contain multiple objects or scenes.",
-            "Based on my analysis, this image shows a clear scene. I can identify the main elements and composition.",
-            "Great image quality! I can see the details in the picture. This looks like a carefully captured photo."
-        ]
-    };
-    
-    const languageResponses = responses[currentLanguage];
-    return languageResponses[Math.floor(Math.random() * languageResponses.length)];
-}
-
-// Process test paper questions one by one
-function processTestPaperQuestions(questions, imageData) {
-    const t = translations[currentLanguage];
-    
-    // First, show detection message
-    const detectionMessages = {
-        'zh-TW': `我檢測到這是一張試卷或測試題！我發現了 ${questions.length} 道題目。讓我逐個為您解答。`,
-        'en': `I detected this is a test paper! I found ${questions.length} questions. Let me answer them one by one.`
-    };
-    
-    const detectionMsg = createMessage(detectionMessages[currentLanguage], false);
-    messagesDiv.appendChild(detectionMsg);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    
-    // Process each question with a delay
-    questions.forEach((q, index) => {
-        setTimeout(() => {
-            // Show the question
-            let questionText = `\n📝 **${t.question || '问题'} ${q.number}:**\n${q.question}`;
-            
-            if (q.options) {
-                questionText += '\n\n' + q.options.join('\n');
-            }
-            
-            const questionMsg = createMessage(questionText, false);
-            messagesDiv.appendChild(questionMsg);
-            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-            
-            // Show thinking indicator
-            setTimeout(() => {
-                const thinkingTexts = {
-                    'zh-TW': '正在思考答案...',
-                    'en': 'Thinking about the answer...'
-                };
-                
-                const thinkingIndicator = createTypingIndicator();
-                messagesDiv.appendChild(thinkingIndicator);
-                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                
-                // Show answer after delay
-                setTimeout(() => {
-                    messagesDiv.removeChild(thinkingIndicator);
-                    
-                    const answer = generateAnswer(q, q.number);
-                    const answerHeaders = {
-                        'zh-TW': `💡 **答案 ${q.number}:**\n\n`,
-                        'en': `💡 **Answer ${q.number}:**\n\n`
-                    };
-                    
-                    const fullAnswer = answerHeaders[currentLanguage] + answer;
-                    const answerMsg = createMessage(fullAnswer, false);
-                    messagesDiv.appendChild(answerMsg);
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                    
-                    // If this is the last question, show completion message
-                    if (index === questions.length - 1) {
-                        setTimeout(() => {
-                            const completionMessages = {
-                                'zh-TW': '✅ 所有題目已解答完畢！如果您還有其他問題，請隨時告訴我。',
-                                'en': '✅ All questions have been answered! If you have any other questions, feel free to ask.'
-                            };
-                            
-                            const completionMsg = createMessage(completionMessages[currentLanguage], false);
-                            messagesDiv.appendChild(completionMsg);
-                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                        }, 1000);
-                    }
-                }, 2000);
-            }, 500);
-        }, (index * 6000) + 1000); // Stagger each question by 6 seconds
-    });
-}
-
-translations['zh-TW'].readMessage = '朗讀訊息';
-translations['zh-TW'].stopReading = '停止朗讀';
-
-translations['en'].readMessage = 'Read message';
-translations['en'].stopReading = 'Stop reading';
-
-translations['ja'].readMessage = 'メッセージを読み上げる';
-translations['ja'].stopReading = '読み上げを停止';
-
-// Conversation management translations
-translations['zh-TW'].noConversations = '暫無對話';
-translations['zh-TW'].untitledConversation = '未命名對話';
-translations['zh-TW'].conversationLoadError = '載入對話失敗，請稍後再試。';
-translations['zh-TW'].conversationCreateError = '建立對話失敗，請稍後再試。';
-translations['zh-TW'].messageSaveError = '儲存訊息失敗。';
-translations['zh-TW'].attachmentPlaceholder = '[附件]';
-
-translations['en'].noConversations = 'No conversations yet';
-translations['en'].untitledConversation = 'Untitled conversation';
-translations['en'].conversationLoadError = 'Unable to load the conversation. Please try again.';
-translations['en'].conversationCreateError = 'Unable to start a new conversation right now.';
-translations['en'].messageSaveError = 'Unable to save the message.';
-translations['en'].attachmentPlaceholder = '[attachment]';
-
-translations['ja'].noConversations = '会話はまだありません';
-translations['ja'].untitledConversation = '名称未設定の会話';
-translations['ja'].conversationLoadError = '会話を読み込めませんでした。後でもう一度お試しください。';
-translations['ja'].conversationCreateError = '新しい会話を開始できませんでした。';
-translations['ja'].messageSaveError = 'メッセージを保存できませんでした。';
-translations['ja'].attachmentPlaceholder = '[添付]';
-
-// Load saved language preference on page load
-window.addEventListener('DOMContentLoaded', () => {
     const savedLanguage = localStorage.getItem('preferredLanguage');
     if (savedLanguage && translations[savedLanguage]) {
         currentLanguage = savedLanguage;
@@ -740,6 +411,56 @@ window.addEventListener('DOMContentLoaded', () => {
                 option.querySelector('i').className = 'fas fa-circle';
             }
         });
+    }
+    
+    // Initialize socket.io connection if available
+    if (typeof io !== 'undefined') {
+        const token = localStorage.getItem('access_token');
+        if (token) {
+            const socket = io({
+                auth: { token: token }
+            });
+            
+            // Listen for new_message events for optimistic UI updates
+            socket.on('new_message', (data) => {
+                console.log('Received new_message event:', data);
+                
+                // Check if this message has a temp_id
+                if (data.temp_id) {
+                    // Look for existing message with this temp_id
+                    const existingElement = document.querySelector(`[data-temp-id="${data.temp_id}"]`);
+                    
+                    if (existingElement) {
+                        // Case A: This is our own optimistically rendered message
+                        // DO NOT replace the images to prevent flickering
+                        // Just update the message status or remove temp_id marker
+                        console.log('Optimistic UI: Message already displayed with temp_id:', data.temp_id);
+                        existingElement.removeAttribute('data-temp-id'); // Mark as confirmed
+                        existingElement.setAttribute('data-message-id', data.message.id);
+                        
+                        // Optionally, update message metadata without touching images
+                        // You can add a "sent" indicator or timestamp here if needed
+                        return; // Skip re-rendering
+                    }
+                }
+                
+                // Case B: This is a new message from another user/session
+                // Render it normally using server URLs
+                if (data.message && data.conversation_id === activeConversationId) {
+                    const messageElement = createMessageWithUploadedFiles(
+                        data.message.content,
+                        data.message.uploaded_files,
+                        data.message.sender === 'user'
+                    );
+                    messageElement.setAttribute('data-message-id', data.message.id);
+                    messagesDiv.appendChild(messageElement);
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                }
+            });
+            
+            // Store socket globally for other parts of the app if needed
+            window.chatSocket = socket;
+        }
     }
 });
 
@@ -777,7 +498,24 @@ fileUploadBtn.addEventListener('click', () => {
 
 fileInput.addEventListener('change', (e) => {
     const files = Array.from(e.target.files);
+    const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
+
     files.forEach(file => {
+        // Check for allowed file types (Image, Video, PDF)
+        const fileName = file.name.toLowerCase();
+        const isImage = file.type.startsWith('image/');
+        const isVideo = file.type.startsWith('video/');
+        const isPDF = file.type === 'application/pdf' || fileName.endsWith('.pdf');
+        
+        if (!isImage && !isVideo && !isPDF) {
+            showCustomAlert(`File "${file.name}" is not supported. Please upload PDF documents, Images, or Videos.`);
+            return;
+        }
+
+        if (file.size > MAX_FILE_SIZE) {
+            showCustomAlert(`File "${file.name}" is too large. Maximum size is 500MB.`);
+            return;
+        }
         if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
             selectedFiles.push(file);
         }
@@ -796,11 +534,13 @@ function updateFilePreview() {
     filePreviewContainer.innerHTML = '';
     
     selectedFiles.forEach((file, index) => {
-        const previewItem = document.createElement('div');
-        previewItem.className = 'file-preview-item';
+        let previewItem;
         
         if (file.type.startsWith('image/')) {
-            // Image preview
+            // Image preview with square container
+            previewItem = document.createElement('div');
+            previewItem.className = 'file-preview-item';
+            
             const img = document.createElement('img');
             const reader = new FileReader();
             reader.onload = (e) => {
@@ -812,36 +552,71 @@ function updateFilePreview() {
             };
             reader.readAsDataURL(file);
             previewItem.appendChild(img);
-        } else {
-            // File icon
-            const fileIcon = document.createElement('div');
-            fileIcon.className = 'file-icon';
-            const iconMap = {
-                'pdf': 'fa-file-pdf',
-                'doc': 'fa-file-word',
-                'docx': 'fa-file-word',
-                'txt': 'fa-file-alt'
-            };
-            const ext = file.name.split('.').pop().toLowerCase();
-            const iconClass = iconMap[ext] || 'fa-file';
-            fileIcon.innerHTML = `<i class="fas ${iconClass}"></i>`;
+        } else if (file.type.startsWith('video/')) {
+            // Video preview with square container
+            previewItem = document.createElement('div');
+            previewItem.className = 'file-preview-item';
             
+            const video = document.createElement('video');
+            video.style.width = '100%';
+            video.style.height = '100%';
+            video.style.objectFit = 'cover';
+            video.style.borderRadius = '8px';
+            video.muted = true; // Mute by default
+            
+            const videoUrl = URL.createObjectURL(file);
+            video.src = videoUrl;
+            
+            // Add click handler to open preview modal
+            video.addEventListener('click', () => {
+                openDocumentPreviewModal(videoUrl, file.name);
+            });
+            
+            previewItem.appendChild(video);
+        } else {
+            // File name only - simplified without square container
+            previewItem = document.createElement('div');
+            previewItem.className = 'file-preview-simple';
+            
+            // Add file icon
+            const fileIcon = document.createElement('i');
+            fileIcon.className = 'fas fa-file-pdf'; // Default to PDF for now
+            if (file.type.includes('pdf')) fileIcon.className = 'fas fa-file-pdf';
+            else if (file.type.includes('word')) fileIcon.className = 'fas fa-file-word';
+            else if (file.type.includes('excel')) fileIcon.className = 'fas fa-file-excel';
+            else fileIcon.className = 'fas fa-file-alt';
+            fileIcon.style.fontSize = '20px';
+            fileIcon.style.color = '#A89BC5';
+            previewItem.appendChild(fileIcon);
+
             const fileName = document.createElement('div');
-            fileName.className = 'file-name';
+            fileName.className = 'file-name-simple';
             fileName.textContent = file.name;
             fileName.title = file.name;
             
-            previewItem.appendChild(fileIcon);
+            // Create blob URL and add click handler for preview
+            const fileUrl = URL.createObjectURL(file);
+            fileName.addEventListener('click', () => {
+                openDocumentPreviewModal(fileUrl, file.name);
+            });
+            fileName.style.cursor = 'pointer'; // Show it's clickable
+            
             previewItem.appendChild(fileName);
         }
         
         // Remove button
         const removeBtn = document.createElement('button');
         removeBtn.className = 'remove-file';
-        removeBtn.innerHTML = '&times;';
+        removeBtn.innerHTML = '<i class="fas fa-times"></i>';
         removeBtn.onclick = () => {
             selectedFiles.splice(index, 1);
             updateFilePreview();
+            
+            // Close preview panel if it's open
+            const previewPanel = document.getElementById('preview-panel');
+            if (previewPanel && previewPanel.style.display === 'flex') {
+                closeDocumentPreview();
+            }
         };
         
         previewItem.appendChild(removeBtn);
@@ -953,7 +728,7 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
         messageInput.placeholder = t.placeholder;
         
         if (event.error === 'not-allowed') {
-            alert(t.micPermissionDenied || '麦克风权限被拒绝');
+            showCustomAlert(t.micPermissionDenied || '麦克风权限被拒绝');
         }
     };
     
@@ -968,7 +743,7 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
 voiceInputBtn.addEventListener('click', () => {
     if (!recognition) {
         const t = translations[currentLanguage];
-        alert(t.voiceNotSupported || '您的浏览器不支持语音识别');
+        showCustomAlert(t.voiceNotSupported || '您的浏览器不支持语音识别');
         return;
     }
     
@@ -1007,7 +782,7 @@ webcamBtn.addEventListener('click', async () => {
     } catch (error) {
         console.error('Webcam error:', error);
         const t = translations[currentLanguage];
-        alert(t.webcamPermissionDenied || '无法访问摄像头');
+        showCustomAlert(t.webcamPermissionDenied || '无法访问摄像头');
         closeWebcamModal();
     }
 });
@@ -1076,7 +851,7 @@ retakeBtn.addEventListener('click', async () => {
     } catch (error) {
         console.error('Webcam error:', error);
         const t = translations[currentLanguage];
-        alert(t.webcamPermissionDenied || '无法访问摄像头');
+        showCustomAlert(t.webcamPermissionDenied || '无法访问摄像头');
         closeWebcamModal();
     }
 });
@@ -1105,13 +880,14 @@ async function sendMessageWithFiles() {
 
     const attachmentsSnapshot = [...selectedFiles];
     
+    // Generate unique temp_id for optimistic UI
+    const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
     // Clear the file preview immediately after sending
     selectedFiles = [];
     updateFilePreview();
 
-    const placeholderText = messageText || (hasFiles ? t.attachmentPlaceholder : '');
-
-    const userMessageElement = createMessageWithFiles(messageText, attachmentsSnapshot, true);
+    const userMessageElement = createMessageWithFiles(messageText, attachmentsSnapshot, true, tempId);
 
     messagesDiv.appendChild(userMessageElement);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
@@ -1119,7 +895,7 @@ async function sendMessageWithFiles() {
 
     conversationHistory.push({
         role: 'user',
-        content: placeholderText || t.attachmentPlaceholder,
+        content: messageText,
         time: Date.now()
     });
 
@@ -1145,31 +921,26 @@ async function sendMessageWithFiles() {
             }))
             : null;
 
-        try {
-            const userMessageResponse = await chatAPI.addMessage(
-                conversationId,
-                placeholderText || t.attachmentPlaceholder,
-                'user',
-                attachmentsMetadata ? { attachments: attachmentsMetadata } : null,
-                attachmentsSnapshot
-            );
+        const userMessageResponse = await chatAPI.addMessage(
+            conversationId,
+            messageText,
+            'user',
+            attachmentsMetadata ? { attachments: attachmentsMetadata } : null,
+            attachmentsSnapshot,
+            tempId
+        );
 
-            if (userMessageResponse.conversation) {
-                upsertConversation(userMessageResponse.conversation);
-            }
-
-            // Update the user message element to use server URLs for uploaded files
-            if (userMessageResponse.message && userMessageResponse.message.uploaded_files) {
-                updateMessageWithServerFiles(userMessageElement, userMessageResponse.message.uploaded_files);
-            }
-
-        } catch (messageError) {
-            console.error('Failed to persist user message', messageError);
-            alert(t.messageSaveError);
+        if (userMessageResponse.conversation) {
+            upsertConversation(userMessageResponse.conversation);
         }
 
-        const imageFile = attachmentsSnapshot.find((file) => file.type.startsWith('image/'));
-        const pdfFile = attachmentsSnapshot.find((file) => file.type === 'application/pdf' || file.name.toLowerCase().endsWith('.pdf'));
+        // DO NOT update with server files to prevent flickering (Optimistic UI)
+        // The local blob URLs will remain visible to the user
+        // if (userMessageResponse.message && userMessageResponse.message.uploaded_files) {
+        //     updateMessageWithServerFiles(userMessageElement, userMessageResponse.message.uploaded_files);
+        // }
+
+        const mediaFile = attachmentsSnapshot.find((file) => file.type.startsWith('image/') || file.type.startsWith('video/'));
         
         // Create bot message element with typing indicator
         const botMessageElement = createMessage('', false);
@@ -1181,159 +952,130 @@ async function sendMessageWithFiles() {
         
         let fullResponse = '';
         
-        // Function to display text with typing effect
-        const typeText = (text, element, speed = 30) => {
-            return new Promise((resolve) => {
-                let index = 0;
-                const typeInterval = setInterval(() => {
-                    if (index < text.length) {
-                        element.textContent += text[index];
-                        index++;
-                        messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                    } else {
-                        clearInterval(typeInterval);
-                        resolve();
+        if (mediaFile) {
+            // For images/videos, use the uploaded URL
+            // Find the index to get the correct URL from uploaded_files
+            const mediaIndex = attachmentsSnapshot.indexOf(mediaFile);
+            const mediaUrl = userMessageResponse.message.uploaded_files[mediaIndex];
+            const mediaMimeType = mediaFile.type;
+
+            let currentTypingIndex = 0;
+            let pendingText = '';
+            
+            await chatAPI.streamChatMessage(
+                messageText || (mediaFile.type.startsWith('video/') ? (t.analyzeVideo || 'Please analyze this video') : t.analyzeImage),
+                null,
+                mediaUrl,
+                mediaMimeType,
+                currentLanguage,
+                conversationHistory,
+                (chunk) => {
+                    pendingText += chunk;
+                    
+                    const typePendingText = () => {
+                        if (currentTypingIndex < pendingText.length) {
+                            botMessageContent.textContent = pendingText.slice(0, currentTypingIndex + 1);
+                            currentTypingIndex++;
+                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                            setTimeout(typePendingText, 30);
+                        }
+                    };
+                    
+                    if (currentTypingIndex < pendingText.length) {
+                        typePendingText();
                     }
-                }, speed);
-            });
-        };
+                },
+                () => {
+                    fullResponse = pendingText;
+                    botMessageElement.classList.remove('typing-indicator');
+                    const speakBtn = document.createElement('button');
+                    speakBtn.className = 'speak-btn';
+                    speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                    speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
+                    speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
+                    botMessageElement.querySelector('.message-content').appendChild(speakBtn);
+                },
+                (error) => {
+                    console.error('Streaming error:', error);
+                    botMessageElement.classList.remove('typing-indicator');
+                    botMessageContent.textContent = t.errorMsg || '抱歉，發生了錯誤。請稍後再試。';
+                    fullResponse = botMessageContent.textContent;
+                    const speakBtn = document.createElement('button');
+                    speakBtn.className = 'speak-btn';
+                    speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                    speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
+                    speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
+                    botMessageElement.querySelector('.message-content').appendChild(speakBtn);
+                }
+            );
+        } else {
+            // Use streaming for text messages
+            let currentTypingIndex = 0;
+            let pendingText = '';
+            
+            await chatAPI.streamChatMessage(
+                messageText,
+                null,
+                null,
+                null,
+                currentLanguage,
+                conversationHistory,
+                (chunk) => {
+                    pendingText += chunk;
+                    
+                    const typePendingText = () => {
+                        if (currentTypingIndex < pendingText.length) {
+                            botMessageContent.textContent = pendingText.slice(0, currentTypingIndex + 1);
+                            currentTypingIndex++;
+                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                            setTimeout(typePendingText, 30);
+                        }
+                    };
+                    
+                    if (currentTypingIndex < pendingText.length) {
+                        typePendingText();
+                    }
+                },
+                () => {
+                    fullResponse = pendingText;
+                    botMessageElement.classList.remove('typing-indicator');
+                    const speakBtn = document.createElement('button');
+                    speakBtn.className = 'speak-btn';
+                    speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                    speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
+                    speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
+                    botMessageElement.querySelector('.message-content').appendChild(speakBtn);
+                },
+                (error) => {
+                    console.error('Streaming error:', error);
+                    botMessageElement.classList.remove('typing-indicator');
+                    botMessageContent.textContent = t.errorMsg || '抱歉，發生了錯誤。請稍後再試。';
+                    fullResponse = botMessageContent.textContent;
+                    const speakBtn = document.createElement('button');
+                    speakBtn.className = 'speak-btn';
+                    speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                    speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
+                    speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
+                    botMessageElement.querySelector('.message-content').appendChild(speakBtn);
+                }
+            );
+        }
+        
+        // Ensure fullResponse has content
+        if (!fullResponse.trim()) {
+            fullResponse = t.errorMsg || '抱歉，發生了錯誤。請稍後再試。';
+            botMessageContent.textContent = fullResponse;
+        }
+        
+        conversationHistory.push({ role: 'bot', content: fullResponse, time: Date.now() });
         
         try {
-            if (imageFile || pdfFile) {
-                // For images and PDFs, use streaming with file attachment
-                const fileToSend = imageFile || pdfFile;
-                const defaultMessage = imageFile ? (t.analyzeImage || '分析這張圖片') : (t.analyzePDF || '分析這個 PDF 文件');
-                
-                let currentTypingIndex = 0;
-                let pendingText = '';
-                
-                await chatAPI.streamChatMessage(
-                    messageText || defaultMessage,
-                    fileToSend,
-                    currentLanguage,
-                    conversationHistory,
-                    (chunk) => {
-                        // Accumulate chunks
-                        pendingText += chunk;
-                        
-                        // Type out the accumulated text character by character
-                        const typePendingText = () => {
-                            if (currentTypingIndex < pendingText.length) {
-                                botMessageContent.textContent = pendingText.slice(0, currentTypingIndex + 1);
-                                currentTypingIndex++;
-                                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                                setTimeout(typePendingText, 30); // Typing speed
-                            }
-                        };
-                        
-                        if (currentTypingIndex < pendingText.length) {
-                            typePendingText();
-                        }
-                    },
-                    () => {
-                        // Streaming complete
-                        fullResponse = pendingText;
-                        botMessageElement.classList.remove('typing-indicator');
-                        // Add speak button after streaming is complete
-                        const speakBtn = document.createElement('button');
-                        speakBtn.className = 'speak-btn';
-                        speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-                        speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
-                        speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
-                        botMessageElement.querySelector('.message-content').appendChild(speakBtn);
-                    },
-                    (error) => {
-                        console.error('Streaming error:', error);
-                        botMessageElement.classList.remove('typing-indicator');
-                        botMessageContent.textContent = t.errorMsg || '抱歉，發生了錯誤。請稍後再試。';
-                        fullResponse = botMessageContent.textContent;
-                        // Add speak button for error message too
-                        const speakBtn = document.createElement('button');
-                        speakBtn.className = 'speak-btn';
-                        speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-                        speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
-                        speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
-                        botMessageElement.querySelector('.message-content').appendChild(speakBtn);
-                    }
-                );
-            } else {
-                // Use streaming for text messages
-                let currentTypingIndex = 0;
-                let pendingText = '';
-                
-                await chatAPI.streamChatMessage(
-                    messageText || placeholderText,
-                    null,
-                    currentLanguage,
-                    conversationHistory,
-                    (chunk) => {
-                        // Accumulate chunks
-                        pendingText += chunk;
-                        
-                        // Type out the accumulated text character by character
-                        const typePendingText = () => {
-                            if (currentTypingIndex < pendingText.length) {
-                                botMessageContent.textContent = pendingText.slice(0, currentTypingIndex + 1);
-                                currentTypingIndex++;
-                                messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                                setTimeout(typePendingText, 30); // Typing speed
-                            }
-                        };
-                        
-                        if (currentTypingIndex < pendingText.length) {
-                            typePendingText();
-                        }
-                    },
-                    () => {
-                        // Streaming complete
-                        fullResponse = pendingText;
-                        botMessageElement.classList.remove('typing-indicator');
-                        // Add speak button after streaming is complete
-                        const speakBtn = document.createElement('button');
-                        speakBtn.className = 'speak-btn';
-                        speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-                        speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
-                        speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
-                        botMessageElement.querySelector('.message-content').appendChild(speakBtn);
-                    },
-                    (error) => {
-                        console.error('Streaming error:', error);
-                        botMessageElement.classList.remove('typing-indicator');
-                        botMessageContent.textContent = t.errorMsg || '抱歉，發生了錯誤。請稍後再試。';
-                        fullResponse = botMessageContent.textContent;
-                        // Add speak button for error message too
-                        const speakBtn = document.createElement('button');
-                        speakBtn.className = 'speak-btn';
-                        speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-                        speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
-                        speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
-                        botMessageElement.querySelector('.message-content').appendChild(speakBtn);
-                    }
-                );
+            const assistantMessageResponse = await chatAPI.addMessage(conversationId, fullResponse, 'assistant');
+            if (assistantMessageResponse.conversation) {
+                upsertConversation(assistantMessageResponse.conversation);
             }
-            
-            conversationHistory.push({ role: 'bot', content: fullResponse, time: Date.now() });
-            
-            try {
-                const assistantMessageResponse = await chatAPI.addMessage(conversationId, fullResponse, 'assistant');
-                if (assistantMessageResponse.conversation) {
-                    upsertConversation(assistantMessageResponse.conversation);
-                }
-            } catch (assistantError) {
-                console.error('Failed to persist assistant message', assistantError);
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            botMessageElement.classList.remove('typing-indicator');
-            botMessageContent.textContent = t.errorMsg || '抱歉，發生了錯誤。請稍後再試。';
-            fullResponse = botMessageContent.textContent;
-            // Add speak button for error
-            const speakBtn = document.createElement('button');
-            speakBtn.className = 'speak-btn';
-            speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-            speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
-            speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
-            botMessageElement.querySelector('.message-content').appendChild(speakBtn);
+        } catch (assistantError) {
+            console.error('Failed to persist assistant message', assistantError);
         }
     } catch (error) {
         console.error('Error:', error);
@@ -1344,9 +1086,14 @@ async function sendMessageWithFiles() {
     }
 }
 
-function createMessageWithFiles(text, files, isUser = true) {
+function createMessageWithFiles(text, files, isUser = true, tempId = null) {
     const container = document.createElement('div');
     container.className = isUser ? 'user-message-container' : 'bot-message-container';
+    
+    // Add temp_id as data attribute for optimistic UI tracking
+    if (tempId) {
+        container.setAttribute('data-temp-id', tempId);
+    }
     
     const avatar = document.createElement('div');
     avatar.className = isUser ? 'avatar user-avatar' : 'avatar bot-avatar';
@@ -1359,11 +1106,8 @@ function createMessageWithFiles(text, files, isUser = true) {
         avatar.style.backgroundImage = `url(${botAvatar})`;
         avatar.style.backgroundSize = 'cover';
         avatar.style.backgroundPosition = 'center';
-    } else if (!isUser) {
-        // Create Corgi-style dog SVG
-        avatar.innerHTML = getDogSVG();
     } else {
-        avatar.innerHTML = '<i class="fas fa-user"></i>';
+        avatar.innerHTML = isUser ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
     }
     
     const messageContent = document.createElement('div');
@@ -1388,11 +1132,54 @@ function createMessageWithFiles(text, files, isUser = true) {
                     // For local files, open the preview panel with data URL
                     openDocumentPreviewModal(img.src, file.name);
                 });
+            } else if (file.type.startsWith('video/')) {
+                const videoContainer = document.createElement('div');
+                videoContainer.className = 'video-preview-container';
+                
+                const video = document.createElement('video');
+                video.className = 'message-video-thumb';
+                const videoUrl = URL.createObjectURL(file);
+                video.src = videoUrl;
+                video.muted = true;
+                video.preload = 'metadata';
+                
+                // Try to show a frame
+                video.addEventListener('loadeddata', () => {
+                    video.currentTime = 0.1;
+                });
+
+                const playIcon = document.createElement('div');
+                playIcon.className = 'play-overlay';
+                playIcon.innerHTML = '<i class="fas fa-play-circle"></i>';
+
+                videoContainer.appendChild(video);
+                videoContainer.appendChild(playIcon);
+                
+                videoContainer.addEventListener('click', () => {
+                    openDocumentPreviewModal(videoUrl, file.name);
+                });
+                
+                messageContent.appendChild(videoContainer);
             } else {
-                // Show file name for non-image files
+                // Show file name for non-image files (PDFs, etc.)
                 const fileInfo = document.createElement('div');
-                fileInfo.style.cssText = 'padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 8px;';
-                fileInfo.innerHTML = `<i class="fas fa-file"></i> ${file.name}`;
+                fileInfo.className = 'message-file-info';
+                
+                let iconClass = 'fas fa-file-alt';
+                if (file.name.toLowerCase().endsWith('.pdf')) iconClass = 'fas fa-file-pdf';
+                else if (file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx')) iconClass = 'fas fa-file-word';
+                else if (file.name.toLowerCase().endsWith('.xls') || file.name.toLowerCase().endsWith('.xlsx')) iconClass = 'fas fa-file-excel';
+                
+                fileInfo.innerHTML = `<i class="${iconClass}"></i> <span>${file.name}</span>`;
+                
+                // Create blob URL for preview
+                const fileUrl = URL.createObjectURL(file);
+                
+                // Add click handler to open preview modal
+                fileInfo.addEventListener('click', () => {
+                    openDocumentPreviewModal(fileUrl, file.name);
+                });
+                
                 messageContent.appendChild(fileInfo);
             }
         });
@@ -1423,47 +1210,106 @@ function updateMessageWithServerFiles(messageElement, uploadedFiles) {
         return fileName.replace(/_(\d+)(\.\w+)$/, '$2');
     }
     
-    // Remove existing file displays
+    // Remove existing file displays (local preview elements)
     const existingFileInfos = messageContent.querySelectorAll('div[style*="background"]');
     existingFileInfos.forEach(info => {
-        if (info.innerHTML.includes('fas fa-file')) {
+        if (info.innerHTML.includes('fas fa-file') || info.innerHTML.includes('fas fa-video')) {
             info.remove();
         }
     });
     
+    // Remove existing images to replace with server URLs
+    const existingImages = messageContent.querySelectorAll('img.message-image');
+    existingImages.forEach(img => img.remove());
+    
+    // Remove existing video elements (local previews)
+    const existingVideos = messageContent.querySelectorAll('video.message-video-thumb');
+    existingVideos.forEach(video => video.remove());
+    const existingVideoContainers = messageContent.querySelectorAll('.video-preview-container');
+    existingVideoContainers.forEach(container => container.remove());
+    
+    // Get the text paragraph to insert media before it
+    const textParagraph = messageContent.querySelector('p');
+    
     // Add server-based file displays
     uploadedFiles.forEach(filePath => {
-        const fullPath = `/static/${filePath}`;
+        let fullPath;
+        if (filePath.startsWith('https://storage.googleapis.com/')) {
+            const token = localStorage.getItem('access_token');
+            fullPath = `/serve_file?url=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`;
+        } else {
+            fullPath = `/static/${filePath}`;
+        }
         const rawFileName = filePath.split('/').pop();
         const displayFileName = cleanFileName(rawFileName);
         
         // Check if it's an image
         const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(displayFileName);
+        const isVideo = /\.(mp4|webm|ogg|mov)$/i.test(displayFileName);
         
         if (isImage) {
-            // For images, we could update the src, but since we already have the image displayed from local file,
-            // and the server URL should work the same, we might not need to change it.
-            // But to ensure consistency, let's update it
-            const existingImg = messageContent.querySelector('img.message-image');
-            if (existingImg) {
-                existingImg.src = fullPath;
-                // Update the modal click handler to use server URL
-                existingImg.onclick = () => {
-                    openDocumentPreviewModal(fullPath, displayFileName);
-                };
+            const img = document.createElement('img');
+            img.className = 'message-image';
+            img.src = fullPath;
+            img.addEventListener('click', () => {
+                openDocumentPreviewModal(fullPath, displayFileName);
+            });
+            
+            // Insert before the text paragraph to keep text at the bottom
+            if (textParagraph) {
+                messageContent.insertBefore(img, textParagraph);
+            } else {
+                messageContent.appendChild(img);
+            }
+        } else if (isVideo) {
+            const videoContainer = document.createElement('div');
+            videoContainer.className = 'video-preview-container';
+            
+            const video = document.createElement('video');
+            video.className = 'message-video-thumb';
+            video.src = fullPath;
+            video.muted = true;
+            video.preload = 'metadata';
+            
+            // Try to show a frame
+            video.addEventListener('loadeddata', () => {
+                video.currentTime = 0.1;
+            });
+
+            const playIcon = document.createElement('div');
+            playIcon.className = 'play-overlay';
+            playIcon.innerHTML = '<i class="fas fa-play-circle"></i>';
+
+            videoContainer.appendChild(video);
+            videoContainer.appendChild(playIcon);
+            
+            videoContainer.addEventListener('click', () => {
+                openDocumentPreviewModal(fullPath, displayFileName);
+            });
+            
+            // Insert before the text paragraph to keep text at the bottom
+            if (textParagraph) {
+                messageContent.insertBefore(videoContainer, textParagraph);
+            } else {
+                messageContent.appendChild(videoContainer);
             }
         } else {
-            // For non-image files, replace the plain text with a clickable link
+            // For non-image/video files, show clickable file info
             const fileInfo = document.createElement('div');
-            fileInfo.style.cssText = 'padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 8px; cursor: pointer;';
-            fileInfo.innerHTML = `<i class="fas fa-file"></i> ${displayFileName}`;
+            fileInfo.className = 'message-file-info';
+            
+            let iconClass = 'fas fa-file-alt';
+            if (displayFileName.toLowerCase().endsWith('.pdf')) iconClass = 'fas fa-file-pdf';
+            else if (displayFileName.toLowerCase().endsWith('.doc') || displayFileName.toLowerCase().endsWith('.docx')) iconClass = 'fas fa-file-word';
+            else if (displayFileName.toLowerCase().endsWith('.xls') || displayFileName.toLowerCase().endsWith('.xlsx')) iconClass = 'fas fa-file-excel';
+            
+            fileInfo.innerHTML = `<i class="${iconClass}"></i> <span>${displayFileName}</span>`;
             
             fileInfo.addEventListener('click', () => {
                 openDocumentPreviewModal(fullPath, displayFileName);
             });
             
             // Insert before the text paragraph to keep text at the bottom
-            const textParagraph = messageContent.querySelector('p');
             if (textParagraph) {
                 messageContent.insertBefore(fileInfo, textParagraph);
             } else {
@@ -1489,44 +1335,36 @@ function openDocumentPreviewModal(filePath, fileName) {
     // Determine file type and create appropriate preview
     const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(fileName);
     const isPDF = /\.pdf$/i.test(fileName);
+    const isVideo = /\.(mp4|webm|ogg|mov)$/i.test(fileName);
 
     if (isImage) {
         const img = document.createElement('img');
         img.src = filePath;
-        img.style.cssText = `
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-            display: block;
-            border-radius: 8px;
-        `;
         previewContent.appendChild(img);
+    } else if (isVideo) {
+        const video = document.createElement('video');
+        video.src = filePath;
+        video.controls = true;
+        previewContent.appendChild(video);
     } else if (isPDF) {
         const iframe = document.createElement('iframe');
         iframe.src = filePath;
-        iframe.style.cssText = `
-            width: 100%;
-            height: 100%;
-            border: none;
-            border-radius: 8px;
-        `;
         previewContent.appendChild(iframe);
     } else {
         // For other document types, try to display in iframe or show download link
         const iframe = document.createElement('iframe');
         iframe.src = filePath;
-        iframe.style.cssText = `
-            width: 100%;
-            height: 100%;
-            border: none;
-            border-radius: 8px;
-        `;
         previewContent.appendChild(iframe);
     }
 
     // Show preview panel
     mainContent.classList.add('preview-active');
     previewPanel.style.display = 'flex';
+    // Trigger animation
+    setTimeout(() => {
+        previewPanel.style.opacity = '1';
+        previewPanel.style.transform = 'translateX(0)';
+    }, 10);
 
     // Add close event listener
     closePreviewBtn.onclick = () => {
@@ -1537,7 +1375,6 @@ function openDocumentPreviewModal(filePath, fileName) {
 function closeDocumentPreview() {
     const mainContent = document.getElementById('main-content');
     const previewPanel = document.getElementById('preview-panel');
-
     mainContent.classList.remove('preview-active');
     previewPanel.style.display = 'none';
 }
@@ -1557,11 +1394,8 @@ function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
         avatar.style.backgroundImage = `url(${botAvatar})`;
         avatar.style.backgroundSize = 'cover';
         avatar.style.backgroundPosition = 'center';
-    } else if (!isUser) {
-        // Create Corgi-style dog SVG
-        avatar.innerHTML = getDogSVG();
     } else {
-        avatar.innerHTML = '<i class="fas fa-user"></i>';
+        avatar.innerHTML = isUser ? '<i class="fas fa-user"></i>' : '<i class="fas fa-robot"></i>';
     }
     
     const messageContent = document.createElement('div');
@@ -1572,46 +1406,82 @@ function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
         // Remove timestamp pattern: _ followed by digits before the extension
         return fileName.replace(/_(\d+)(\.\w+)$/, '$2');
     }
-    
+
     // Add uploaded files
     if (uploadedFiles && uploadedFiles.length > 0) {
         uploadedFiles.forEach(filePath => {
-            // Assuming filePath is like "upload/filename.jpg"
-            const fullPath = `/static/${filePath}`;
+            let fullPath;
+            if (filePath.startsWith('https://storage.googleapis.com/')) {
+                const token = localStorage.getItem('access_token');
+                fullPath = `/serve_file?url=${encodeURIComponent(filePath)}&token=${encodeURIComponent(token)}`;
+            } else {
+                fullPath = `/static/${filePath}`;
+            }
             const rawFileName = filePath.split('/').pop();
             const displayFileName = cleanFileName(rawFileName);
-            
+
             // Check if it's an image
             const isImage = /\.(jpg|jpeg|png|gif|bmp|webp)$/i.test(displayFileName);
-            
+            const isVideo = /\.(mp4|webm|ogg|mov)$/i.test(displayFileName);
+
             if (isImage) {
                 const img = document.createElement('img');
                 img.className = 'message-image';
                 img.src = fullPath;
-                img.style.maxWidth = '100%';
-                img.style.borderRadius = '8px';
-                img.style.marginBottom = '10px';
-                
+
                 img.addEventListener('click', () => {
                     openDocumentPreviewModal(fullPath, displayFileName);
                 });
-                
+
                 messageContent.appendChild(img);
+            } else if (isVideo) {
+                const videoContainer = document.createElement('div');
+                videoContainer.className = 'video-preview-container';
+                
+                const video = document.createElement('video');
+                video.className = 'message-video-thumb';
+                video.src = fullPath;
+                video.muted = true;
+                video.preload = 'metadata';
+                
+                // Try to show a frame
+                video.addEventListener('loadeddata', () => {
+                    video.currentTime = 0.1;
+                });
+
+                const playIcon = document.createElement('div');
+                playIcon.className = 'play-overlay';
+                playIcon.innerHTML = '<i class="fas fa-play-circle"></i>';
+
+                videoContainer.appendChild(video);
+                videoContainer.appendChild(playIcon);
+                
+                videoContainer.addEventListener('click', () => {
+                    openDocumentPreviewModal(fullPath, displayFileName);
+                });
+
+                messageContent.appendChild(videoContainer);
             } else {
                 // Show file name for non-image files with preview modal
                 const fileInfo = document.createElement('div');
-                fileInfo.style.cssText = 'padding: 8px; background: rgba(0,0,0,0.1); border-radius: 6px; margin-bottom: 8px; cursor: pointer;';
-                fileInfo.innerHTML = `<i class="fas fa-file"></i> ${displayFileName}`;
+                fileInfo.className = 'message-file-info';
                 
+                let iconClass = 'fas fa-file-alt';
+                if (displayFileName.toLowerCase().endsWith('.pdf')) iconClass = 'fas fa-file-pdf';
+                else if (displayFileName.toLowerCase().endsWith('.doc') || displayFileName.toLowerCase().endsWith('.docx')) iconClass = 'fas fa-file-word';
+                else if (displayFileName.toLowerCase().endsWith('.xls') || displayFileName.toLowerCase().endsWith('.xlsx')) iconClass = 'fas fa-file-excel';
+                
+                fileInfo.innerHTML = `<i class="${iconClass}"></i> <span>${displayFileName}</span>`;
+
                 fileInfo.addEventListener('click', () => {
                     openDocumentPreviewModal(fullPath, displayFileName);
                 });
-                
+
                 messageContent.appendChild(fileInfo);
             }
         });
     }
-    
+
     // Add text if provided
     if (text) {
         const paragraph = document.createElement('p');
@@ -1624,852 +1494,3 @@ function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
     
     return container;
 }
-// ===== Child Assessment Functionality =====
-
-// Add event listener for assessment button
-const assessmentBtn = document.getElementById('assessmentBtn');
-if (assessmentBtn) {
-    assessmentBtn.addEventListener('click', () => {
-        try {
-            // Import and initialize child assessment module
-            if (typeof ChildDevelopmentAssessment !== 'undefined') {
-                ChildDevelopmentAssessment.showAssessmentSetup();
-            } else {
-                alert('兒童發育評估系統正在加載...');
-                // Dynamically load the assessment module
-                const script = document.createElement('script');
-                script.src = '../static/js/child_assessment.js';
-                script.onload = () => {
-                    ChildDevelopmentAssessment.showAssessmentSetup();
-                };
-                document.head.appendChild(script);
-            }
-        } catch (error) {
-            console.error('開啟評估系統錯誤:', error);
-            alert('無法開啟評估系統，請稍後重試');
-        }
-    });
-}
-
-// History button event listener
-const historyBtn = document.getElementById('historyBtn');
-if (historyBtn) {
-    historyBtn.addEventListener('click', () => {
-        try {
-            // Import and initialize assessment history viewer
-            if (typeof ChildDevelopmentAssessment !== 'undefined') {
-                ChildDevelopmentAssessment.showAssessmentHistory();
-            } else {
-                alert('歷史紀錄系統正在加載...');
-                // Dynamically load the assessment module
-                const script = document.createElement('script');
-                script.src = '../static/js/child_assessment.js';
-                script.onload = () => {
-                    ChildDevelopmentAssessment.showAssessmentHistory();
-                };
-                document.head.appendChild(script);
-            }
-        } catch (error) {
-            console.error('開啟歷史紀錄系統錯誤:', error);
-            alert('無法開啟歷史紀錄，請稍後重試');
-        }
-    });
-}
-
-// Interactive quiz: one question at a time
-function startInteractiveQuiz(quizData) {
-    const { test_id, questions, total_questions } = quizData;
-    
-    // Show quiz start message
-    const startMsg = document.createElement('div');
-    startMsg.className = 'bot-message-container';
-    startMsg.style.cssText = 'background: linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%); padding: 20px; border-radius: 15px; color: white; margin: 10px 0;';
-    startMsg.innerHTML = `
-        <h3 style="margin: 0 0 10px 0; font-size: 24px;"><i class="fas fa-clipboard-question"></i> PDF 測驗開始</h3>
-        <p style="margin: 0; opacity: 0.9;">共 ${total_questions} 題選擇題</p>
-        <p style="margin: 5px 0 0 0; opacity: 0.7; font-size: 12px;">Test ID: ${test_id}</p>
-    `;
-    messagesDiv.appendChild(startMsg);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    
-    // Quiz state
-    const quizState = {
-        test_id: test_id,
-        questions: questions,
-        currentIndex: 0,
-        userAnswers: [],
-        correctCount: 0
-    };
-    
-    // Show first question
-    setTimeout(() => showNextQuestion(quizState), 500);
-}
-
-function showNextQuestion(quizState) {
-    const { questions, currentIndex, userAnswers } = quizState;
-    
-    if (currentIndex >= questions.length) {
-        // Quiz finished - show results
-        showQuizResults(quizState);
-        return;
-    }
-    
-    const question = questions[currentIndex];
-    const questionNumber = currentIndex + 1;
-    
-    // Create question container
-    const questionContainer = document.createElement('div');
-    questionContainer.className = 'bot-message-container';
-    questionContainer.style.cssText = 'background: white; padding: 20px; border-radius: 15px; border: 2px solid #9B8AB8; margin: 10px 0;';
-    
-    // Question header
-    const questionHeader = document.createElement('div');
-    questionHeader.style.cssText = 'font-weight: bold; font-size: 18px; color: #9B8AB8; margin-bottom: 15px;';
-    questionHeader.innerHTML = `<i class="fas fa-question-circle"></i> 第 ${questionNumber}/${questions.length} 題`;
-    questionContainer.appendChild(questionHeader);
-    
-    // Question text
-    const questionText = document.createElement('div');
-    questionText.style.cssText = 'font-size: 16px; color: #333; margin-bottom: 20px; line-height: 1.6;';
-    questionText.textContent = question.question;
-    questionContainer.appendChild(questionText);
-    
-    // Options
-    question.options.forEach((option, optIdx) => {
-        const optionBtn = document.createElement('button');
-        optionBtn.style.cssText = `
-            display: block;
-            width: 100%;
-            padding: 15px;
-            margin: 10px 0;
-            background: #f5f5f5;
-            border: 2px solid #e0e0e0;
-            border-radius: 10px;
-            text-align: left;
-            cursor: pointer;
-            transition: all 0.3s;
-            font-size: 15px;
-            color: #333;
-        `;
-        optionBtn.textContent = `${optIdx + 1}. ${option}`;
-        
-        optionBtn.onmouseover = () => {
-            if (!optionBtn.disabled) {
-                optionBtn.style.background = '#e8f0fe';
-                optionBtn.style.borderColor = '#9B8AB8';
-            }
-        };
-        optionBtn.onmouseout = () => {
-            if (!optionBtn.disabled) {
-                optionBtn.style.background = '#f5f5f5';
-                optionBtn.style.borderColor = '#e0e0e0';
-            }
-        };
-        
-        optionBtn.onclick = () => {
-            const isCorrect = optIdx === question.correct_answer;
-            
-            // Record answer
-            quizState.userAnswers.push({
-                question_index: currentIndex,
-                selected_option: optIdx,
-                answer: option,
-                is_correct: isCorrect
-            });
-            
-            if (isCorrect) {
-                quizState.correctCount++;
-            }
-            
-            // Disable all buttons
-            Array.from(questionContainer.querySelectorAll('button')).forEach(btn => {
-                btn.disabled = true;
-                btn.style.cursor = 'not-allowed';
-            });
-            
-            // Show feedback
-            if (isCorrect) {
-                optionBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
-                optionBtn.style.borderColor = '#11998e';
-                optionBtn.style.color = 'white';
-                optionBtn.innerHTML = `✅ ${optIdx + 1}. ${option}`;
-            } else {
-                optionBtn.style.background = 'linear-gradient(135deg, #eb3349 0%, #f45c43 100%)';
-                optionBtn.style.borderColor = '#eb3349';
-                optionBtn.style.color = 'white';
-                optionBtn.innerHTML = `❌ ${optIdx + 1}. ${option}`;
-                
-                // Highlight correct answer
-                const correctBtn = questionContainer.querySelectorAll('button')[question.correct_answer];
-                correctBtn.style.background = 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)';
-                correctBtn.style.borderColor = '#11998e';
-                correctBtn.style.color = 'white';
-                correctBtn.innerHTML = `✅ ${question.correct_answer + 1}. ${question.options[question.correct_answer]} (正確答案)`;
-            }
-            
-            // Show next question after delay
-            setTimeout(() => {
-                quizState.currentIndex++;
-                showNextQuestion(quizState);
-            }, 2000);
-        };
-        
-        questionContainer.appendChild(optionBtn);
-    });
-    
-    messagesDiv.appendChild(questionContainer);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-}
-
-function showQuizResults(quizState) {
-    const { test_id, questions, userAnswers, correctCount } = quizState;
-    const total = questions.length;
-    const score = ((correctCount / total) * 100).toFixed(1);
-    
-    // Display results
-    const resultContainer = document.createElement('div');
-    resultContainer.className = 'bot-message-container';
-    resultContainer.style.cssText = 'max-width: 800px; background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%); padding: 25px; border-radius: 15px; color: white; margin: 10px 0;';
-    
-    resultContainer.innerHTML = `
-        <h3 style="margin: 0 0 20px 0; font-size: 28px; text-align: center;">
-            <i class="fas fa-trophy"></i> 測驗完成！
-        </h3>
-        <div style="font-size: 56px; font-weight: bold; text-align: center; margin: 30px 0;">
-            ${score}%
-        </div>
-        <p style="text-align: center; font-size: 20px; margin: 15px 0;">
-            答對 <strong>${correctCount}</strong> 題 / 共 <strong>${total}</strong> 題
-        </p>
-        <div style="background: rgba(255,255,255,0.2); padding: 20px; border-radius: 10px; margin-top: 25px;">
-            <p style="margin: 0 0 15px 0; font-weight: bold; font-size: 18px;">📊 詳細結果：</p>
-            ${userAnswers.map((ans, idx) => `
-                <div style="margin: 12px 0; padding: 12px; background: rgba(255,255,255,0.15); border-radius: 8px;">
-                    <div style="font-weight: bold; font-size: 16px;">
-                        Q${idx + 1}: ${ans.is_correct ? '✅ 正確' : '❌ 錯誤'}
-                    </div>
-                    <div style="font-size: 13px; margin-top: 5px; opacity: 0.9;">
-                        ${questions[idx].question}
-                    </div>
-                    ${!ans.is_correct ? `
-                        <div style="font-size: 13px; margin-top: 8px; padding: 8px; background: rgba(255,255,255,0.2); border-radius: 5px;">
-                            <strong>您的答案:</strong> ${ans.answer}<br>
-                            <strong>正確答案:</strong> ${questions[idx].options[questions[idx].correct_answer]}
-                        </div>
-                    ` : ''}
-                </div>
-            `).join('')}
-        </div>
-        <p style="text-align: center; margin-top: 20px; opacity: 0.8; font-size: 12px;">
-            Test ID: ${test_id}
-        </p>
-    `;
-    
-    messagesDiv.appendChild(resultContainer);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    
-    // Submit to server (optional, for record keeping)
-    fetch('/api/quiz/submit', {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-        },
-        body: JSON.stringify({
-            test_id: test_id,
-            answers: userAnswers
-        })
-    }).catch(err => console.error('提交結果錯誤:', err));
-}
-
-// ===== 影片分析功能 Video Analysis Functions =====
-
-
-// Video upload zone handler
-const videoUploadZone = document.getElementById('videoUploadZone');
-const videoInput = document.getElementById('videoInput');
-
-if (videoUploadZone && videoInput) {
-    videoUploadZone.addEventListener('click', () => {
-        videoInput.click();
-    });
-    
-    videoInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            await analyzeVideoFile(file);
-            videoInput.value = ''; // Reset input
-        }
-    });
-    
-    // Drag and drop support
-    videoUploadZone.addEventListener('dragover', (e) => {
-        e.preventDefault();
-        videoUploadZone.style.borderColor = '#9B8AB8';
-        videoUploadZone.style.background = 'rgba(102, 126, 234, 0.1)';
-    });
-    
-    videoUploadZone.addEventListener('dragleave', (e) => {
-        e.preventDefault();
-        videoUploadZone.style.borderColor = '';
-        videoUploadZone.style.background = '';
-    });
-    
-    videoUploadZone.addEventListener('drop', async (e) => {
-        e.preventDefault();
-        videoUploadZone.style.borderColor = '';
-        videoUploadZone.style.background = '';
-        
-        const file = e.dataTransfer.files[0];
-        if (file && file.type.startsWith('video/')) {
-            await analyzeVideoFile(file);
-        } else {
-            alert('請上傳影片文件');
-        }
-    });
-}
-
-async function analyzeVideoFromUrl(youtubeUrl) {
-    const uploadProgress = document.getElementById('uploadProgress');
-    const uploadStatus = document.getElementById('uploadStatus');
-    
-    uploadProgress.style.display = 'block';
-    uploadStatus.textContent = '正在下載 YouTube 影片...';
-    
-    const formData = new FormData();
-    formData.append('youtube_url', youtubeUrl);
-    
-    try {
-        const response = await fetch('/video/analyze', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            },
-            body: formData
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || '影片分析失敗');
-        }
-        
-        const result = await response.json();
-        
-        uploadStatus.textContent = '影片載入成功！正在分析...';
-        
-        // Display video and start analysis
-        await displayVideoAndAnalyze(result);
-        
-    } catch (error) {
-        console.error('影片分析錯誤:', error);
-        uploadStatus.textContent = '錯誤: ' + error.message;
-        throw error;
-    } finally {
-        setTimeout(() => {
-            uploadProgress.style.display = 'none';
-        }, 2000);
-    }
-}
-
-async function analyzeVideoFile(file) {
-    const uploadProgress = document.getElementById('uploadProgress');
-    const uploadStatus = document.getElementById('uploadStatus');
-    
-    uploadProgress.style.display = 'block';
-    uploadStatus.textContent = '正在上傳影片...';
-    
-    const formData = new FormData();
-    formData.append('video', file);
-    
-    try {
-        const response = await fetch('/video/analyze', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            },
-            body: formData
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
-            throw new Error(error.error || '影片分析失敗');
-        }
-        
-        const result = await response.json();
-        
-        uploadStatus.textContent = '影片上傳成功！正在分析...';
-        
-        // Display video and start analysis
-        await displayVideoAndAnalyze(result);
-        
-    } catch (error) {
-        console.error('影片分析錯誤:', error);
-        uploadStatus.textContent = '錯誤: ' + error.message;
-        alert('影片上傳失敗: ' + error.message);
-    } finally {
-        setTimeout(() => {
-            uploadProgress.style.display = 'none';
-        }, 2000);
-    }
-}
-
-async function displayVideoAndAnalyze(result) {
-    const { video_info, video_url, frames, is_youtube } = result;
-    
-    // Close video modal
-    const videoModal = document.getElementById('videoModal');
-    if (videoModal) {
-        videoModal.style.display = 'none';
-    }
-    
-    // Create video message in chat
-    const videoMessage = document.createElement('div');
-    videoMessage.className = 'message user-message';
-    videoMessage.innerHTML = `
-        <div class="message-avatar">
-            ${window.userAvatar && window.userAvatarType === 'emoji' 
-                ? `<div style="font-size: 24px;">${window.userAvatar}</div>`
-                : '<i class="fas fa-user"></i>'}
-        </div>
-        <div class="message-content">
-            <div class="video-preview-container" style="margin-bottom: 15px;">
-                <video controls style="width: 100%; max-width: 600px; border-radius: 12px; background: #000;">
-                    <source src="${video_url}" type="video/mp4">
-                    您的瀏覽器不支援視頻播放
-                </video>
-            </div>
-            <div style="padding: 12px; background: rgba(255,255,255,0.1); border-radius: 8px;">
-                <strong>${is_youtube ? '📺' : '📹'} ${video_info.title || video_info.filename}</strong><br>
-                <small>
-                    ⏱️ 時長: ${formatDuration(video_info.duration)} | 
-                    📊 已提取 ${frames.length} 個關鍵幀
-                </small>
-            </div>
-            <p style="margin-top: 10px;">請分析這個影片，告訴我影片中的人在做什麼</p>
-        </div>
-    `;
-    
-    messagesDiv.appendChild(videoMessage);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    
-    // Start streaming analysis
-    await streamVideoAnalysis(frames, video_info);
-}
-
-async function streamVideoAnalysis(frames, videoInfo) {
-    const aiMessageDiv = document.createElement('div');
-    aiMessageDiv.className = 'message ai-message';
-    aiMessageDiv.innerHTML = `
-        <div class="message-avatar">
-            <i class="fas fa-robot"></i>
-        </div>
-        <div class="message-content">
-            <div class="typing-indicator">
-                <span></span><span></span><span></span>
-            </div>
-        </div>
-    `;
-    messagesDiv.appendChild(aiMessageDiv);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-    
-    try {
-        const response = await fetch('/video/stream-analysis', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            },
-            body: JSON.stringify({
-                frames: frames,
-                video_info: videoInfo,
-                prompt: '請詳細描述這個影片中發生了什麼事情，人物在做什麼動作，場景如何變化。'
-            })
-        });
-        
-        if (!response.ok) {
-            throw new Error('影片分析請求失敗');
-        }
-        
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let aiResponse = '';
-        
-        // Remove typing indicator
-        const typingIndicator = aiMessageDiv.querySelector('.typing-indicator');
-        if (typingIndicator) {
-            typingIndicator.remove();
-        }
-        
-        // Create content container
-        const contentDiv = document.createElement('div');
-        contentDiv.className = 'ai-response-content';
-        aiMessageDiv.querySelector('.message-content').appendChild(contentDiv);
-        
-        while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            
-            const chunk = decoder.decode(value, { stream: true });
-            const lines = chunk.split('\n');
-            
-            for (const line of lines) {
-                if (line.startsWith('data: ')) {
-                    try {
-                        const data = JSON.parse(line.slice(6));
-                        
-                        if (data.error) {
-                            throw new Error(data.error);
-                        }
-                        
-                        if (data.content) {
-                            aiResponse += data.content;
-                            contentDiv.innerHTML = marked.parse(aiResponse);
-                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                        }
-                        
-                        if (data.done) {
-                            console.log('影片分析完成');
-                        }
-                    } catch (e) {
-                        if (line.trim()) {
-                            console.error('解析錯誤:', e, line);
-                        }
-                    }
-                }
-            }
-        }
-        
-    } catch (error) {
-        console.error('影片分析錯誤:', error);
-        aiMessageDiv.querySelector('.message-content').innerHTML = `
-            <p style="color: #ff4444;">❌ 影片分析失敗: ${error.message}</p>
-        `;
-    }
-}
-
-function formatDuration(seconds) {
-    const hours = Math.floor(seconds / 3600);
-    const minutes = Math.floor((seconds % 3600) / 60);
-    const secs = Math.floor(seconds % 60);
-    
-    if (hours > 0) {
-        return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
-    } else {
-        return `${minutes}:${secs.toString().padStart(2, '0')}`;
-    }
-}
-
-console.log('✅ 影片分析功能已載入');
-
-// 添加到 chatbox.js 末尾 - 簡化版影片分析
-
-// 查找影片按鈕
-const videoBtn = document.querySelector('[title*="影片"], [onclick*="videoModal"], .video-btn');
-if (videoBtn) {
-    console.log('找到影片按鈕，替換為直接上傳');
-    
-    // 創建隱藏的文件輸入
-    const directVideoInput = document.createElement('input');
-    directVideoInput.type = 'file';
-    directVideoInput.accept = 'video/*';
-    directVideoInput.style.display = 'none';
-    directVideoInput.id = 'directVideoInput';
-    document.body.appendChild(directVideoInput);
-    
-    // 替換按鈕功能
-    videoBtn.onclick = function(e) {
-        e.preventDefault();
-        directVideoInput.click();
-    };
-    
-    // 處理文件選擇
-    directVideoInput.addEventListener('change', async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-        
-        console.log('選擇的影片:', file.name, file.size);
-        
-        // 顯示上傳中訊息
-        const uploadMsg = createMessage(
-            `📹 正在上傳影片: ${file.name} (${(file.size/1024/1024).toFixed(2)}MB)`,
-            true
-        );
-        
-        try {
-            // 上傳並分析
-            const formData = new FormData();
-            formData.append('video', file);
-            
-            const response = await fetch('/video/analyze', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                },
-                body: formData
-            });
-            
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || '上傳失敗');
-            }
-            
-            const result = await response.json();
-            console.log('分析結果:', result);
-            
-            // 移除上傳訊息
-            uploadMsg.remove();
-            
-            // 顯示影片和分析
-            await displayVideoAndAnalyze(result);
-            
-        } catch (error) {
-            console.error('影片處理錯誤:', error);
-            uploadMsg.querySelector('.message-content').innerHTML = 
-                `❌ 錯誤: ${error.message}`;
-        }
-        
-        // 重置輸入
-        directVideoInput.value = '';
-    });
-}
-
-console.log('✅ 簡化版影片上傳已載入');
-
-// ===== 清除所有影片功能 =====
-const clearAllVideosBtn = document.getElementById('clearAllVideosBtn');
-if (clearAllVideosBtn) {
-    clearAllVideosBtn.addEventListener('click', async function() {
-        // 確認對話框
-        const confirmed = confirm('⚠️ 確定要刪除所有影片嗎？此操作無法復原！');
-        if (!confirmed) return;
-        
-        // 二次確認
-        const doubleConfirm = confirm('🚨 最後確認：這將永久刪除所有已上傳的影片！');
-        if (!doubleConfirm) return;
-        
-        try {
-            this.disabled = true;
-            this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 刪除中...';
-            
-            const response = await fetch('/api/videos/clear-all', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            
-            if (!response.ok) {
-                const error = await response.json();
-                throw new Error(error.error || '刪除失敗');
-            }
-            
-            const result = await response.json();
-            
-            // 顯示成功訊息
-            alert(`✅ ${result.message}`);
-            
-            // 清空影片列表
-            const videoList = document.getElementById('videoList');
-            if (videoList) {
-                videoList.innerHTML = '<p class="empty-state">尚無影片</p>';
-            }
-            
-            // 隱藏清除按鈕
-            this.style.display = 'none';
-            
-            // 隱藏影片詳情
-            const videoDetails = document.getElementById('videoDetails');
-            if (videoDetails) {
-                videoDetails.style.display = 'none';
-            }
-            
-        } catch (error) {
-            console.error('清除影片錯誤:', error);
-            alert('❌ 清除失敗: ' + error.message);
-        } finally {
-            this.disabled = false;
-            this.innerHTML = '<i class="fas fa-trash-alt"></i> 清除所有影片';
-        }
-    });
-}
-
-// 監聽影片列表變化，自動顯示/隱藏清除按鈕
-const videoListObserver = new MutationObserver(function(mutations) {
-    const videoList = document.getElementById('videoList');
-    const clearBtn = document.getElementById('clearAllVideosBtn');
-    
-    if (videoList && clearBtn) {
-        const hasVideos = videoList.querySelectorAll('.video-item').length > 0;
-        clearBtn.style.display = hasVideos ? 'inline-block' : 'none';
-    }
-});
-
-const videoListElement = document.getElementById('videoList');
-if (videoListElement) {
-    videoListObserver.observe(videoListElement, { 
-        childList: true, 
-        subtree: true 
-    });
-}
-
-console.log('✅ 清除所有影片功能已載入');
-
-// ===== 為已上傳的影片添加分析功能 =====
-async function analyzeExistingVideo(videoPath) {
-    console.log('開始分析已存在的影片:', videoPath);
-    
-    // 從路徑中提取文件名
-    const filename = videoPath.split('/').pop();
-    
-    // 顯示分析中訊息
-    const analyzingMsg = createMessage(
-        `🎬 正在分析影片: ${filename}...`,
-        true
-    );
-    
-    try {
-        // 獲取影片文件
-        const response = await fetch(videoPath);
-        const blob = await response.blob();
-        const file = new File([blob], filename, { type: 'video/mp4' });
-        
-        // 上傳並分析
-        const formData = new FormData();
-        formData.append('video', file);
-        
-        const analyzeResponse = await fetch('/video/analyze', {
-            method: 'POST',
-            headers: {
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            },
-            body: formData
-        });
-        
-        if (!analyzeResponse.ok) {
-            const error = await analyzeResponse.json();
-            throw new Error(error.error || '分析失敗');
-        }
-        
-        const result = await analyzeResponse.json();
-        console.log('分析結果:', result);
-        
-        // 移除分析中訊息
-        analyzingMsg.remove();
-        
-        // 顯示影片和分析
-        await displayVideoAndAnalyze(result);
-        
-    } catch (error) {
-        console.error('影片分析錯誤:', error);
-        analyzingMsg.querySelector('.message-content').innerHTML = 
-            `❌ 分析失敗: ${error.message}`;
-    }
-}
-
-// 暴露到全局，方便調用
-window.analyzeExistingVideo = analyzeExistingVideo;
-
-console.log('✅ 影片重新分析功能已載入');
-
-// ===== 覆蓋影片按鈕，改為直接分析模式 =====
-document.addEventListener('DOMContentLoaded', function() {
-    setTimeout(() => {
-        const videoBtn = document.getElementById('videoUploadBtn');
-        if (videoBtn) {
-            console.log('✅ 找到影片按鈕，替換為快速分析模式');
-            
-            // 移除所有舊的事件監聽器（通過克隆節點）
-            const newVideoBtn = videoBtn.cloneNode(true);
-            videoBtn.parentNode.replaceChild(newVideoBtn, videoBtn);
-            
-            // 創建隱藏的文件輸入
-            let quickVideoInput = document.getElementById('quickVideoInput');
-            if (!quickVideoInput) {
-                quickVideoInput = document.createElement('input');
-                quickVideoInput.type = 'file';
-                quickVideoInput.accept = 'video/*';
-                quickVideoInput.id = 'quickVideoInput';
-                quickVideoInput.style.display = 'none';
-                document.body.appendChild(quickVideoInput);
-            }
-            
-            // 新的點擊事件 - 直接選擇文件
-            newVideoBtn.addEventListener('click', function(e) {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log('影片按鈕被點擊 - 打開文件選擇器');
-                quickVideoInput.click();
-            });
-            
-            // 處理文件選擇 - 立即分析
-            quickVideoInput.addEventListener('change', async function(e) {
-                const file = e.target.files[0];
-                if (!file) return;
-                
-                console.log('✅ 選擇的影片:', file.name, `(${(file.size/1024/1024).toFixed(2)}MB)`);
-                
-                // 檢查文件大小
-                if (file.size > 500 * 1024 * 1024) {
-                    alert('❌ 影片太大！請選擇小於 500MB 的影片');
-                    this.value = '';
-                    return;
-                }
-                
-                // 顯示上傳中訊息
-                const uploadMsg = createMessage(
-                    `📹 正在上傳並分析影片: ${file.name}\n大小: ${(file.size/1024/1024).toFixed(2)}MB`,
-                    true
-                );
-                
-                try {
-                    // 上傳並分析
-                    const formData = new FormData();
-                    formData.append('video', file);
-                    
-                    console.log('開始上傳影片...');
-                    const response = await fetch('/video/analyze', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                        },
-                        body: formData
-                    });
-                    
-                    if (!response.ok) {
-                        const error = await response.json();
-                        throw new Error(error.error || '上傳失敗');
-                    }
-                    
-                    const result = await response.json();
-                    console.log('✅ 影片分析結果:', result);
-                    
-                    // 移除上傳訊息
-                    uploadMsg.remove();
-                    
-                    // 顯示影片和分析
-                    if (typeof displayVideoAndAnalyze === 'function') {
-                        await displayVideoAndAnalyze(result);
-                    } else {
-                        console.error('❌ displayVideoAndAnalyze 函數不存在');
-                        createMessage('影片已上傳，正在啟動分析...', false);
-                    }
-                    
-                } catch (error) {
-                    console.error('❌ 影片處理錯誤:', error);
-                    uploadMsg.querySelector('.message-content').innerHTML = 
-                        `❌ 處理失敗: ${error.message}`;
-                }
-                
-                // 重置輸入
-                this.value = '';
-            });
-            
-            console.log('✅ 影片按鈕已改為快速分析模式');
-        } else {
-            console.warn('⚠️ 未找到影片按鈕');
-        }
-    }, 1000); // 延遲1秒確保其他腳本已加載
-});
-
-console.log('✅ 影片快速分析模式已啟動');

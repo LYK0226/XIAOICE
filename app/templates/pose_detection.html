@@ -172,12 +172,12 @@
 
     <!-- Socket.IO Client Library -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    
     <!-- MediaPipe Holistic Library (543 landmarks: 33 pose + 468 face + 21*2 hands) -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
+
     
     <!-- 3D Pose detection modules -->
     <script src="{{ url_for('main.serve_pose_detection_js', filename='pose_error_handler.js') }}"></script>

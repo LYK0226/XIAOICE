@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>聊天盒子 - Chatbox</title>
+    <!-- Main chat interface styles -->
+    <link rel="stylesheet" href="../static/css/chatbox.css">
+    <!-- Sidebar styles -->
+    <link rel="stylesheet" href="../static/css/sidebar.css">
+    <!-- Settings modal styles -->
+    <link rel="stylesheet" href="../static/css/settings.css">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body>
+    <div id="sidebar">
+        <div class="sidebar-header">
+            <button type="button" class="sidebar-toggle" id="sidebarToggle" title="Toggle sidebar"><i class="fas fa-bars"></i></button>
+            <i class="fas fa-comment"></i>
+            <h2>聊天盒子</h2>
+        </div>
+        
+        <div class="sidebar-section">
+            <h3>聊天</h3>
+            <ul class="chat-list">
+                <li class="empty-state">載入中...</li>
+            </ul>
+        </div>
+        
+        <div class="sidebar-footer">
+            <button type="button" class="sidebar-btn" id="newChat"><i class="fas fa-plus"></i> <span data-i18n="newChat">新對話</span></button>
+            <button type="button" class="sidebar-btn" id="exitChatroom" onclick="window.location.href='/index'"><i class="fas fa-arrow-left"></i> <span data-i18n="exitChatroom">退出聊天室</span></button>
+            <button type="button" class="sidebar-btn" id="settings"><i class="fas fa-cog"></i> <span data-i18n="settings">設定</span></button>
+            <button type="button" class="sidebar-btn" id="logout"><i class="fas fa-sign-out-alt"></i> <span data-i18n="logout">登出</span></button>
+        </div>
+    </div>
+    
+    <div id="main-content">
+        <div id="chat-container">
+            <div id="chat-header">
+                <div class="chat-title">
+                    <button type="button" class="sidebar-show-btn" id="sidebarShowBtn" style="display: none;" title="Show sidebar"><i class="fas fa-bars"></i></button>
+                    <i class="fas fa-comment"></i>
+                    <span>聊天盒子</span>
+                </div>
+                <div class="chat-actions">
+                    <button type="button" class="icon-btn" title="Search"><i class="fas fa-search"></i></button>
+                    <button type="button" class="icon-btn" title="User profile"><i class="fas fa-user-circle"></i></button>
+                    <button type="button" class="icon-btn" title="More options"><i class="fas fa-ellipsis-h"></i></button>
+                </div>
+            </div>
+            
+            <div id="messages">
+                <div class="bot-message-container">
+                    <div class="avatar bot-avatar">
+                        <i class="fas fa-robot"></i>
+                    </div>
+                    <div class="message-content" id="welcomeMsg">
+                        <p>您好！我是 XIAOICE，專注於幼兒成長分析的兒童發育陪伴者。</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="input-container">
+                <div class="input-toolbar">
+                    <button type="button" class="toolbar-btn" id="fileUploadBtn" title="附加文件/圖像"><i class="fas fa-paperclip"></i></button>
+                    <button type="button" class="toolbar-btn" id="emojiBtn" title="表情符號"><i class="fas fa-smile"></i></button>
+                    <button type="button" class="toolbar-btn" id="voiceInputBtn" title="語音輸入"><i class="fas fa-microphone"></i></button>
+                    <button type="button" class="toolbar-btn" id="webcamBtn" title="攝影機"><i class="fas fa-camera"></i></button>
+                </div>
+                <div class="input-wrapper">
+                    <input type="text" id="messageInput" placeholder="在這裡輸入您的問題...">
+                    <input type="file" id="fileInput" accept="image/*,video/*,application/pdf" multiple style="display: none;">
+                    <button type="button" id="sendButton" title="Send message"><i class="fas fa-paper-plane"></i></button>
+                    <button type="button" id="poseDetectionPageBtn" class="pose-page-btn" title="姿態分析" onclick="window.location.href='/pose_detection'"><i class="fas fa-running"></i></button>
+                </div>
+                
+                <!-- File Preview Container -->
+                <div id="filePreviewContainer" class="file-preview-container" style="display: none;"></div>
+                
+                <!-- Emoji Picker -->
+                <div id="emojiPicker" class="emoji-picker" style="display: none;">
+                    <div class="emoji-header">
+                        <span class="emoji-tab active" data-category="smileys">😊</span>
+                        <span class="emoji-tab" data-category="gestures">👋</span>
+                        <span class="emoji-tab" data-category="animals">🐱</span>
+                        <span class="emoji-tab" data-category="food">🍕</span>
+                        <span class="emoji-tab" data-category="activities">⚽</span>
+                        <span class="emoji-tab" data-category="travel">✈️</span>
+                        <span class="emoji-tab" data-category="objects">💡</span>
+                        <span class="emoji-tab" data-category="symbols">❤️</span>
+                    </div>
+                    <div class="emoji-content" id="emojiContent"></div>
+                </div>
+                
+                <!-- Webcam Modal -->
+                <div id="webcamModal" class="webcam-modal" style="display: none;">
+                    <div class="webcam-content">
+                        <div class="webcam-header">
+                            <h3>拍照</h3>
+                            <button type="button" class="close-webcam" id="closeWebcam" title="Close webcam">&times;</button>
+                        </div>
+                        <div class="webcam-body">
+                            <video id="webcamVideo" autoplay playsinline></video>
+                            <canvas id="webcamCanvas" style="display: none;"></canvas>
+                        </div>
+                        <div class="webcam-footer">
+                            <button type="button" class="webcam-action-btn" id="captureBtn"><i class="fas fa-camera"></i> 拍照</button>
+                            <button type="button" class="webcam-action-btn" id="retakeBtn" style="display: none;"><i class="fas fa-redo"></i> 重拍</button>
+                            <button type="button" class="webcam-action-btn primary" id="usePhotoBtn" style="display: none;"><i class="fas fa-check"></i> 使用照片</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Document Preview Panel -->
+        <div id="preview-panel" class="preview-panel" style="display: none;">
+            <div class="preview-header">
+                <h3 id="preview-title">Document Preview</h3>
+                <button type="button" class="close-preview" id="closePreview" title="Close preview">&times;</button>
+            </div>
+            <div class="preview-content" id="preview-content">
+                <!-- Preview content will be inserted here -->
+            </div>
+        </div>
+    </div>
+    
+
+    <!-- Settings Modal (included from separate file) -->
+    {% include 'setting.html' %}
+    
+    <!-- Auth check script -->
+    <script>
+        if (!localStorage.getItem('access_token')) {
+            window.location.href = '/login';
+        }
+
+        // Handle logout
+        document.getElementById('logout').addEventListener('click', async () => {
+            localStorage.removeItem('access_token');
+            window.location.href = '/login';
+        });
+    </script>
+    
+    <!-- Socket.IO Client Library -->
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <!-- WebSocket Manager Module -->
+    <script src="../static/js/socket_module.js"></script>
+    <!-- 先載入 API 模塊 -->
+    <script src="../static/js/api_module.js"></script>
+    <!-- 載入側邊欄功能 (在 chatbox 之前,因為 chatbox 會呼叫 sidebar 函數) -->
+    <script src="../static/js/sidebar.js"></script>
+    <!-- 然後載入主要腳本 -->
+    <script src="../static/js/chatbox.js"></script>
+    <!-- 最後載入設定功能 -->
+    <script src="../static/js/settings.js"></script>
+
+</body>
+</html>

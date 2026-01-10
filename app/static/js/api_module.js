@@ -39,17 +39,24 @@ class ChatAPI {
      * 調用後端聊天 API (串流版本)
      * @param {string} userMessage - 用戶輸入的文字訊息
      * @param {File} imageFile - 可選的圖片文件
+     * @param {string} imageUrl - 可選的圖片 URL
+     * @param {string} imageMimeType - 圖片 MIME 類型
      * @param {string} currentLanguage - 當前語言設置
      * @param {function} onChunk - 回調函數，用於處理每個文字區塊
      * @param {function} onComplete - 完成時的回調函數
      * @param {function} onError - 錯誤時的回調函數
      * @returns {Promise} - 可取消的 Promise
      */
-    async streamChatMessage(userMessage, imageFile = null, currentLanguage = 'zh-TW', history = null, onChunk, onComplete, onError) {
+    async streamChatMessage(userMessage, imageFile = null, imageUrl = null, imageMimeType = null, currentLanguage = 'zh-TW', history = null, onChunk, onComplete, onError) {
         const formData = new FormData();
         formData.append('message', userMessage);
         
-        if (imageFile) {
+        if (imageUrl) {
+            formData.append('image_url', imageUrl);
+            if (imageMimeType) {
+                formData.append('image_mime_type', imageMimeType);
+            }
+        } else if (imageFile) {
             formData.append('image', imageFile);
         }
 
@@ -175,7 +182,7 @@ class ChatAPI {
         return response.json();
     }
 
-    async addMessage(conversationId, content, sender, metadata = null, files = null) {
+    async addMessage(conversationId, content, sender, metadata = null, files = null, tempId = null) {
         if (files && files.length > 0) {
             // Use FormData for file uploads
             const formData = new FormData();
@@ -185,6 +192,11 @@ class ChatAPI {
             
             if (metadata) {
                 formData.append('metadata', JSON.stringify(metadata));
+            }
+            
+            // Add temp_id for optimistic UI tracking
+            if (tempId) {
+                formData.append('temp_id', tempId);
             }
             
             files.forEach((file) => {
@@ -217,6 +229,11 @@ class ChatAPI {
             
             if (metadata) {
                 payload.metadata = metadata;
+            }
+            
+            // Add temp_id for optimistic UI tracking
+            if (tempId) {
+                payload.temp_id = tempId;
             }
             
             const response = await fetch(this.endpoints.messages, {
@@ -320,18 +337,21 @@ class ChatAPI {
     /**
      * 發送帶圖片的訊息
      * @param {string} message - 文字訊息
-     * @param {File} imageFile - 圖片文件
+     * @param {string} imageUrl - 圖片 URL
+     * @param {string} imageMimeType - 圖片 MIME 類型
      * @param {string} language - 語言設置
      * @param {Array} history - 對話歷史
      * @returns {Promise<string>}
      */
-    async sendImageMessage(message, imageFile, language = 'zh-TW', history = null) {
+    async sendImageMessage(message, imageUrl, imageMimeType, language = 'zh-TW', history = null) {
         return new Promise((resolve, reject) => {
             let fullResponse = '';
 
             this.streamChatMessage(
                 message,
-                imageFile,
+                null, // no imageFile
+                imageUrl,
+                imageMimeType,
                 language,
                 history,
                 (chunk) => {

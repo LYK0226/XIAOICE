@@ -39,114 +39,11 @@
                             </div>
                             <div class="field-actions">
                                 <button class="edit-btn" onclick="document.getElementById('userAvatarInput').click()">
-                                    <i class="fas fa-upload"></i> <span data-i18n="settings.profile.upload">上傳圖片</span>
-                                </button>
-                                <button class="edit-btn" id="selectPresetAvatarBtn">
-                                    <i class="fas fa-images"></i> <span data-i18n="settings.profile.selectPreset">選擇頭像</span>
+                                    <i class="fas fa-edit"></i> <span data-i18n="settings.profile.edit">編輯</span>
                                 </button>
                                 <button class="clear-btn" id="clearUserAvatar">
                                     <i class="fas fa-times"></i> <span data-i18n="settings.profile.clear">清除</span>
                                 </button>
-                            </div>
-                        </div>
-
-                        <!-- Preset Avatar Selector (Hidden by default) -->
-                        <div class="preset-avatar-selector" id="presetAvatarSelector" style="display: none;">
-                            <div class="preset-avatar-header">
-                                <h4>🎨 選擇可愛頭像</h4>
-                                <button class="close-preset-btn" id="closePresetSelector">×</button>
-                            </div>
-                            <div class="preset-avatar-grid">
-                                <!-- Category: Animals -->
-                                <div class="avatar-category">
-                                    <h5>🐾 動物</h5>
-                                    <div class="avatar-options">
-                                        <div class="preset-avatar-option" data-avatar="🐶">🐶</div>
-                                        <div class="preset-avatar-option" data-avatar="🐱">🐱</div>
-                                        <div class="preset-avatar-option" data-avatar="🐭">🐭</div>
-                                        <div class="preset-avatar-option" data-avatar="🐹">🐹</div>
-                                        <div class="preset-avatar-option" data-avatar="🐰">🐰</div>
-                                        <div class="preset-avatar-option" data-avatar="🦊">🦊</div>
-                                        <div class="preset-avatar-option" data-avatar="🐻">🐻</div>
-                                        <div class="preset-avatar-option" data-avatar="🐼">🐼</div>
-                                        <div class="preset-avatar-option" data-avatar="🐨">🐨</div>
-                                        <div class="preset-avatar-option" data-avatar="🐯">🐯</div>
-                                        <div class="preset-avatar-option" data-avatar="🦁">🦁</div>
-                                        <div class="preset-avatar-option" data-avatar="🐮">🐮</div>
-                                    </div>
-                                </div>
-                                <!-- Category: Food -->
-                                <div class="avatar-category">
-                                    <h5>🍰 食物</h5>
-                                    <div class="avatar-options">
-                                        <div class="preset-avatar-option" data-avatar="🍕">🍕</div>
-                                        <div class="preset-avatar-option" data-avatar="🍔">🍔</div>
-                                        <div class="preset-avatar-option" data-avatar="🍟">🍟</div>
-                                        <div class="preset-avatar-option" data-avatar="🍿">🍿</div>
-                                        <div class="preset-avatar-option" data-avatar="🍩">🍩</div>
-                                        <div class="preset-avatar-option" data-avatar="🍪">🍪</div>
-                                        <div class="preset-avatar-option" data-avatar="🎂">🎂</div>
-                                        <div class="preset-avatar-option" data-avatar="🍰">🍰</div>
-                                        <div class="preset-avatar-option" data-avatar="🧁">🧁</div>
-                                        <div class="preset-avatar-option" data-avatar="🍦">🍦</div>
-                                        <div class="preset-avatar-option" data-avatar="🍧">🍧</div>
-                                        <div class="preset-avatar-option" data-avatar="🍨">🍨</div>
-                                    </div>
-                                </div>
-                                <!-- Category: Nature -->
-                                <div class="avatar-category">
-                                    <h5>🌸 自然</h5>
-                                    <div class="avatar-options">
-                                        <div class="preset-avatar-option" data-avatar="🌸">🌸</div>
-                                        <div class="preset-avatar-option" data-avatar="🌺">🌺</div>
-                                        <div class="preset-avatar-option" data-avatar="🌻">🌻</div>
-                                        <div class="preset-avatar-option" data-avatar="🌷">🌷</div>
-                                        <div class="preset-avatar-option" data-avatar="🌹">🌹</div>
-                                        <div class="preset-avatar-option" data-avatar="🪻">🪻</div>
-                                        <div class="preset-avatar-option" data-avatar="🌼">🌼</div>
-                                        <div class="preset-avatar-option" data-avatar="🌿">🌿</div>
-                                        <div class="preset-avatar-option" data-avatar="☘️">☘️</div>
-                                        <div class="preset-avatar-option" data-avatar="🍀">🍀</div>
-                                        <div class="preset-avatar-option" data-avatar="🌈">🌈</div>
-                                        <div class="preset-avatar-option" data-avatar="⭐">⭐</div>
-                                    </div>
-                                </div>
-                                <!-- Category: Objects -->
-                                <div class="avatar-category">
-                                    <h5>🎁 物品</h5>
-                                    <div class="avatar-options">
-                                        <div class="preset-avatar-option" data-avatar="🎨">🎨</div>
-                                        <div class="preset-avatar-option" data-avatar="🎭">🎭</div>
-                                        <div class="preset-avatar-option" data-avatar="🎪">🎪</div>
-                                        <div class="preset-avatar-option" data-avatar="🎯">🎯</div>
-                                        <div class="preset-avatar-option" data-avatar="🎮">🎮</div>
-                                        <div class="preset-avatar-option" data-avatar="🎲">🎲</div>
-                                        <div class="preset-avatar-option" data-avatar="🎹">🎹</div>
-                                        <div class="preset-avatar-option" data-avatar="🎸">🎸</div>
-                                        <div class="preset-avatar-option" data-avatar="🎺">🎺</div>
-                                        <div class="preset-avatar-option" data-avatar="🎻">🎻</div>
-                                        <div class="preset-avatar-option" data-avatar="🎼">🎼</div>
-                                        <div class="preset-avatar-option" data-avatar="🎧">🎧</div>
-                                    </div>
-                                </div>
-                                <!-- Category: Faces -->
-                                <div class="avatar-category">
-                                    <h5>😊 表情</h5>
-                                    <div class="avatar-options">
-                                        <div class="preset-avatar-option" data-avatar="😊">😊</div>
-                                        <div class="preset-avatar-option" data-avatar="😎">😎</div>
-                                        <div class="preset-avatar-option" data-avatar="🤓">🤓</div>
-                                        <div class="preset-avatar-option" data-avatar="🥳">🥳</div>
-                                        <div class="preset-avatar-option" data-avatar="😇">😇</div>
-                                        <div class="preset-avatar-option" data-avatar="🤩">🤩</div>
-                                        <div class="preset-avatar-option" data-avatar="😺">😺</div>
-                                        <div class="preset-avatar-option" data-avatar="😸">😸</div>
-                                        <div class="preset-avatar-option" data-avatar="😻">😻</div>
-                                        <div class="preset-avatar-option" data-avatar="💖">💖</div>
-                                        <div class="preset-avatar-option" data-avatar="💝">💝</div>
-                                        <div class="preset-avatar-option" data-avatar="✨">✨</div>
-                                    </div>
-                                </div>
                             </div>
                         </div>
                         
@@ -209,137 +106,16 @@
                         <label data-i18n="settings.personalization.language">界面語言</label>
                         <div class="language-grid">
                             <div class="lang-option active" data-lang="zh-TW">
-                                <i class="fas fa-circle"></i>
-                                <span>繁體中文</span>
+                                <i class="fas fa-font"></i>
+                                <span data-i18n="settings.personalization.language.zh-TW">繁體中文</span>
                             </div>
                             <div class="lang-option" data-lang="en">
-                                <i class="fas fa-check-circle"></i>
-                                <span>English</span>
+                                <i class="fas fa-language"></i>
+                                <span data-i18n="settings.personalization.language.en">English</span>
                             </div>
                             <div class="lang-option" data-lang="ja">
-                                <i class="fas fa-circle"></i>
-                                <span>日本語</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Bot Avatar Setting -->
-                    <div class="setting-item">
-                        <label>🤖 機器人頭像</label>
-                        <p class="setting-description" style="font-size: 14px; color: #666; margin-bottom: 15px;">自訂聊天機器人的頭像</p>
-                        <div class="bot-avatar-section">
-                            <div class="avatar-preview" id="botAvatarPreview" style="display: inline-flex; margin-right: 15px; vertical-align: middle;">
-                                <i class="fas fa-robot"></i>
-                            </div>
-                            <button class="edit-btn" id="selectBotAvatarBtn" style="display: inline-flex; align-items: center; gap: 8px;">
-                                <i class="fas fa-images"></i> <span>選擇機器人頭像</span>
-                            </button>
-                            <button class="clear-btn" id="clearBotAvatar" style="display: inline-flex; align-items: center; gap: 8px; margin-left: 10px;">
-                                <i class="fas fa-undo"></i> <span>恢復預設</span>
-                            </button>
-                        </div>
-
-                        <!-- Bot Avatar Selector (Hidden by default) -->
-                        <div class="preset-avatar-selector" id="botAvatarSelector" style="display: none; margin-top: 20px;">
-                            <div class="preset-avatar-header">
-                                <h4>🤖 選擇機器人頭像</h4>
-                                <button class="close-preset-btn" id="closeBotSelector">×</button>
-                            </div>
-                            <div class="preset-avatar-grid">
-                                <!-- Category: Robots & AI -->
-                                <div class="avatar-category">
-                                    <h5>🤖 機器人</h5>
-                                    <div class="avatar-options">
-                                        <div class="preset-avatar-option" data-avatar="🤖">🤖</div>
-                                        <div class="preset-avatar-option" data-avatar="🦾">🦾</div>
-                                        <div class="preset-avatar-option" data-avatar="🦿">🦿</div>
-                                        <div class="preset-avatar-option" data-avatar="👾">👾</div>
-                                        <div class="preset-avatar-option" data-avatar="🛸">🛸</div>
-                                        <div class="preset-avatar-option" data-avatar="🚀">🚀</div>
-                                        <div class="preset-avatar-option" data-avatar="🛰️">🛰️</div>
-                                        <div class="preset-avatar-option" data-avatar="💻">💻</div>
-                                        <div class="preset-avatar-option" data-avatar="⚙️">⚙️</div>
-                                        <div class="preset-avatar-option" data-avatar="🔧">🔧</div>
-                                        <div class="preset-avatar-option" data-avatar="🔬">🔬</div>
-                                        <div class="preset-avatar-option" data-avatar="🧬">🧬</div>
-                                    </div>
-                                </div>
-
-                                <!-- Category: Magic & Fantasy -->
-                                <div class="avatar-category">
-                                    <h5>✨ 魔法</h5>
-                                    <div class="avatar-options">
-                                        <div class="preset-avatar-option" data-avatar="✨">✨</div>
-                                        <div class="preset-avatar-option" data-avatar="⚡">⚡</div>
-                                        <div class="preset-avatar-option" data-avatar="🔮">🔮</div>
-                                        <div class="preset-avatar-option" data-avatar="🪄">🪄</div>
-                                        <div class="preset-avatar-option" data-avatar="🌟">🌟</div>
-                                        <div class="preset-avatar-option" data-avatar="💫">💫</div>
-                                        <div class="preset-avatar-option" data-avatar="🌠">🌠</div>
-                                        <div class="preset-avatar-option" data-avatar="🎯">🎯</div>
-                                        <div class="preset-avatar-option" data-avatar="🎪">🎪</div>
-                                        <div class="preset-avatar-option" data-avatar="🎭">🎭</div>
-                                        <div class="preset-avatar-option" data-avatar="🎨">🎨</div>
-                                        <div class="preset-avatar-option" data-avatar="🎬">🎬</div>
-                                    </div>
-                                </div>
-
-                                <!-- Category: Gems & Symbols -->
-                                <div class="avatar-category">
-                                    <h5>💎 寶石</h5>
-                                    <div class="avatar-options">
-                                        <div class="preset-avatar-option" data-avatar="💎">💎</div>
-                                        <div class="preset-avatar-option" data-avatar="💠">💠</div>
-                                        <div class="preset-avatar-option" data-avatar="🔷">🔷</div>
-                                        <div class="preset-avatar-option" data-avatar="🔶">🔶</div>
-                                        <div class="preset-avatar-option" data-avatar="🟣">🟣</div>
-                                        <div class="preset-avatar-option" data-avatar="🟢">🟢</div>
-                                        <div class="preset-avatar-option" data-avatar="🔵">🔵</div>
-                                        <div class="preset-avatar-option" data-avatar="🟡">🟡</div>
-                                        <div class="preset-avatar-option" data-avatar="🟠">🟠</div>
-                                        <div class="preset-avatar-option" data-avatar="🔴">🔴</div>
-                                        <div class="preset-avatar-option" data-avatar="⭐">⭐</div>
-                                        <div class="preset-avatar-option" data-avatar="🌈">🌈</div>
-                                    </div>
-                                </div>
-
-                                <!-- Category: Space -->
-                                <div class="avatar-category">
-                                    <h5>🌌 宇宙</h5>
-                                    <div class="avatar-options">
-                                        <div class="preset-avatar-option" data-avatar="🌌">🌌</div>
-                                        <div class="preset-avatar-option" data-avatar="🌙">🌙</div>
-                                        <div class="preset-avatar-option" data-avatar="🌎">🌎</div>
-                                        <div class="preset-avatar-option" data-avatar="🪐">🪐</div>
-                                        <div class="preset-avatar-option" data-avatar="☄️">☄️</div>
-                                        <div class="preset-avatar-option" data-avatar="🌞">🌞</div>
-                                        <div class="preset-avatar-option" data-avatar="⭐">⭐</div>
-                                        <div class="preset-avatar-option" data-avatar="💫">💫</div>
-                                        <div class="preset-avatar-option" data-avatar="🌠">🌠</div>
-                                        <div class="preset-avatar-option" data-avatar="🌃">🌃</div>
-                                        <div class="preset-avatar-option" data-avatar="🌆">🌆</div>
-                                        <div class="preset-avatar-option" data-avatar="🌇">🌇</div>
-                                    </div>
-                                </div>
-
-                                <!-- Category: Smart Faces -->
-                                <div class="avatar-category">
-                                    <h5>😊 智能表情</h5>
-                                    <div class="avatar-options">
-                                        <div class="preset-avatar-option" data-avatar="😊">😊</div>
-                                        <div class="preset-avatar-option" data-avatar="🤓">🤓</div>
-                                        <div class="preset-avatar-option" data-avatar="😎">😎</div>
-                                        <div class="preset-avatar-option" data-avatar="🧐">🧐</div>
-                                        <div class="preset-avatar-option" data-avatar="🤖">🤖</div>
-                                        <div class="preset-avatar-option" data-avatar="👽">👽</div>
-                                        <div class="preset-avatar-option" data-avatar="👻">👻</div>
-                                        <div class="preset-avatar-option" data-avatar="💀">💀</div>
-                                        <div class="preset-avatar-option" data-avatar="🎃">🎃</div>
-                                        <div class="preset-avatar-option" data-avatar="😈">😈</div>
-                                        <div class="preset-avatar-option" data-avatar="👹">👹</div>
-                                        <div class="preset-avatar-option" data-avatar="👺">👺</div>
-                                    </div>
-                                </div>
+                                <i class="fas fa-comment-dots"></i>
+                                <span data-i18n="settings.personalization.language.ja">日本語</span>
                             </div>
                         </div>
                     </div>
@@ -356,9 +132,10 @@
                         <label data-i18n="settings.advanced.model">AI 模型選擇</label>
                         <div class="model-selection">
                             <select id="aiModelSelect" class="setting-select">
-                                <option value="gemini-2.5-flash" data-i18n="settings.advanced.model.flash">Gemini 2.5 Flash (推薦)</option>
-                                <option value="gemini-2.5-pro" data-i18n="settings.advanced.model.pro">Gemini 2.5 Pro (高品質)</option>
-                                <option value="gemini-2.0-flash-exp" data-i18n="settings.advanced.model.adk">Gemini 2.0 Flash ADK (實驗性)</option>
+                                <option value="gemini-2.5-flash" data-i18n="settings.advanced.model.gemini-2.5-flash">Gemini 2.5 Flash</option>
+                                <option value="gemini-2.5-pro" data-i18n="settings.advanced.model.gemini-2.5-pro">Gemini 2.5 Pro</option>
+                                <option value="gemini-3-flash-preview" data-i18n="settings.advanced.model.gemini-3-flash">Gemini 3 Flash</option>
+                                <option value="gemini-3-pro-preview" data-i18n="settings.advanced.model.gemini-3-pro">Gemini 3 Pro</option>
                             </select>
                         </div>
                     </div>
@@ -384,19 +161,31 @@
 
 <!-- Custom Alert Modal -->
 <div id="customAlertModal" class="modal">
-    <div class="modal-content" style="max-width: 450px;">
-        <p id="customAlertMessage" style="margin: 20px 0; text-align: center;"></p>
-        <button id="customAlertCloseBtn" class="sidebar-btn" style="width: 50%; margin: 0 auto; text-align: center; display: block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold;" data-i18n="alert.confirm">确定</button>
+    <div class="modal-content custom-modal-mini">
+        <p id="customAlertMessage" class="custom-modal-message"></p>
+        <button id="customAlertCloseBtn" class="custom-modal-btn primary" data-i18n="alert.confirm">确定</button>
     </div>
 </div>
 
 <!-- Custom Confirm Modal -->
 <div id="customConfirmModal" class="modal">
-    <div class="modal-content" style="max-width: 450px;">
-        <p id="customConfirmMessage" style="margin: 20px 0; text-align: center;"></p>
-        <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="customConfirmOkBtn" class="sidebar-btn" style="flex: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold;" data-i18n="alert.confirm">确定</button>
-            <button id="customConfirmCancelBtn" class="sidebar-btn" style="flex: 1; background: #6c757d; color: white;" data-i18n="alert.cancel">取消</button>
+    <div class="modal-content custom-modal-mini">
+        <p id="customConfirmMessage" class="custom-modal-message"></p>
+        <div class="custom-modal-actions">
+            <button id="customConfirmOkBtn" class="custom-modal-btn primary" data-i18n="alert.confirm">确定</button>
+            <button id="customConfirmCancelBtn" class="custom-modal-btn secondary" data-i18n="alert.cancel">取消</button>
+        </div>
+    </div>
+</div>
+
+<!-- Custom Prompt Modal -->
+<div id="customPromptModal" class="modal">
+    <div class="modal-content custom-modal-mini">
+        <p id="customPromptMessage" class="custom-modal-message"></p>
+        <input type="text" id="customPromptInput" class="custom-modal-input">
+        <div class="custom-modal-actions">
+            <button id="customPromptOkBtn" class="custom-modal-btn primary" data-i18n="alert.confirm">确定</button>
+            <button id="customPromptCancelBtn" class="custom-modal-btn secondary" data-i18n="alert.cancel">取消</button>
         </div>
     </div>
 </div>
@@ -413,25 +202,23 @@
 
 <!-- API Key Modal -->
 <div id="apiKeyModal" class="modal">
-    <div class="modal-content" style="max-width: 500px;">
-        
+    <div class="modal-content custom-modal-mini">
+        <h2 data-i18n="api_key_modal.title">添加 API 金鑰</h2>
         <div class="api-key-form">
             <div class="form-group">
-                <label for="apiKeyName" data-i18n="api_key_modal.name_label">金鑰名稱</label>
-                <input type="text" id="apiKeyName" placeholder="例如：我的 Google API" required>
+                <input type="text" id="apiKeyName" class="custom-modal-input" placeholder="金鑰名稱 (例如：My Gemini Key)" required>
             </div>
             
             <div class="form-group">
-                <label for="apiKeyValue" data-i18n="api_key_modal.key_label">API 金鑰</label>
-                <input type="password" id="apiKeyValue" placeholder="輸入您的 Google AI API 金鑰" required>
-                <small class="form-hint" data-i18n="api_key_modal.hint">您的 API 金鑰將被加密存儲</small>
+                <input type="password" id="apiKeyValue" class="custom-modal-input" placeholder="輸入您的 Google AI API 金鑰" required>
+                <small class="form-hint" style="display: block; text-align: center; margin-bottom: 20px; color: #8B7AA8; font-weight: 600;" data-i18n="api_key_modal.hint">您的 API 金鑰將被加密存儲</small>
             </div>
             
-            <div class="form-actions">
-                <button id="saveApiKeyBtn" class="sidebar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <div class="custom-modal-actions">
+                <button id="saveApiKeyBtn" class="custom-modal-btn primary">
                     <i class="fas fa-save"></i> <span data-i18n="api_key_modal.save">保存</span>
                 </button>
-                <button id="cancelApiKeyBtn" class="sidebar-btn" style="background: #6c757d;">
+                <button id="cancelApiKeyBtn" class="custom-modal-btn secondary">
                     <i class="fas fa-times"></i> <span data-i18n="api_key_modal.cancel">取消</span>
                 </button>
             </div>
@@ -441,17 +228,16 @@
 
 <!-- Edit Username Modal -->
 <div id="editUsernameModal" class="modal">
-    <div class="modal-content" style="max-width: 450px;">
-        <h3 style="margin-bottom: 20px; text-align: center;" data-i18n="settings.profile.edit_username">編輯用戶名稱</h3>
+    <div class="modal-content custom-modal-mini">
+        <h2 data-i18n="settings.profile.edit_username">編輯用戶名稱</h2>
         <div class="form-group">
-            <label for="editUsernameInput" data-i18n="settings.profile.username">用戶名稱</label>
-            <input type="text" id="editUsernameInput" placeholder="輸入新的用戶名稱" required>
+            <input type="text" id="editUsernameInput" class="custom-modal-input" placeholder="輸入新的用戶名稱" required>
         </div>
-        <div class="form-actions">
-            <button id="saveUsernameBtn" class="sidebar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div class="custom-modal-actions">
+            <button id="saveUsernameBtn" class="custom-modal-btn primary">
                 <i class="fas fa-save"></i> <span data-i18n="settings.profile.save">保存</span>
             </button>
-            <button id="cancelUsernameBtn" class="sidebar-btn" style="background: #6c757d;">
+            <button id="cancelUsernameBtn" class="custom-modal-btn secondary">
                 <i class="fas fa-times"></i> <span data-i18n="settings.profile.cancel">取消</span>
             </button>
         </div>
@@ -460,17 +246,16 @@
 
 <!-- Edit Email Modal -->
 <div id="editEmailModal" class="modal">
-    <div class="modal-content" style="max-width: 450px;">
-        <h3 style="margin-bottom: 20px; text-align: center;" data-i18n="settings.profile.edit_email">編輯電子郵件</h3>
+    <div class="modal-content custom-modal-mini">
+        <h2 data-i18n="settings.profile.edit_email">編輯電子郵件</h2>
         <div class="form-group">
-            <label for="editEmailInput" data-i18n="settings.profile.email">電子郵件</label>
-            <input type="email" id="editEmailInput" placeholder="輸入新的電子郵件地址" required>
+            <input type="email" id="editEmailInput" class="custom-modal-input" placeholder="輸入新的電子郵件地址" required>
         </div>
-        <div class="form-actions">
-            <button id="saveEmailBtn" class="sidebar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div class="custom-modal-actions">
+            <button id="saveEmailBtn" class="custom-modal-btn primary">
                 <i class="fas fa-save"></i> <span data-i18n="settings.profile.save">保存</span>
             </button>
-            <button id="cancelEmailBtn" class="sidebar-btn" style="background: #6c757d;">
+            <button id="cancelEmailBtn" class="custom-modal-btn secondary">
                 <i class="fas fa-times"></i> <span data-i18n="settings.profile.cancel">取消</span>
             </button>
         </div>
@@ -479,25 +264,18 @@
 
 <!-- Change Password Modal -->
 <div id="changePasswordModal" class="modal">
-    <div class="modal-content" style="max-width: 450px;">
-        <h3 style="margin-bottom: 20px; text-align: center;" data-i18n="settings.profile.change_password">變更密碼</h3>
+    <div class="modal-content custom-modal-mini">
+        <h2 data-i18n="settings.profile.change_password">變更密碼</h2>
         <div class="form-group">
-            <label for="oldPasswordInput" data-i18n="settings.profile.old_password">舊密碼</label>
-            <input type="password" id="oldPasswordInput" placeholder="輸入舊密碼" required>
+            <input type="password" id="oldPasswordInput" class="custom-modal-input" placeholder="輸入舊密碼" required>
+            <input type="password" id="newPasswordInput" class="custom-modal-input" placeholder="輸入新密碼" required>
+            <input type="password" id="confirmPasswordInput" class="custom-modal-input" placeholder="再次輸入新密碼" required>
         </div>
-        <div class="form-group">
-            <label for="newPasswordInput" data-i18n="settings.profile.new_password">新密碼</label>
-            <input type="password" id="newPasswordInput" placeholder="輸入新密碼" required>
-        </div>
-        <div class="form-group">
-            <label for="confirmPasswordInput" data-i18n="settings.profile.confirm_password">確認新密碼</label>
-            <input type="password" id="confirmPasswordInput" placeholder="再次輸入新密碼" required>
-        </div>
-        <div class="form-actions">
-            <button id="savePasswordBtn" class="sidebar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div class="custom-modal-actions">
+            <button id="savePasswordBtn" class="custom-modal-btn primary">
                 <i class="fas fa-save"></i> <span data-i18n="settings.profile.save">保存</span>
             </button>
-            <button id="cancelPasswordBtn" class="sidebar-btn" style="background: #6c757d;">
+            <button id="cancelPasswordBtn" class="custom-modal-btn secondary">
                 <i class="fas fa-times"></i> <span data-i18n="settings.profile.cancel">取消</span>
             </button>
         </div>

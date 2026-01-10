@@ -2,225 +2,48 @@
 
 // ===== Translation System for Settings =====
 
-// Translation dictionary for settings page
-const settingsTranslations = {
-    'zh-TW': {
-        'settings.personalization': '個人化',
-        'settings.advanced': '高級',
-        'settings.profile.title': '個人資料',
-        'settings.profile': '個人資料',
-        'settings.profile.description': '管理您的個人資料和帳戶設定',
-        'settings.profile.avatar': '頭像',
-        'settings.profile.username': '用戶名稱',
-        'settings.profile.email': '電子郵件',
-        'settings.profile.password': '密碼',
-        'settings.profile.save': '保存更改',
-        'settings.profile.clear': '清除',
-        'settings.profile.edit': '編輯',
-        'settings.personalization.title': '個人化設定',
-        'settings.personalization.description': '自訂您的個人化偏好設定',
-        'settings.personalization.theme': '主題模式',
-        'settings.personalization.theme.light': '淺色',
-        'settings.personalization.theme.dark': '深色',
-        'settings.personalization.theme.auto': '自動',
-        'settings.personalization.language': '界面語言',
-        'settings.advanced.title': 'API 金鑰管理',
-        'settings.advanced.description': '管理您的 Google AI API 金鑰',
-        'settings.advanced.model': 'AI 模型選擇',
-        'settings.advanced.model.flash': 'Gemini 2.5 Flash (推薦)',
-        'settings.advanced.model.pro': 'Gemini 2.5 Pro (高品質)',
-        'settings.advanced.model.adk': 'Gemini 2.0 Flash ADK (實驗性)',
-        'settings.advanced.api_key': 'API 金鑰',
-        'settings.advanced.api_key.description': '您可以添加多個 API 金鑰以分散使用量',
-        'settings.advanced.api_key.add': '添加 API 金鑰',
-        'alert.confirm': '確定',
-        'alert.cancel': '取消',
-        'api_key_modal.name_label': '金鑰名稱',
-        'api_key_modal.key_label': 'API 金鑰',
-        'api_key_modal.hint': '您的 API 金鑰將被加密存儲',
-        'api_key_modal.save': '保存',
-        'api_key_modal.cancel': '取消',
-        'api_key.in_use': '使用中',
-        'api_key.use': '使用',
-        'api_key.no_keys': '尚未添加任何 API 金鑰',
-        'api_key.no_keys_desc': '請添加您的 Google AI API 金鑰以使用聊天功能',
-        'settings.profile.edit_username': '編輯用戶名稱',
-        'settings.profile.edit_email': '編輯電子郵件',
-        'settings.profile.change_password': '變更密碼',
-        'settings.profile.old_password': '舊密碼',
-        'settings.profile.new_password': '新密碼',
-        'settings.profile.confirm_password': '確認新密碼',
-        'settings.profile.save': '保存',
-        'settings.profile.cancel': '取消'
-    },
-    'en': {
-        'settings.personalization': 'Personalization',
-        'settings.advanced': 'Advanced',
-        'settings.profile.title': 'Profile',
-        'settings.profile': 'Profile',
-        'settings.profile.description': 'Manage your profile and account settings',
-        'settings.profile.avatar': 'Avatar',
-        'settings.profile.username': 'Username',
-        'settings.profile.email': 'Email',
-        'settings.profile.password': 'Password',
-        'settings.profile.save': 'Save Changes',
-        'settings.profile.clear': 'Clear',
-        'settings.profile.edit': 'Edit',
-        'settings.profile.edit_username': 'Edit Username',
-        'settings.profile.edit_email': 'Edit Email',
-        'settings.profile.change_password': 'Change Password',
-        'settings.profile.old_password': 'Old Password',
-        'settings.profile.new_password': 'New Password',
-        'settings.profile.confirm_password': 'Confirm New Password',
-        'settings.profile.save': 'Save',
-        'settings.profile.cancel': 'Cancel',
-        'settings.personalization.title': 'Personalization Settings',
-        'settings.personalization.description': 'Customize your personalization preferences',
-        'settings.personalization.theme': 'Theme Mode',
-        'settings.personalization.theme.light': 'Light',
-        'settings.personalization.theme.dark': 'Dark',
-        'settings.personalization.theme.auto': 'Auto',
-        'settings.personalization.language': 'Interface Language',
-        'settings.advanced.title': 'API Key Management',
-        'settings.advanced.description': 'Manage your Google AI API keys',
-        'settings.advanced.model': 'AI Model Selection',
-        'settings.advanced.model.flash': 'Gemini 2.5 Flash (Recommended)',
-        'settings.advanced.model.pro': 'Gemini 2.5 Pro (High Quality)',
-        'settings.advanced.model.adk': 'Gemini 2.0 Flash ADK (Experimental)',
-        'settings.advanced.api_key': 'API Key',
-        'settings.advanced.api_key.description': 'You can add multiple API keys to distribute usage',
-        'settings.advanced.api_key.add': 'Add API Key',
-        'alert.confirm': 'OK',
-        'alert.cancel': 'Cancel',
-        'api_key_modal.name_label': 'Key Name',
-        'api_key_modal.key_label': 'API Key',
-        'api_key_modal.hint': 'Your API key will be encrypted and stored securely',
-        'api_key_modal.save': 'Save',
-        'api_key_modal.cancel': 'Cancel',
-        'api_key.in_use': 'In Use',
-        'api_key.use': 'Use',
-        'api_key.no_keys': 'No API keys added yet',
-        'api_key.no_keys_desc': 'Please add your Google AI API key to use chat features'
-    },
-    'ja': {
-        'settings.personalization': 'パーソナライズ',
-        'settings.advanced': '詳細設定',
-        'settings.profile.title': 'プロフィール',
-        'settings.profile': 'プロフィール',
-        'settings.profile.description': 'プロフィールとアカウント設定を管理',
-        'settings.profile.avatar': 'アバター',
-        'settings.profile.username': 'ユーザー名',
-        'settings.profile.email': 'メールアドレス',
-        'settings.profile.password': 'パスワード',
-        'settings.profile.save': '変更を保存',
-        'settings.profile.clear': 'クリア',
-        'settings.profile.edit': '編集',
-        'settings.profile.edit_username': 'ユーザー名を編集',
-        'settings.profile.edit_email': 'メールアドレスを編集',
-        'settings.profile.change_password': 'パスワードを変更',
-        'settings.profile.old_password': '現在のパスワード',
-        'settings.profile.new_password': '新しいパスワード',
-        'settings.profile.confirm_password': '新しいパスワードを確認',
-        'settings.profile.save': '保存',
-        'settings.profile.cancel': 'キャンセル',
-        'settings.personalization.title': 'パーソナライズ設定',
-        'settings.personalization.description': 'パーソナライズの設定をカスタマイズ',
-        'settings.personalization.theme': 'テーマモード',
-        'settings.personalization.theme.light': 'ライト',
-        'settings.personalization.theme.dark': 'ダーク',
-        'settings.personalization.theme.auto': '自動',
-        'settings.personalization.language': 'インターフェース言語',
-        'settings.advanced.title': 'APIキー管理',
-        'settings.advanced.description': 'Google AI APIキーを管理',
-        'settings.advanced.model': 'AIモデル選択',
-        'settings.advanced.model.flash': 'Gemini 2.5 Flash (推奨)',
-        'settings.advanced.model.pro': 'Gemini 2.5 Pro (高品質)',
-        'settings.advanced.model.adk': 'Gemini 2.0 Flash ADK (実験的)',
-        'settings.advanced.api_key': 'APIキー',
-        'settings.advanced.api_key.description': '使用量を分散するために複数のAPIキーを追加できます',
-        'settings.advanced.api_key.add': 'APIキーを追加',
-        'alert.confirm': 'OK',
-        'alert.cancel': 'キャンセル',
-        'api_key_modal.name_label': 'キー名',
-        'api_key_modal.key_label': 'APIキー',
-        'api_key_modal.hint': 'APIキーは暗号化されて安全に保存されます',
-        'api_key_modal.save': '保存',
-        'api_key_modal.cancel': 'キャンセル',
-        'api_key.in_use': '使用中',
-        'api_key.use': '使用',
-        'api_key.no_keys': 'まだAPIキーが追加されていません',
-        'api_key.no_keys_desc': 'チャット機能を使用するにはGoogle AI APIキーを追加してください'
-    }
-};
-
 // Function to update settings page language
 function updateSettingsLanguage(lang) {
-    const translations = settingsTranslations[lang] || settingsTranslations['en'];
+    // Use translations from the global translations object loaded in chatbox.js
+    const t = window.translations && window.translations[lang] ? window.translations[lang] : null;
+    
+    if (!t) {
+        console.warn(`Translations for ${lang} not loaded yet`);
+        return;
+    }
     
     // Update all elements with data-i18n attributes
     document.querySelectorAll('[data-i18n]').forEach(element => {
         const key = element.getAttribute('data-i18n');
-        if (translations[key]) {
-            element.textContent = translations[key];
+        if (t[key]) {
+            element.textContent = t[key];
         }
     });
     
     // Update select options
     document.querySelectorAll('option[data-i18n]').forEach(option => {
         const key = option.getAttribute('data-i18n');
-        if (translations[key]) {
-            option.textContent = translations[key];
+        if (t[key]) {
+            option.textContent = t[key];
         }
     });
     
     // Update placeholders
-    const placeholders = {
-        'zh-TW': {
-            'apiKeyName': '例如：我的 Google API',
-            'apiKeyValue': '輸入您的 Google AI API 金鑰',
-            'editUsername': '輸入新的用戶名稱',
-            'editEmail': '輸入新的電子郵件地址',
-            'oldPassword': '輸入舊密碼',
-            'newPassword': '輸入新密碼',
-            'confirmPassword': '再次輸入新密碼'
-        },
-        'en': {
-            'apiKeyName': 'e.g., My Google API',
-            'apiKeyValue': 'Enter your Google AI API key',
-            'editUsername': 'Enter new username',
-            'editEmail': 'Enter new email address',
-            'oldPassword': 'Enter old password',
-            'newPassword': 'Enter new password',
-            'confirmPassword': 'Confirm new password'
-        },
-        'ja': {
-            'apiKeyName': '例: 私の Google API',
-            'apiKeyValue': 'Google AI APIキーを入力してください',
-            'editUsername': '新しいユーザー名を入力',
-            'editEmail': '新しいメールアドレスを入力',
-            'oldPassword': '現在のパスワードを入力',
-            'newPassword': '新しいパスワードを入力',
-            'confirmPassword': '新しいパスワードを確認'
-        }
-    };
+    const apiKeyNameInput = document.getElementById('apiKeyName');
+    const apiKeyValueInput = document.getElementById('apiKeyValue');
+    const editUsernameInput = document.getElementById('editUsernameInput');
+    const editEmailInput = document.getElementById('editEmailInput');
+    const oldPasswordInput = document.getElementById('oldPasswordInput');
+    const newPasswordInput = document.getElementById('newPasswordInput');
+    const confirmPasswordInput = document.getElementById('confirmPasswordInput');
     
-    if (placeholders[lang]) {
-        const apiKeyNameInput = document.getElementById('apiKeyName');
-        const apiKeyValueInput = document.getElementById('apiKeyValue');
-        const editUsernameInput = document.getElementById('editUsernameInput');
-        const editEmailInput = document.getElementById('editEmailInput');
-        const oldPasswordInput = document.getElementById('oldPasswordInput');
-        const newPasswordInput = document.getElementById('newPasswordInput');
-        const confirmPasswordInput = document.getElementById('confirmPasswordInput');
-        
-        if (apiKeyNameInput) apiKeyNameInput.placeholder = placeholders[lang].apiKeyName;
-        if (apiKeyValueInput) apiKeyValueInput.placeholder = placeholders[lang].apiKeyValue;
-        if (editUsernameInput) editUsernameInput.placeholder = placeholders[lang].editUsername;
-        if (editEmailInput) editEmailInput.placeholder = placeholders[lang].editEmail;
-        if (oldPasswordInput) oldPasswordInput.placeholder = placeholders[lang].oldPassword;
-        if (newPasswordInput) newPasswordInput.placeholder = placeholders[lang].newPassword;
-        if (confirmPasswordInput) confirmPasswordInput.placeholder = placeholders[lang].confirmPassword;
-    }
+    if (apiKeyNameInput && t['placeholder.apiKeyName']) apiKeyNameInput.placeholder = t['placeholder.apiKeyName'];
+    if (apiKeyValueInput && t['placeholder.apiKeyValue']) apiKeyValueInput.placeholder = t['placeholder.apiKeyValue'];
+    if (editUsernameInput && t['placeholder.editUsername']) editUsernameInput.placeholder = t['placeholder.editUsername'];
+    if (editEmailInput && t['placeholder.editEmail']) editEmailInput.placeholder = t['placeholder.editEmail'];
+    if (oldPasswordInput && t['placeholder.oldPassword']) oldPasswordInput.placeholder = t['placeholder.oldPassword'];
+    if (newPasswordInput && t['placeholder.newPassword']) newPasswordInput.placeholder = t['placeholder.newPassword'];
+    if (confirmPasswordInput && t['placeholder.confirmPassword']) confirmPasswordInput.placeholder = t['placeholder.confirmPassword'];
 }
 
 // ===== Custom Modal Functions =====
@@ -325,9 +148,68 @@ function showCustomConfirm(message, callback) {
     }
 }
 
-// Make functions global
-window.showCustomAlert = showCustomAlert;
-window.showCustomConfirm = showCustomConfirm;
+// Custom prompt function using modal instead of browser prompt
+function showCustomPrompt(message, defaultValue, callback) {
+    const modal = document.getElementById('customPromptModal');
+    const messageElement = document.getElementById('customPromptMessage');
+    const inputElement = document.getElementById('customPromptInput');
+    const okBtn = document.getElementById('customPromptOkBtn');
+    const cancelBtn = document.getElementById('customPromptCancelBtn');
+
+    if (modal && messageElement && inputElement && okBtn && cancelBtn) {
+        messageElement.textContent = message;
+        inputElement.value = defaultValue || '';
+        modal.style.display = 'block';
+        inputElement.focus();
+        
+        // Update language for the modal
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        updateSettingsLanguage(langToUse);
+        
+        const cleanup = () => {
+            modal.style.display = 'none';
+            okBtn.removeEventListener('click', okHandler);
+            cancelBtn.removeEventListener('click', cancelHandler);
+            window.removeEventListener('click', outsideClickHandler);
+            inputElement.removeEventListener('keypress', enterHandler);
+        };
+
+        const okHandler = () => {
+            const value = inputElement.value;
+            cleanup();
+            if (typeof callback === 'function') callback(value);
+        };
+
+        const cancelHandler = () => {
+            cleanup();
+            if (typeof callback === 'function') callback(null);
+        };
+
+        const outsideClickHandler = (e) => {
+            if (e.target === modal) {
+                cancelHandler();
+            }
+        };
+        
+        const enterHandler = (e) => {
+            if (e.key === 'Enter') {
+                okHandler();
+            }
+        };
+
+        okBtn.addEventListener('click', okHandler);
+        cancelBtn.addEventListener('click', cancelHandler);
+        window.addEventListener('click', outsideClickHandler);
+        inputElement.addEventListener('keypress', enterHandler);
+    } else {
+        const result = prompt(message, defaultValue);
+        if (typeof callback === 'function') callback(result);
+    }
+}
+
+window.showCustomPrompt = showCustomPrompt;
 
 // ===== Avatar Settings =====
 
@@ -431,7 +313,16 @@ async function loadUserProfile() {
             
             // Load user avatar if available
             if (user.avatar) {
-                userAvatar = `/static/${user.avatar}`;
+                const token = localStorage.getItem('access_token');
+                // If it's a GCS (or absolute) URL, use the serve_file endpoint to proxy with token
+                if (user.avatar.startsWith('https://storage.googleapis.com/') || user.avatar.startsWith('gs://')) {
+                    userAvatar = `/serve_file?url=${encodeURIComponent(user.avatar)}&token=${encodeURIComponent(token)}`;
+                } else if (user.avatar.startsWith('/')) {
+                    userAvatar = user.avatar;
+                } else {
+                    userAvatar = `/static/${user.avatar}`;
+                }
+
                 userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
                 userAvatarPreview.style.backgroundSize = 'cover';
                 userAvatarPreview.style.backgroundPosition = 'center';
@@ -1036,7 +927,6 @@ saveApiKeyBtn.addEventListener('click', async () => {
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
         const supportedLangs = ['zh-TW', 'en', 'ja'];
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
-        const translations = settingsTranslations[langToUse] || settingsTranslations['en'];
         
         const errorMessages = {
             'zh-TW': '請填寫所有欄位',
@@ -1118,14 +1008,14 @@ function renderApiKeys(apiKeys, selectedId) {
     const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
     const supportedLangs = ['zh-TW', 'en', 'ja'];
     const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
-    const translations = settingsTranslations[langToUse] || settingsTranslations['en'];
+    const t = window.translations && window.translations[langToUse] ? window.translations[langToUse] : {};
     
     if (apiKeys.length === 0) {
         apiKeyList.innerHTML = `
             <div style="text-align: center; color: #666; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
                 <i class="fas fa-key" style="font-size: 24px; color: #ccc; margin-bottom: 10px;"></i>
-                <p style="margin: 0 0 10px 0; font-weight: 500;">${translations['api_key.no_keys']}</p>
-                <p style="margin: 0; font-size: 14px;">${translations['api_key.no_keys_desc']}</p>
+                <p style="margin: 0 0 10px 0; font-weight: 500;">${t['api_key.no_keys'] || 'No API keys added yet'}</p>
+                <p style="margin: 0; font-size: 14px;">${t['api_key.no_keys_desc'] || 'Please add your Google AI API key'}</p>
             </div>
         `;
         return;
@@ -1136,7 +1026,7 @@ function renderApiKeys(apiKeys, selectedId) {
         const keyItem = document.createElement('div');
         keyItem.className = `api-key-item ${isSelected ? 'selected' : ''}`;
         
-        const buttonText = isSelected ? translations['api_key.in_use'] : translations['api_key.use'];
+        const buttonText = isSelected ? (t['api_key.in_use'] || 'In Use') : (t['api_key.use'] || 'Use');
         
         keyItem.innerHTML = `
             <div class="api-key-info">
@@ -1389,7 +1279,15 @@ async function saveAvatarToServer(file) {
             console.log('Avatar saved to server successfully');
             // Update the user avatar path for display
             if (result.avatar_path) {
-                userAvatar = `/static/${result.avatar_path}`;
+                const avatarPath = result.avatar_path;
+                const token = localStorage.getItem('access_token');
+                if (avatarPath.startsWith('https://storage.googleapis.com/') || avatarPath.startsWith('gs://')) {
+                    userAvatar = `/serve_file?url=${encodeURIComponent(avatarPath)}&token=${encodeURIComponent(token)}`;
+                } else if (avatarPath.startsWith('/')) {
+                    userAvatar = avatarPath;
+                } else {
+                    userAvatar = `/static/${avatarPath}`;
+                }
                 userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
                 userAvatarPreview.style.backgroundSize = 'cover';
                 userAvatarPreview.style.backgroundPosition = 'center';
@@ -1397,6 +1295,14 @@ async function saveAvatarToServer(file) {
                 // Update global userAvatar for chatbox.js
                 if (window.userAvatar !== undefined) {
                     window.userAvatar = userAvatar;
+                }
+            } else {
+                // If avatar_path is null, it's cleared
+                userAvatar = null;
+                userAvatarPreview.style.backgroundImage = 'none';
+                userAvatarPreview.innerHTML = '<i class="fas fa-user"></i>';
+                if (window.userAvatar !== undefined) {
+                    window.userAvatar = null;
                 }
             }
         } else {
@@ -1488,269 +1394,4 @@ document.getElementById('settings').addEventListener('click', () => {
         loadUserModel();
         loadUserProfileSettings();
     }, 100);
-});
-
-// ===== Preset Avatar Selector Functionality =====
-
-// Toggle preset avatar selector
-const selectPresetAvatarBtn = document.getElementById('selectPresetAvatarBtn');
-const presetAvatarSelector = document.getElementById('presetAvatarSelector');
-const closePresetSelector = document.getElementById('closePresetSelector');
-
-if (selectPresetAvatarBtn) {
-    selectPresetAvatarBtn.addEventListener('click', () => {
-        presetAvatarSelector.style.display = 
-            presetAvatarSelector.style.display === 'none' ? 'block' : 'none';
-    });
-}
-
-if (closePresetSelector) {
-    closePresetSelector.addEventListener('click', () => {
-        presetAvatarSelector.style.display = 'none';
-    });
-}
-
-// Handle preset avatar selection
-const presetAvatarOptions = document.querySelectorAll('.preset-avatar-option');
-presetAvatarOptions.forEach(option => {
-    option.addEventListener('click', function() {
-        // Remove selected class from all options
-        presetAvatarOptions.forEach(opt => opt.classList.remove('selected'));
-        
-        // Add selected class to clicked option
-        this.classList.add('selected');
-        
-        // Get the emoji avatar
-        const avatar = this.getAttribute('data-avatar');
-        
-        // Update the preview
-        const preview = document.getElementById('userAvatarPreview');
-        preview.innerHTML = `<div style="font-size: 32px;">${avatar}</div>`;
-        preview.style.background = 'linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%)';
-        
-        // Save to localStorage
-        localStorage.setItem('userAvatar', avatar);
-        localStorage.setItem('userAvatarType', 'emoji');
-        
-        // Update globally
-        window.userAvatar = avatar;
-        window.userAvatarType = 'emoji';
-        
-        // Hide selector after selection
-        setTimeout(() => {
-            presetAvatarSelector.style.display = 'none';
-        }, 500);
-        
-        // Show success message
-        showNotification('✅ 頭像已更新！', 'success');
-    });
-});
-
-// Load saved avatar on page load
-function loadSavedAvatar() {
-    const savedAvatar = localStorage.getItem('userAvatar');
-    const avatarType = localStorage.getItem('userAvatarType');
-    const preview = document.getElementById('userAvatarPreview');
-    
-    if (savedAvatar && preview) {
-        if (avatarType === 'emoji') {
-            preview.innerHTML = `<div style="font-size: 32px;">${savedAvatar}</div>`;
-            preview.style.background = 'linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%)';
-            window.userAvatar = savedAvatar;
-            window.userAvatarType = 'emoji';
-            
-            // Highlight the selected emoji
-            presetAvatarOptions.forEach(opt => {
-                if (opt.getAttribute('data-avatar') === savedAvatar) {
-                    opt.classList.add('selected');
-                }
-            });
-        } else if (avatarType === 'image') {
-            preview.style.backgroundImage = `url(${savedAvatar})`;
-            preview.style.backgroundSize = 'cover';
-            preview.style.backgroundPosition = 'center';
-            preview.innerHTML = '';
-            window.userAvatar = savedAvatar;
-            window.userAvatarType = 'image';
-        }
-    }
-}
-
-// Call on page load
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadSavedAvatar);
-} else {
-    loadSavedAvatar();
-}
-
-// Simple notification function
-function showNotification(message, type = 'info') {
-    const notification = document.createElement('div');
-    notification.className = `notification notification-${type}`;
-    notification.textContent = message;
-    notification.style.cssText = `
-        position: fixed;
-        top: 20px;
-        right: 20px;
-        padding: 15px 25px;
-        background: ${type === 'success' ? '#4CAF50' : '#2196F3'};
-        color: white;
-        border-radius: 8px;
-        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-        z-index: 10000;
-        animation: slideInRight 0.3s ease;
-    `;
-    
-    document.body.appendChild(notification);
-    
-    setTimeout(() => {
-        notification.style.animation = 'slideOutRight 0.3s ease';
-        setTimeout(() => notification.remove(), 300);
-    }, 3000);
-}
-
-// Add animation styles
-const style = document.createElement('style');
-style.textContent = `
-    @keyframes slideInRight {
-        from {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-        to {
-            transform: translateX(0);
-            opacity: 1;
-        }
-    }
-    
-    @keyframes slideOutRight {
-        from {
-            transform: translateX(0);
-            opacity: 1;
-        }
-        to {
-            transform: translateX(400px);
-            opacity: 0;
-        }
-    }
-`;
-document.head.appendChild(style);
-
-console.log('✅ Preset avatar selector initialized');
-
-// ===== Bot Avatar Selector Functionality =====
-
-// Toggle bot avatar selector
-const selectBotAvatarBtn = document.getElementById('selectBotAvatarBtn');
-const botAvatarSelector = document.getElementById('botAvatarSelector');
-const closeBotSelector = document.getElementById('closeBotSelector');
-const clearBotAvatarBtn = document.getElementById('clearBotAvatar');
-
-if (selectBotAvatarBtn) {
-    selectBotAvatarBtn.addEventListener('click', () => {
-        botAvatarSelector.style.display = 
-            botAvatarSelector.style.display === 'none' ? 'block' : 'none';
-    });
-}
-
-if (closeBotSelector) {
-    closeBotSelector.addEventListener('click', () => {
-        botAvatarSelector.style.display = 'none';
-    });
-}
-
-if (clearBotAvatarBtn) {
-    clearBotAvatarBtn.addEventListener('click', () => {
-        // Clear bot avatar
-        localStorage.removeItem('botAvatar');
-        localStorage.removeItem('botAvatarType');
-        window.botAvatar = null;
-        window.botAvatarType = null;
-        
-        // Reset preview to default
-        const preview = document.getElementById('botAvatarPreview');
-        preview.innerHTML = '<i class="fas fa-robot"></i>';
-        preview.style.backgroundImage = '';
-        preview.style.background = '';
-        
-        // Remove selected class from all bot options
-        const botOptions = botAvatarSelector.querySelectorAll('.preset-avatar-option');
-        botOptions.forEach(opt => opt.classList.remove('selected'));
-        
-        showNotification('✅ 已恢復預設機器人頭像', 'success');
-    });
-}
-
-// Handle bot avatar selection
-const botAvatarOptions = botAvatarSelector ? botAvatarSelector.querySelectorAll('.preset-avatar-option') : [];
-botAvatarOptions.forEach(option => {
-    option.addEventListener('click', function() {
-        // Remove selected class from all options
-        botAvatarOptions.forEach(opt => opt.classList.remove('selected'));
-        
-        // Add selected class to clicked option
-        this.classList.add('selected');
-        
-        // Get the emoji avatar
-        const avatar = this.getAttribute('data-avatar');
-        
-        // Update the preview
-        const preview = document.getElementById('botAvatarPreview');
-        preview.innerHTML = `<div style="font-size: 32px;">${avatar}</div>`;
-        preview.style.background = 'linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%)';
-        
-        // Save to localStorage
-        localStorage.setItem('botAvatar', avatar);
-        localStorage.setItem('botAvatarType', 'emoji');
-        
-        // Update globally in chatbox
-        if (window.botAvatar !== undefined) {
-            window.botAvatar = avatar;
-            window.botAvatarType = 'emoji';
-        }
-        
-        // Hide selector after selection
-        setTimeout(() => {
-            botAvatarSelector.style.display = 'none';
-        }, 500);
-        
-        // Show success message
-        showNotification('✅ 機器人頭像已更新！', 'success');
-    });
-});
-
-// Load saved bot avatar on page load
-function loadSavedBotAvatar() {
-    const savedAvatar = localStorage.getItem('botAvatar');
-    const avatarType = localStorage.getItem('botAvatarType');
-    const preview = document.getElementById('botAvatarPreview');
-    
-    if (savedAvatar && preview) {
-        if (avatarType === 'emoji') {
-            preview.innerHTML = `<div style="font-size: 32px;">${savedAvatar}</div>`;
-            preview.style.background = 'linear-gradient(135deg, #9B8AB8 0%, #B8A8D8 100%)';
-            
-            // Update globally in chatbox
-            if (window.botAvatar !== undefined) {
-                window.botAvatar = savedAvatar;
-                window.botAvatarType = 'emoji';
-            }
-            
-            // Highlight the selected emoji
-            botAvatarOptions.forEach(opt => {
-                if (opt.getAttribute('data-avatar') === savedAvatar) {
-                    opt.classList.add('selected');
-                }
-            });
-        }
-    }
-}
-
-// Call on page load
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', loadSavedBotAvatar);
-} else {
-    loadSavedBotAvatar();
-}
-
-console.log('✅ Bot avatar selector initialized');
+})
