@@ -430,32 +430,32 @@ const AssessmentQuestions = {
             id: 1,
             domain: '認知',
             emoji: '🐻',
-            question: '兒童能否數數1-5？',
-            description: '觀察兒童是否能正確數數到5。',
+            question: '兒童能否覆述數字',
+            description: '觀察兒童能聽後立刻覆述三個數字。',
             
         },
         {
             id: 2,
             domain: '認知',
             emoji: '🐻',
-            question: '兒童能否辨認顏色？',
-            description: '觀察兒童是否能辨認並說出基本顏色。',
+            question: '兒童能否辨認並說出自己的姓名、性別及年齡？',
+            description: '觀察兒童是否能正確回答自己的姓名、性別及年齡。',
             
         },
         {
             id: 3,
             domain: '認知',
             emoji: '🐻',
-            question: '兒童能否辨認形狀？',
-            description: '觀察兒童是否能辨認圓形、方形、三角形。',
+            question: '兒童能否從兩件物件中分辨出大／小、長／短、幼滑／粗糙、堅硬／柔軟？',
+            description: '觀察兒童是否能正確分辨並指出物件的大小、長短、質感及硬度。',
             
         },
         {
             id: 4,
             domain: '認知',
             emoji: '🐻',
-            question: '兒童能否分類物品？',
-            description: '觀察兒童是否能按顏色或大小分類物品。',
+            question: '兒童能否認識三至四種顏色的名稱？',
+            description: '觀察兒童是否能正確說出三至四種顏色的名稱。',
             
         },
         {
@@ -470,40 +470,40 @@ const AssessmentQuestions = {
             id: 6,
             domain: '認知',
             emoji: '🐻',
-            question: '兒童能否理解大小概念？',
-            description: '觀察兒童是否能區分大和小。',
+            question: '兒童是否開始懂得把物件分類和組合，例如：食物、衣服、鞋配襪、杯配碟？',
+            description: '觀察兒童是否能依物件的種類或功能進行分類與配對。',
             
         },
         {
             id: 7,
             domain: '認知',
             emoji: '🐻',
-            question: '兒童能否記住簡單序列？',
-            description: '觀察兒童是否能記住3個動作的序列。',
+            question: '兒童是否明白先後次序，能把積木或珠子依圖案排序？',
+            description: '觀察兒童是否能依照圖案或指示，正確地將積木或珠子排序。',
             
         },
         {
             id: 8,
             domain: '認知',
             emoji: '🐻',
-            question: '兒童能否理解因果關係？',
-            description: '觀察兒童是否理解簡單的因果關係。',
+            question: '兒童在畫人像時，能否繪出頭和身體其中部分？',
+            description: '觀察兒童是否在繪畫人像時能畫出頭部及身體的部分特徵。',
             
         },
         {
             id: 9,
             domain: '認知',
             emoji: '🐻',
-            question: '兒童能否找出缺失的物品？',
-            description: '觀察兒童是否能發現一組物品中缺少什麼。',
+            question: '兒童能否分辨男女？',
+            description: '觀察兒童是否能正確指出並區分男性與女性。',
             
         },
         {
             id: 10,
             domain: '認知',
             emoji: '🐻',
-            question: '兒童能否配對相同物品？',
-            description: '觀察兒童是否能將相同的物品配對。',
+            question: '兒童能否經一至兩次嘗試，便能把五個環依大小次序穿在棍上？',
+            description: '觀察兒童是否能在短時間內，依大小順序將五個環正確套在棍上。',
             
         }
     ]
