@@ -1,8 +1,14 @@
-# XIAOICE AI Assistant - Developer Guidelines
+# XIAOICE — Copilot Quick Reference (for AI coding agents)
 
-## Architecture Overview
+Brief: concise, repo-specific guidance so an AI agent can be productive quickly.
 
-XIAOICE is a multi-user Flask web application with Google Gemini AI integration, WebSocket streaming, and real-time pose detection.
+Core architecture (where to look)
+- Flask app factory: `app/__init__.py` (create_app, SocketIO config).
+- Multi-agent AI: `app/agent/chat_agent.py` (coordinator + pdf/media specialists).
+- HTTP endpoints: `app/routes.py` (SSE `/chat/stream`, upload endpoints, model selection).
+- WebSocket handling: `app/socket_events.py` (JWT auth via `auth` field on connect).
+- Storage helpers: `app/gcp_bucket.py` (upload/download/delete + env var handling).
+- DB models and conventions: `app/models.py` (User, UserProfile, UserApiKey, Conversation, Message, FileUpload).
 
 ### Core Components
 - **Flask App Factory**: `app/__init__.py` initializes with blueprints, JWT, SocketIO, and database
@@ -118,6 +124,29 @@ CREATE_DB_ON_STARTUP=true  # Development convenience
 - Coordinator agent routes to text/media agents
 - Support streaming responses for real-time UX
 - Include conversation history for context
+
+### Actionable facts & quick rules
+- API keys: `UserApiKey.set_encrypted_key()` / `get_decrypted_key()` rely on `ENCRYPTION_KEY` in env; avoid decrypting globally.
+- Language: coordinator enforces language matching (see COORDINATOR_AGENT_INSTRUCTION).
+- Session IDs: `conv_{user_id}_{conversation_id}` — use this when you need persistent agent sessions.
+- Streaming: `/chat/stream` (SSE) uses `agent.generate_streaming_response(...)`; socket handlers use the same generator.
+- File uploads: supported MIME types & 500MB limit enforced in `app/agent/chat_agent.py`; use `gcp_bucket.upload_image_to_gcs` for uploads.
+- GCS: set `GCS_CREDENTIALS_PATH` or `GOOGLE_APPLICATION_CREDENTIALS` and `GCS_BUCKET_NAME`.
+
+### Useful commands / quick examples
+- Dev setup: `python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`
+- Run server (dev): `python run.py` (socketio.run)
+- Migrations: `flask db migrate -m "msg" && flask db upgrade` or set `CREATE_DB_ON_STARTUP=true` for quick dev
+- Tests: `pytest`; run `test/test_multi_agent.py` for streaming example (it shows how to call `generate_streaming_response`).
+
+### Patterns & constraints to follow
+- Do not set a global `GOOGLE_API_KEY` across threads; use per-user keys cached by ChatAgentManager.
+- When changing streaming output, preserve prefix-stripping logic in `routes` and `socket_events` (e.g., remove 'Assistant:', 'AI:').
+- When deleting conversations, delete associated GCS files first (`routes.delete_conversation`).
+
+### Where to add tests
+- Add unit tests in `test/`; mock GCS functions for file tests and test streaming by calling `generate_streaming_response` directly.
+
 
 ### File Operations
 - Use `app/gcp_bucket.py` functions for GCS

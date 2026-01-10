@@ -1394,4 +1394,4 @@ document.getElementById('settings').addEventListener('click', () => {
         loadUserModel();
         loadUserProfileSettings();
     }, 100);
-});
+})

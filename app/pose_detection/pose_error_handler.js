@@ -1,10 +1,8 @@
 /**
- * Pose Error Handler Module
+ * 姿勢錯誤處理模組
  * 
- * Provides centralized error handling for pose detection system.
- * Handles camera permissions, MediaPipe model loading, and runtime errors.
- * 
- * Requirements: 1.5, 2.5
+ * 為姿勢偵測系統提供集中式錯誤處理。
+ * 處理相機權限、MediaPipe 模型載入與執行時錯誤。
  */
 
 class PoseErrorHandler {
@@ -37,11 +35,11 @@ class PoseErrorHandler {
 
         if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
             errorCode = 'CAMERA_PERMISSION_DENIED';
-            userMessage = 'Camera access denied. Please allow camera permissions in your browser settings.';
+            userMessage = '攝影機存取被拒。請在瀏覽器設定中允許攝影機權限。';
             suggestions = [
-                'Click the camera icon in your browser address bar',
-                'Select "Allow" for camera access',
-                'Refresh the page and try again'
+                '點選瀏覽器網址列的相機圖示',
+                '選擇「允許」以開啟攝影機存取',
+                '重新整理頁面後再試一次'
             ];
         } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
             errorCode = 'CAMERA_NOT_FOUND';
@@ -110,11 +108,11 @@ class PoseErrorHandler {
 
         if (error.code === 'MEDIAPIPE_NOT_LOADED') {
             errorCode = 'MEDIAPIPE_NOT_LOADED';
-            userMessage = 'Pose detection library failed to load. Please check your internet connection.';
+            userMessage = '姿勢偵測函式庫載入失敗。請檢查您的網路連線。';
             suggestions = [
-                'Check your internet connection',
-                'Refresh the page',
-                'Try again in a few moments'
+                '檢查網路連線',
+                '重新整理頁面',
+                '稍後再試'
             ];
         } else if (error.code === 'NETWORK_ERROR' || (error.message && error.message.includes('network'))) {
             errorCode = 'NETWORK_ERROR';
@@ -221,12 +219,12 @@ class PoseErrorHandler {
     handleNoPoseDetected() {
         const infoObj = {
             code: 'NO_POSE_DETECTED',
-            message: 'No person detected in frame.',
+            message: '畫面中未偵測到任何人。',
             suggestions: [
-                'Make sure you are visible in the camera',
-                'Ensure good lighting conditions',
-                'Move closer to the camera',
-                'Check if camera is pointing at you'
+                '確保您在攝影機可視範圍內',
+                '確保良好光線',
+                '靠近攝影機',
+                '確認攝影機方向對準您'
             ],
             severity: 'info',
             timestamp: Date.now()
@@ -320,9 +318,9 @@ class PoseErrorHandler {
     }
 
     /**
-     * Get last error
+     * 取得最後一筆錯誤
      * 
-     * @returns {Object|null} Last error object or null
+     * @returns {Object|null} 最後一次錯誤物件或 null
      */
     getLastError() {
         return this.lastError;
@@ -375,5 +373,5 @@ class PoseErrorHandler {
     }
 }
 
-// Export for use in other modules
+// 匯出供其他模組使用
 window.PoseErrorHandler = PoseErrorHandler;

@@ -1,3 +1,4 @@
+
 import os
 
 class Config:
@@ -15,6 +16,11 @@ class Config:
     # Uploads
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'upload')
     MAX_CONTENT_LENGTH = 500 * 1024 * 1024  # 500 MB
+
+    # Allowed file extensions
+    ALLOWED_IMAGE_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif', 'webp'}
+    ALLOWED_VIDEO_EXTENSIONS = {'mp4', 'avi', 'mov', 'mkv', 'webm', 'flv', 'wmv'}
+    ALLOWED_EXTENSIONS = ALLOWED_IMAGE_EXTENSIONS | ALLOWED_VIDEO_EXTENSIONS
 
     # Google Cloud Storage
     GCS_BUCKET_NAME = os.environ.get('GCS_BUCKET_NAME')
@@ -48,4 +54,3 @@ class Config:
     POSE_MIN_DETECTION_CONFIDENCE = float(os.environ.get('POSE_MIN_DETECTION_CONFIDENCE', '0.5'))
     POSE_MIN_TRACKING_CONFIDENCE = float(os.environ.get('POSE_MIN_TRACKING_CONFIDENCE', '0.5'))
     POSE_MAX_CONCURRENT_SESSIONS = int(os.environ.get('POSE_MAX_CONCURRENT_SESSIONS', '50'))
-    POSE_FRAME_SIZE_LIMIT_MB = int(os.environ.get('POSE_FRAME_SIZE_LIMIT_MB', '5'))

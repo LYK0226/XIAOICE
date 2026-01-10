@@ -5,766 +5,39 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>姿態分析 - Pose Detection</title>
     <!-- Pose detection styles -->
-    <link rel="stylesheet" href="../static/css/pose_detection.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/pose_detection.css') }}">
     <!-- Sidebar styles for consistency -->
-    <link rel="stylesheet" href="../static/css/sidebar.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/sidebar.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            transition: background 0.3s ease;
-        }
-
-        body.dark-theme {
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-        }
-
-        /* Header */
-        .pose-page-header {
-            background: rgba(255, 255, 255, 0.95);
-            -webkit-backdrop-filter: blur(10px);
-            backdrop-filter: blur(10px);
-            padding: 16px 24px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-            transition: background 0.3s ease;
-        }
-
-        body.dark-theme .pose-page-header {
-            background: rgba(42, 42, 42, 0.95);
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 16px;
-        }
-
-        .back-btn {
-            background: none;
-            border: none;
-            font-size: 24px;
-            color: #667eea;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 8px;
-            transition: all 0.2s;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .back-btn:hover {
-            background: rgba(102, 126, 234, 0.1);
-            transform: translateX(-2px);
-        }
-
-        body.dark-theme .back-btn {
-            color: #8b9bea;
-        }
-
-        .page-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: #333;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
-
-        body.dark-theme .page-title {
-            color: #e0e0e0;
-        }
-
-        .page-title i {
-            color: #667eea;
-        }
-
-        body.dark-theme .page-title i {
-            color: #8b9bea;
-        }
-
-        .header-right {
-            display: flex;
-            gap: 12px;
-            align-items: center;
-        }
-
-        .theme-toggle {
-            background: none;
-            border: none;
-            font-size: 20px;
-            color: #666;
-            cursor: pointer;
-            padding: 8px;
-            border-radius: 8px;
-            transition: all 0.2s;
-        }
-
-        .theme-toggle:hover {
-            background: rgba(102, 126, 234, 0.1);
-            color: #667eea;
-        }
-
-        body.dark-theme .theme-toggle {
-            color: #999;
-        }
-
-        body.dark-theme .theme-toggle:hover {
-            color: #8b9bea;
-        }
-
-        /* Main Content */
-        .pose-page-content {
-            flex: 1;
-            display: flex;
-            padding: 24px;
-            gap: 24px;
-            max-width: 1600px;
-            width: 100%;
-            margin: 0 auto;
-        }
-
-        /* Video Section */
-        .video-section {
-            flex: 2;
-            display: flex;
-            flex-direction: column;
-            gap: 16px;
-        }
-
-        .video-wrapper {
-            position: relative;
-            background: rgba(0, 0, 0, 0.9);
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
-            aspect-ratio: 4/3;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-
-        #poseVideo {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
-
-        #poseCanvas {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-        }
-
-        .video-placeholder {
-            position: absolute;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 16px;
-            color: rgba(255, 255, 255, 0.6);
-        }
-
-        .video-placeholder i {
-            font-size: 64px;
-        }
-
-        .video-placeholder p {
-            font-size: 18px;
-        }
-
-        .video-wrapper.active .video-placeholder {
-            display: none;
-        }
-
-        /* Controls */
-        .controls-section {
-            display: flex;
-            gap: 12px;
-            justify-content: center;
-        }
-
-        .control-btn {
-            padding: 14px 32px;
-            border: none;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            border-radius: 12px;
-            cursor: pointer;
-            font-size: 16px;
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
-        }
-
-        .control-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.5);
-        }
-
-        .control-btn:active {
-            transform: translateY(0);
-        }
-
-        .control-btn.stop {
-            background: linear-gradient(135deg, #ff1744 0%, #ff5252 100%);
-            box-shadow: 0 4px 15px rgba(255, 23, 68, 0.4);
-        }
-
-        .control-btn.stop:hover {
-            box-shadow: 0 6px 20px rgba(255, 23, 68, 0.5);
-        }
-
-        .control-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            transform: none;
-        }
-
-        /* Info Panel */
-        .info-panel {
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-            gap: 20px;
-            min-width: 300px;
-        }
-
-        .info-card {
-            background: rgba(255, 255, 255, 0.95);
-            -webkit-backdrop-filter: blur(10px);
-            backdrop-filter: blur(10px);
-            padding: 24px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-            transition: all 0.3s ease;
-        }
-
-        body.dark-theme .info-card {
-            background: rgba(42, 42, 42, 0.95);
-        }
-
-        .info-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
-        }
-
-        .card-label {
-            font-size: 12px;
-            font-weight: 600;
-            text-transform: uppercase;
-            color: #666;
-            letter-spacing: 1px;
-            margin-bottom: 12px;
-        }
-
-        body.dark-theme .card-label {
-            color: #999;
-        }
-
-        .card-value {
-            font-size: 28px;
-            font-weight: 700;
-            color: #333;
-        }
-
-        body.dark-theme .card-value {
-            color: #e0e0e0;
-        }
-
-        /* Status Indicator */
-        .status-value {
-            display: inline-block;
-            padding: 8px 16px;
-            border-radius: 20px;
-            font-size: 14px;
-            font-weight: 600;
-        }
-
-        .status-value.inactive {
-            background: rgba(158, 158, 158, 0.2);
-            color: #9e9e9e;
-        }
-
-        .status-value.active {
-            background: rgba(0, 200, 83, 0.2);
-            color: #00c853;
-        }
-
-        .status-value.error {
-            background: rgba(255, 23, 68, 0.2);
-            color: #ff1744;
-        }
-
-        /* Action Display */
-        .action-value {
-            font-size: 32px;
-            font-weight: 700;
-            text-align: center;
-            padding: 20px;
-            border-radius: 12px;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            color: white;
-            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-            transition: all 0.3s ease;
-        }
-
-        .action-value.high-confidence {
-            background: linear-gradient(135deg, #00c853 0%, #00e676 100%);
-            box-shadow: 0 4px 15px rgba(0, 200, 83, 0.4);
-        }
-
-        .action-value.medium-confidence {
-            background: linear-gradient(135deg, #ffc107 0%, #ffeb3b 100%);
-            color: #333;
-            box-shadow: 0 4px 15px rgba(255, 193, 7, 0.4);
-        }
-
-        .action-value.low-confidence {
-            background: linear-gradient(135deg, #ff1744 0%, #ff5252 100%);
-            box-shadow: 0 4px 15px rgba(255, 23, 68, 0.4);
-        }
-
-        /* Confidence Display */
-        .confidence-value {
-            font-size: 48px;
-            font-weight: 700;
-            text-align: center;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        /* Error Container */
-        .error-container {
-            background: rgba(255, 23, 68, 0.1);
-            border: 2px solid rgba(255, 23, 68, 0.3);
-            border-radius: 12px;
-            padding: 16px;
-            display: none;
-        }
-
-        .error-container.show {
-            display: block;
-        }
-
-        .error-title {
-            font-weight: 600;
-            color: #ff1744;
-            margin-bottom: 8px;
-        }
-
-        .error-message {
-            color: #666;
-            font-size: 14px;
-        }
-
-        body.dark-theme .error-message {
-            color: #999;
-        }
-
-        /* Instructions Card */
-        .instructions-card {
-            background: rgba(255, 255, 255, 0.95);
-            -webkit-backdrop-filter: blur(10px);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 16px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
-        }
-
-        body.dark-theme .instructions-card {
-            background: rgba(42, 42, 42, 0.95);
-        }
-
-        .instructions-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: #333;
-            margin-bottom: 12px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        body.dark-theme .instructions-title {
-            color: #e0e0e0;
-        }
-
-        .instructions-list {
-            list-style: none;
-            padding: 0;
-        }
-
-        .instructions-list li {
-            padding: 8px 0;
-            color: #666;
-            font-size: 14px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        body.dark-theme .instructions-list li {
-            color: #999;
-        }
-
-        .instructions-list li i {
-            color: #667eea;
-            width: 20px;
-        }
-
-        body.dark-theme .instructions-list li i {
-            color: #8b9bea;
-        }
-
-        /* Responsive Design */
-        @media (max-width: 1024px) {
-            .pose-page-content {
-                flex-direction: column;
-            }
-
-            .info-panel {
-                min-width: auto;
-            }
-        }
-
-        @media (max-width: 768px) {
-            .pose-page-header {
-                padding: 12px 16px;
-            }
-
-            .page-title {
-                font-size: 20px;
-            }
-
-            .pose-page-content {
-                padding: 16px;
-            }
-
-            .control-btn {
-                padding: 12px 24px;
-                font-size: 14px;
-            }
-
-            .action-value {
-                font-size: 24px;
-            }
-
-            .confidence-value {
-                font-size: 36px;
-            }
-        }
-
-        /* Loading Animation */
-        .video-wrapper::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 50px;
-            height: 50px;
-            border: 4px solid rgba(255, 255, 255, 0.2);
-            border-top-color: #667eea;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            z-index: 1;
-            display: none;
-        }
-
-        .video-wrapper.loading::before {
-            display: block;
-        }
-
-        @keyframes spin {
-            to {
-                transform: translate(-50%, -50%) rotate(360deg);
-            }
-        }
-
-        /* All Movements Styling */
-        .movements-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-
-        .movements-list li {
-            padding: 10px 12px;
-            margin-bottom: 8px;
-            background: rgba(102, 126, 234, 0.05);
-            border-left: 3px solid #667eea;
-            border-radius: 6px;
-            color: #333;
-            transition: all 0.2s ease;
-        }
-
-        body.dark-theme .movements-list li {
-            background: rgba(102, 126, 234, 0.1);
-            border-left-color: #8b9bea;
-            color: #e0e0e0;
-        }
-
-        .movements-list li:hover {
-            background: rgba(102, 126, 234, 0.1);
-            transform: translateX(2px);
-        }
-
-        body.dark-theme .movements-list li:hover {
-            background: rgba(102, 126, 234, 0.15);
-        }
-
-        .movements-list li.no-movement-text {
-            background: transparent;
-            border-left: none;
-            color: #999;
-            padding: 8px 0;
-        }
-
-        body.dark-theme .movements-list li.no-movement-text {
-            color: #666;
-        }
-
-        .movement-number {
-            display: inline-block;
-            width: 24px;
-            height: 24px;
-            line-height: 24px;
-            text-align: center;
-            background: #667eea;
-            color: white;
-            border-radius: 50%;
-            font-size: 12px;
-            font-weight: 600;
-            margin-right: 8px;
-            vertical-align: middle;
-        }
-
-        body.dark-theme .movement-number {
-            background: #8b9bea;
-        }
-
-        .movement-text {
-            display: inline-block;
-            vertical-align: middle;
-            font-weight: 500;
-        }
-
-        .movement-confidence {
-            float: right;
-            font-size: 12px;
-            color: #999;
-            font-weight: 600;
-            padding: 2px 8px;
-            background: rgba(0, 0, 0, 0.05);
-            border-radius: 12px;
-        }
-
-        body.dark-theme .movement-confidence {
-            color: #999;
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .movement-confidence.high {
-            color: #00c853;
-            background: rgba(0, 200, 83, 0.1);
-        }
-
-        .movement-confidence.medium {
-            color: #ffc107;
-            background: rgba(255, 193, 7, 0.1);
-        }
-
-        .movement-confidence.low {
-            color: #ff5252;
-            background: rgba(255, 82, 82, 0.1);
-        }
-
-        /* Action History Styling */
-        .action-history-container {
-            flex: 1;
-            overflow-y: auto;
-            overflow-x: hidden;
-            min-height: 0;
-            padding-right: 4px;
-        }
-
-        .action-history-container::-webkit-scrollbar {
-            width: 6px;
-        }
-
-        .action-history-container::-webkit-scrollbar-track {
-            background: rgba(0, 0, 0, 0.05);
-            border-radius: 3px;
-        }
-
-        body.dark-theme .action-history-container::-webkit-scrollbar-track {
-            background: rgba(255, 255, 255, 0.05);
-        }
-
-        .action-history-container::-webkit-scrollbar-thumb {
-            background: rgba(102, 126, 234, 0.3);
-            border-radius: 3px;
-        }
-
-        .action-history-container::-webkit-scrollbar-thumb:hover {
-            background: rgba(102, 126, 234, 0.5);
-        }
-
-        .action-history-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-
-        .action-history-list li {
-            padding: 10px 12px;
-            margin-bottom: 8px;
-            background: rgba(102, 126, 234, 0.05);
-            border-left: 3px solid #667eea;
-            border-radius: 6px;
-            color: #333;
-            font-size: 13px;
-            line-height: 1.5;
-            animation: slideIn 0.3s ease;
-        }
-
-        body.dark-theme .action-history-list li {
-            background: rgba(102, 126, 234, 0.1);
-            border-left-color: #8b9bea;
-            color: #e0e0e0;
-        }
-
-        @keyframes slideIn {
-            from {
-                opacity: 0;
-                transform: translateX(-10px);
-            }
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        .action-history-list li.no-action-text {
-            background: transparent;
-            border-left: none;
-            color: #999;
-            text-align: center;
-            padding: 20px;
-        }
-
-        body.dark-theme .action-history-list li.no-action-text {
-            color: #666;
-        }
-
-        .action-timestamp {
-            display: block;
-            font-size: 11px;
-            color: #999;
-            margin-top: 4px;
-        }
-
-        body.dark-theme .action-timestamp {
-            color: #666;
-        }
-
-        .action-desc {
-            font-weight: 500;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .action-conf-badge {
-            font-size: 11px;
-            padding: 2px 8px;
-            border-radius: 10px;
-            font-weight: 600;
-            margin-left: 8px;
-        }
-
-        .action-conf-badge.high {
-            color: #00c853;
-            background: rgba(0, 200, 83, 0.15);
-        }
-
-        .action-conf-badge.medium {
-            color: #ffc107;
-            background: rgba(255, 193, 7, 0.15);
-        }
-
-        .action-conf-badge.low {
-            color: #ff5252;
-            background: rgba(255, 82, 82, 0.15);
-        }
-
-        .clear-history-btn {
-            background: none;
-            border: none;
-            color: #999;
-            cursor: pointer;
-            padding: 6px 10px;
-            border-radius: 6px;
-            font-size: 14px;
-            transition: all 0.2s;
-        }
-
-        .clear-history-btn:hover {
-            background: rgba(255, 82, 82, 0.1);
-            color: #ff5252;
-        }
-
-        body.dark-theme .clear-history-btn {
-            color: #666;
-        }
-
-        body.dark-theme .clear-history-btn:hover {
-            background: rgba(255, 82, 82, 0.15);
-            color: #ff5252;
-        }
-    </style>
 </head>
-<body>
-    <!-- Header -->
-    <header class="pose-page-header">
-        <div class="header-left">
-            <button class="back-btn" id="backBtn" onclick="window.location.href='/'">
+<body class="vm-video-page">
+    <!-- Decorative animations -->
+    <div class="decorative-stars">
+        <div class="star" style="top: 10%; left: 5%;">⭐</div>
+        <div class="star" style="top: 25%; left: 85%;">✨</div>
+        <div class="star" style="top: 70%; left: 15%;">🌟</div>
+        <div class="star" style="top: 85%; left: 80%;">⭐</div>
+        <div class="cloud" style="top: 15%; left: 10%;">☁️</div>
+        <div class="cloud" style="top: 60%; left: 75%;">☁️</div>
+    </div>
+
+    <!-- Owl Decoration -->
+    <div class="owl-decoration">🦉</div>
+
+    <header class="vm-topbar">
+        <div class="vm-topbar__inner">
+            <button class="btn btn-secondary vm-topbar__back" onclick="window.location.href='/'">
                 <i class="fas fa-arrow-left"></i>
-                <span>返回聊天</span>
+                返回
             </button>
-            <h1 class="page-title">
-                <i class="fas fa-running"></i>
-                姿態分析
-            </h1>
-        </div>
-        <div class="header-right">
-            <button class="theme-toggle" id="themeToggle" title="切換主題">
-                <i class="fas fa-moon"></i>
-            </button>
+            <div class="vm-topbar__title">
+                <span class="vm-topbar__titleText">姿態分析 Pose Detection</span>
+            </div>
+            <div class="vm-topbar__right">
+                <button class="btn btn-secondary" id="themeToggle" title="切換主題">
+                    <i class="fas fa-moon"></i>
+                </button>
+            </div>
         </div>
     </header>
 
@@ -790,29 +63,102 @@
                     <i class="fas fa-stop"></i>
                     停止檢測
                 </button>
+                <button class="control-btn reset" id="resetBtn" style="display: none;">
+                    <i class="fas fa-undo"></i>
+                    重新選擇
+                </button>
+            </div>
+            
+            <!-- Selection Status Indicator -->
+            <div class="selection-status" id="selectionStatus" style="display: none;">
+                <span class="status-icon"><i class="fas fa-crosshairs"></i></span>
+                <span class="status-text" id="selectionStatusText">點擊畫面選擇要追蹤的人</span>
             </div>
         </section>
 
         <!-- Info Panel -->
         <aside class="info-panel">
-            <!-- Status Card -->
-            <div class="info-card">
-                <div class="card-label">狀態</div>
-                <span class="status-value inactive" id="statusValue">未啟動</span>
+            <!-- Current Action Card -->
+            <div class="info-card current-action-card">
+                <div class="card-label">目前動作</div>
+                <span class="status-value inactive" id="currentActionValue">—</span>
             </div>
 
-            <!-- Action History Card -->
-            <div class="info-card" style="flex: 1; display: flex; flex-direction: column; min-height: 0;">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px;">
-                    <div class="card-label" style="margin-bottom: 0;">動作記錄</div>
-                    <button class="clear-history-btn" id="clearHistoryBtn" title="清除記錄">
-                        <i class="fas fa-trash-alt"></i>
-                    </button>
+            <!-- Current Test Action Card -->
+            <div class="info-card current-test-action-card">
+                <div class="card-label">當前測驗動作</div>
+                <div class="current-test-action-content" id="currentTestActionContent">
+                    <div class="test-action-icon" id="testActionIcon">🎯</div>
+                    <div class="test-action-name" id="testActionName">—</div>
+                    <div class="test-action-instruction" id="testActionInstruction">請先開始測驗</div>
                 </div>
-                <div class="action-history-container">
-                    <ul id="actionHistory" class="action-history-list">
-                        <li class="no-action-text">等待檢測...</li>
-                    </ul>
+            </div>
+
+            <!-- Assessment Card (5-action test) -->
+            <div class="info-card assessment-card">
+                <div class="card-label">動作測驗</div>
+
+                <div class="test-row">
+                    <span class="test-label">進度</span>
+                    <span class="test-value" id="testProgressValue">—</span>
+                </div>
+                <div class="test-row">
+                    <span class="test-label">分數</span>
+                    <span class="test-value" id="testScoreValue">0 / 5</span>
+                </div>
+
+                <div class="test-hint" id="testHint">
+                    先點「開始檢測」，再點畫面選擇要追蹤的人，然後開始測驗。
+                </div>
+
+                <div class="test-controls">
+                    <button class="test-btn" id="startTestBtn" disabled>開始測驗</button>
+                    <button class="test-btn secondary" id="skipTestBtn" disabled>跳過</button>
+                    <button class="test-btn secondary" id="resetTestBtn" disabled>重設</button>
+                </div>
+
+                <!-- Detailed evaluation panel (hidden until result available) -->
+                <div class="evaluation-panel" id="evaluationPanel" style="display:none; margin-top:20px;">
+                    <button class="test-btn" id="showReportBtn" style="width:100%; background: linear-gradient(135deg, #6e8efb, #a777e3); color: white; border: none; font-weight: 700; padding:12px; border-radius:12px; cursor:pointer; box-shadow: 0 4px 15px rgba(110, 142, 251, 0.4);">
+                        <i class="fas fa-file-alt"></i> 查看詳細報告
+                    </button>
+                    <button class="test-btn secondary" id="clearEvalBtn" style="margin-top:12px; width:100%; color: #f44336;">
+                        <i class="fas fa-trash-alt"></i> 清除紀錄
+                    </button>
+                    <!-- Hidden summaries used by JS to store data -->
+                    <div id="evaluationSummary" style="display:none;"></div>
+                    <div id="evaluationDetails" style="display:none;"></div>
+                </div>
+            </div>
+
+            <!-- Detection Info Card -->
+            <div class="info-card">
+                <div class="card-label">偵測資訊</div>
+                <div class="info-rows">
+                    <div class="info-row">
+                        <span class="info-key">模式</span>
+                        <span class="info-val" id="detectionModeValue">—</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-key">偵測人數</span>
+                        <span class="info-val" id="detectedPersonCountValue">—</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-key">追蹤對象</span>
+                        <span class="info-val" id="trackedPersonValue">—</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-key">追蹤距離</span>
+                        <span class="info-val" id="trackingDistanceValue">—</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-key">FPS</span>
+                        <span class="info-val" id="fpsValue">—</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-key">處理時間</span>
+                        <span class="info-val" id="frameTimeValue">—</span>
+                    </div>
                 </div>
             </div>
 
@@ -821,393 +167,43 @@
                 <div class="error-title" id="errorTitle">錯誤</div>
                 <div class="error-message" id="errorMessage"></div>
             </div>
-
-            <!-- Instructions -->
-            <div class="instructions-card">
-                <div class="instructions-title">
-                    <i class="fas fa-info-circle"></i>
-                    支援的動作檢測
-                </div>
-                <ul class="instructions-list">
-                    <li><i class="fas fa-head-side-mask"></i> 頭部轉動與傾斜</li>
-                    <li><i class="fas fa-hand-paper"></i> 手臂舉起與移動</li>
-                    <li><i class="fas fa-walking"></i> 腿部抬起與踢腿</li>
-                    <li><i class="fas fa-user"></i> 軀幹旋轉與彎曲</li>
-                    <li><i class="fas fa-cube"></i> 3D 深度可視化</li>
-                </ul>
-            </div>
         </aside>
     </main>
 
-    <!-- Auth check script -->
-    <script>
-        if (!localStorage.getItem('access_token')) {
-            window.location.href = '/login';
-        }
-    </script>
-
     <!-- Socket.IO Client Library -->
     <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    
-    <!-- MediaPipe Pose Library -->
+    <!-- MediaPipe Holistic Library (543 landmarks: 33 pose + 468 face + 21*2 hands) -->
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
     <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/pose/pose.js" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@mediapipe/holistic/holistic.js" crossorigin="anonymous"></script>
+
     
     <!-- 3D Pose detection modules -->
     <script src="{{ url_for('main.serve_pose_detection_js', filename='pose_error_handler.js') }}"></script>
     <script src="{{ url_for('main.serve_pose_detection_js', filename='pose_detector_3d.js') }}"></script>
+    <script src="{{ url_for('main.serve_pose_detection_js', filename='multi_person_detector.js') }}"></script>
+    <script src="{{ url_for('main.serve_pose_detection_js', filename='multi_person_selector.js') }}"></script>
+    <script src="{{ url_for('main.serve_pose_detection_js', filename='action_detector.js') }}"></script>
     <script src="{{ url_for('main.serve_pose_detection_js', filename='movement_analyzers.js') }}"></script>
     <script src="{{ url_for('main.serve_pose_detection_js', filename='movement_detector.js') }}"></script>
     <script src="{{ url_for('main.serve_pose_detection_js', filename='movement_descriptor.js') }}"></script>
     <script src="{{ url_for('main.serve_pose_detection_js', filename='pose_renderer.js') }}"></script>
-    
-    <!-- Page-specific script -->
-    <script>
-        // Theme toggle
-        const themeToggle = document.getElementById('themeToggle');
-        const body = document.body;
-        
-        // Load saved theme
-        const savedTheme = localStorage.getItem('theme') || 'light';
-        if (savedTheme === 'dark') {
-            body.classList.add('dark-theme');
-            themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
-        }
-        
-        themeToggle.addEventListener('click', () => {
-            body.classList.toggle('dark-theme');
-            const isDark = body.classList.contains('dark-theme');
-            themeToggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-            localStorage.setItem('theme', isDark ? 'dark' : 'light');
-        });
 
-        // 3D Pose Detection System
-        let poseDetector3D = null;
-        let movementDetector = null;
-        let movementDescriptor = null;
-        let poseRenderer = null;
-        let videoStream = null;
-        let animationFrameId = null;
-        let isDetecting = false;
+    <!-- Detailed Report Modal Overlay -->
+    <div class="modal-overlay" id="modalOverlay">
+        <div class="modal-content" id="modalContent">
+            <div class="modal-header">
+                <span class="modal-title">📊 評估診斷報告</span>
+                <button class="close-modal" id="closeModalBtn">&times;</button>
+            </div>
+            <div class="modal-body" id="modalBody">
+                <!-- Content will be injected by JS -->
+            </div>
+        </div>
+    </div>
 
-        // Action history tracking
-        let actionHistory = [];
-        let lastDetectedAction = '';
-        let lastDetectedTime = 0;
-        const ACTION_COOLDOWN = 1000; // 1 second cooldown between same actions
-
-        // UI Elements
-        const videoElement = document.getElementById('poseVideo');
-        const canvasElement = document.getElementById('poseCanvas');
-        const startBtn = document.getElementById('startBtn');
-        const stopBtn = document.getElementById('stopBtn');
-        const videoWrapper = document.getElementById('videoWrapper');
-        const statusValue = document.getElementById('statusValue');
-        const actionHistoryEl = document.getElementById('actionHistory');
-        const clearHistoryBtn = document.getElementById('clearHistoryBtn');
-        const errorContainer = document.getElementById('errorContainer');
-
-        // Initialize 3D pose detection system
-        async function initializePoseSystem() {
-            try {
-                console.log('🚀 Initializing 3D pose detection system...');
-                
-                // Initialize PoseDetector3D
-                poseDetector3D = new PoseDetector3D({
-                    modelComplexity: 1,
-                    smoothLandmarks: true,
-                    minDetectionConfidence: 0.5,
-                    minTrackingConfidence: 0.5
-                });
-                await poseDetector3D.initialize();
-                
-                // Initialize MovementDetector
-                movementDetector = new MovementDetector({
-                    movementThreshold: 0.02,
-                    historySize: 5,
-                    confidenceThreshold: 0.5
-                });
-                
-                // Initialize MovementDescriptorGenerator
-                movementDescriptor = new MovementDescriptorGenerator();
-                
-                // Initialize PoseRenderer
-                poseRenderer = new PoseRenderer();
-                
-                console.log('✅ 3D pose detection system initialized');
-                return true;
-            } catch (error) {
-                console.error('❌ Failed to initialize pose system:', error);
-                showError('初始化失敗', error.message || '無法載入姿態檢測模型');
-                return false;
-            }
-        }
-
-        // Start camera and detection
-        async function startDetection() {
-            try {
-                videoWrapper.classList.add('loading');
-                
-                // Initialize system if not already done
-                if (!poseDetector3D) {
-                    const success = await initializePoseSystem();
-                    if (!success) {
-                        throw new Error('Failed to initialize pose detection system');
-                    }
-                }
-                
-                // Request camera access
-                videoStream = await navigator.mediaDevices.getUserMedia({
-                    video: {
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 },
-                        facingMode: 'user'
-                    }
-                });
-                
-                videoElement.srcObject = videoStream;
-                await videoElement.play();
-                
-                // Setup canvas size
-                canvasElement.width = videoElement.videoWidth;
-                canvasElement.height = videoElement.videoHeight;
-                
-                // Start detection loop
-                isDetecting = true;
-                detectLoop();
-                
-                // Update UI
-                startBtn.style.display = 'none';
-                stopBtn.style.display = 'flex';
-                videoWrapper.classList.remove('loading');
-                videoWrapper.classList.add('active');
-                statusValue.textContent = '運行中';
-                statusValue.className = 'status-value active';
-                errorContainer.classList.remove('show');
-                
-                console.log('▶️ Detection started');
-            } catch (error) {
-                console.error('❌ Failed to start detection:', error);
-                videoWrapper.classList.remove('loading');
-                statusValue.textContent = '錯誤';
-                statusValue.className = 'status-value error';
-                
-                if (error.name === 'NotAllowedError') {
-                    showError('攝影機權限被拒絕', '請允許訪問攝影機以使用姿態檢測功能');
-                } else {
-                    showError('啟動失敗', error.message || '無法啟動攝影機');
-                }
-            }
-        }
-
-        // Stop detection
-        function stopDetection() {
-            isDetecting = false;
-            
-            if (animationFrameId) {
-                cancelAnimationFrame(animationFrameId);
-                animationFrameId = null;
-            }
-            
-            if (videoStream) {
-                videoStream.getTracks().forEach(track => track.stop());
-                videoStream = null;
-            }
-            
-            if (videoElement.srcObject) {
-                videoElement.srcObject = null;
-            }
-            
-            // Clear canvas
-            const ctx = canvasElement.getContext('2d');
-            ctx.clearRect(0, 0, canvasElement.width, canvasElement.height);
-            
-            // Update UI
-            startBtn.style.display = 'flex';
-            stopBtn.style.display = 'none';
-            videoWrapper.classList.remove('active');
-            statusValue.textContent = '已停止';
-            statusValue.className = 'status-value inactive';
-            // Don't clear history on stop, just reset detection state
-            lastDetectedAction = '';
-            lastDetectedTime = 0;
-            
-            console.log('⏹️ Detection stopped');
-        }
-
-        // Main detection loop
-        async function detectLoop() {
-            if (!isDetecting) return;
-            
-            try {
-                const startTime = performance.now();
-                
-                // Detect 3D pose
-                const poseResults = await poseDetector3D.detectPose(videoElement);
-                
-                if (poseResults.detected && poseResults.keypoints.length > 0) {
-                    // Detect movements
-                    const movements = movementDetector.detectMovements(poseResults.keypoints);
-                    
-                    // Generate descriptors
-                    const descriptors = movements.map(m => 
-                        movementDescriptor.generateDescriptor(
-                            m.bodyPart,
-                            m.movementType,
-                            m.delta,
-                            m.confidence
-                        )
-                    );
-                    
-                    // Prioritize movements
-                    const prioritized = movementDescriptor.prioritizeMovements(movements, 5);
-                    
-                    // Render 3D visualization
-                    poseRenderer.render(poseResults, canvasElement);
-                    
-                    // Update UI
-                    updateMovementDisplay(prioritized, descriptors);
-                } else {
-                    // No pose detected, clear movement display
-                    primaryMovementEl.textContent = '無檢測到人物';
-                    primaryMovementEl.className = 'action-value low-confidence';
-                    confidenceValueEl.textContent = '0%';
-                    allMovementsEl.innerHTML = '<div style="color: #999;">無檢測到人物</div>';
-                }
-                
-                const processingTime = performance.now() - startTime;
-                console.debug(`⏱️ Frame processed in ${processingTime.toFixed(1)}ms`);
-                
-            } catch (error) {
-                console.error('❌ Error in detection loop:', error);
-            }
-            
-            // Continue loop
-            animationFrameId = requestAnimationFrame(detectLoop);
-        }
-
-        // Add action to history log
-        function addActionToHistory(movement) {
-            const descriptor = movementDescriptor.generateDescriptor(
-                movement.bodyPart,
-                movement.movementType,
-                movement.delta,
-                movement.confidence
-            );
-            
-            const currentTime = Date.now();
-            
-            // Prevent duplicate actions within cooldown period
-            if (descriptor === lastDetectedAction && 
-                (currentTime - lastDetectedTime) < ACTION_COOLDOWN) {
-                return;
-            }
-            
-            lastDetectedAction = descriptor;
-            lastDetectedTime = currentTime;
-            
-            // Create timestamp
-            const timestamp = new Date().toLocaleTimeString('zh-TW', {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit'
-            });
-            
-            // Determine confidence class
-            let confClass = 'low';
-            if (movement.confidence >= 0.7) confClass = 'high';
-            else if (movement.confidence >= 0.5) confClass = 'medium';
-            
-            const conf = Math.round(movement.confidence * 100);
-            
-            // Add to history array
-            const actionItem = {
-                descriptor,
-                confidence: conf,
-                confClass,
-                timestamp,
-                time: currentTime
-            };
-            
-            actionHistory.unshift(actionItem); // Add to beginning
-            
-            // Limit history to 100 items
-            if (actionHistory.length > 100) {
-                actionHistory.pop();
-            }
-            
-            // Update display
-            updateActionHistoryDisplay();
-        }
-        
-        // Update action history display
-        function updateActionHistoryDisplay() {
-            if (actionHistory.length === 0) {
-                actionHistoryEl.innerHTML = '<li class="no-action-text">等待檢測...</li>';
-                return;
-            }
-            
-            const historyHTML = actionHistory.map(item => `
-                <li>
-                    <div class="action-desc">
-                        <span>${item.descriptor}</span>
-                        <span class="action-conf-badge ${item.confClass}">${item.confidence}%</span>
-                    </div>
-                    <span class="action-timestamp">${item.timestamp}</span>
-                </li>
-            `).join('');
-            
-            actionHistoryEl.innerHTML = historyHTML;
-        }
-        
-        // Clear action history
-        function clearActionHistory() {
-            actionHistory = [];
-            lastDetectedAction = '';
-            lastDetectedTime = 0;
-            updateActionHistoryDisplay();
-        }
-        
-        // Update movement display (detect and log movements)
-        function updateMovementDisplay(movements, descriptors) {
-            if (movements.length === 0) {
-                return;
-            }
-            
-            // Add primary movement to history
-            const primaryMovement = movements[0];
-            addActionToHistory(primaryMovement);
-        }
-
-        // Show error
-        function showError(title, message) {
-            const errorTitle = document.getElementById('errorTitle');
-            const errorMessage = document.getElementById('errorMessage');
-            
-            if (errorTitle) errorTitle.textContent = title;
-            if (errorMessage) errorMessage.textContent = message;
-            errorContainer.classList.add('show');
-        }
-
-        // Event listeners
-        startBtn.addEventListener('click', startDetection);
-        stopBtn.addEventListener('click', stopDetection);
-        clearHistoryBtn.addEventListener('click', clearActionHistory);
-
-        // Cleanup on page unload
-        window.addEventListener('beforeunload', () => {
-            stopDetection();
-            if (poseDetector3D) {
-                poseDetector3D.close();
-            }
-            if (movementDetector) {
-                movementDetector.clearHistory();
-            }
-        });
-
-        console.log('✅ 3D pose detection page loaded');
-    </script>
+    <!-- Page-specific script (extracted) -->
+    <script src="{{ url_for('static', filename='js/pose_detection.js') }}"></script>
 </body>
 </html>

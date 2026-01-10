@@ -1,227 +1,257 @@
 /**
- * Movement Descriptor Generator Module
+ * 動作描述產生模組 (Movement Descriptor)
  * 
- * This module converts detected movements into natural language descriptions
- * and prioritizes significant movements for display.
- * 
- * Requirements: 3.1, 3.2, 3.3, 3.4, 3.5
+ * 此模組將偵測到的固定動作轉換為顯示格式。
+ * 支援多語言（中文/英文）和自訂顯示選項。
  */
 
 class MovementDescriptorGenerator {
     /**
-     * Generate natural language description of movement
-     * 
-     * Creates a human-readable descriptor from movement data.
-     * 
-     * @param {string} bodyPart - Body part identifier (e.g., 'right_hand', 'head')
-     * @param {string} movementType - Movement classification (e.g., 'raising', 'turning')
-     * @param {Object} delta - 3D movement vector with x, y, z
-     * @param {number} confidence - Detection confidence (0.0-1.0)
-     * @returns {string} Natural language descriptor
+     * 初始化
+     * @param {Object} config - 設定物件
      */
-    generateDescriptor(bodyPart, movementType, delta, confidence) {
-        if (!bodyPart || !movementType) {
-            return '';
-        }
-
-        // Format body part name (replace underscores with spaces)
-        const formattedBodyPart = bodyPart.replace(/_/g, ' ');
-
-        // Determine direction based on delta
-        let direction = '';
-        if (delta) {
-            if (Math.abs(delta.y) > Math.abs(delta.x) && Math.abs(delta.y) > Math.abs(delta.z)) {
-                direction = delta.y > 0 ? 'down' : 'up';
-            } else if (Math.abs(delta.x) > Math.abs(delta.z)) {
-                direction = delta.x > 0 ? 'right' : 'left';
-            } else if (Math.abs(delta.z) > 0) {
-                direction = delta.z > 0 ? 'backward' : 'forward';
-            }
-        }
-
-        // Build descriptor
-        let descriptor = '';
-
-        switch (movementType) {
-            case 'raising':
-                descriptor = `raising ${formattedBodyPart}`;
-                break;
-            case 'lowering':
-                descriptor = `lowering ${formattedBodyPart}`;
-                break;
-            case 'turning':
-                descriptor = direction ? `turning ${formattedBodyPart} ${direction}` : `turning ${formattedBodyPart}`;
-                break;
-            case 'tilting':
-                descriptor = direction ? `tilting ${formattedBodyPart} ${direction}` : `tilting ${formattedBodyPart}`;
-                break;
-            case 'tilting_side':
-                descriptor = direction ? `tilting ${formattedBodyPart} to ${direction}` : `tilting ${formattedBodyPart}`;
-                break;
-            case 'extending':
-                descriptor = direction ? `extending ${formattedBodyPart} ${direction}` : `extending ${formattedBodyPart}`;
-                break;
-            case 'moving_side':
-                descriptor = `moving ${formattedBodyPart} to the side`;
-                break;
-            case 'bending':
-                descriptor = `bending ${formattedBodyPart}`;
-                break;
-            case 'lifting':
-                descriptor = `lifting ${formattedBodyPart}`;
-                break;
-            case 'kicking':
-                descriptor = direction ? `kicking ${formattedBodyPart} ${direction}` : `kicking ${formattedBodyPart}`;
-                break;
-            case 'rotating':
-                descriptor = direction ? `rotating ${formattedBodyPart} ${direction}` : `rotating ${formattedBodyPart}`;
-                break;
-            case 'leaning':
-                descriptor = direction ? `leaning ${direction}` : `leaning`;
-                break;
-            default:
-                descriptor = `${movementType} ${formattedBodyPart}`;
-        }
-
-        return descriptor;
-    }
-
-    /**
-     * Prioritize movements for display
-     * 
-     * Selects the most significant movements based on magnitude, confidence,
-     * and body part importance.
-     * 
-     * @param {Array<Object>} movements - Array of detected movements
-     * @param {number} maxMovements - Maximum number of movements to return. Default: 3
-     * @returns {Array<Object>} Sorted array of top movements
-     */
-    prioritizeMovements(movements, maxMovements = 3) {
-        if (!movements || movements.length === 0) {
-            return [];
-        }
-
-        // Define body part importance weights
-        const bodyPartWeights = {
-            'head': 1.2,
-            'torso': 1.1,
-            'right_arm': 1.0,
-            'left_arm': 1.0,
-            'right_hand': 1.0,
-            'left_hand': 1.0,
-            'right_leg': 0.9,
-            'left_leg': 0.9,
-            'right_foot': 0.9,
-            'left_foot': 0.9,
-            'right_elbow': 0.8,
-            'left_elbow': 0.8,
-            'right_knee': 0.8,
-            'left_knee': 0.8
+    constructor(config = {}) {
+        this.config = {
+            language: config.language || 'zh',
+            showIcon: config.showIcon !== false
         };
 
-        // Calculate priority score for each movement
-        const scoredMovements = movements.map(movement => {
-            const bodyPartWeight = bodyPartWeights[movement.bodyPart] || 1.0;
-            const magnitudeScore = movement.magnitude || 0;
-            const confidenceScore = movement.confidence || 0;
+        // 類別名稱
+        this.categoryNames = {
+            'arm': { en: 'Arms', zh: '手臂' },
+            'leg': { en: 'Legs', zh: '腿部' },
+            'torso': { en: 'Body', zh: '身體' },
+            'head': { en: 'Head', zh: '頭部' },
+            'combo': { en: 'Combo', zh: '組合' }
+        };
 
-            // Priority = magnitude * confidence * body part weight
-            const priorityScore = magnitudeScore * confidenceScore * bodyPartWeight;
-
-            return {
-                ...movement,
-                priorityScore: priorityScore
-            };
-        });
-
-        // Sort by priority score (descending)
-        scoredMovements.sort((a, b) => b.priorityScore - a.priorityScore);
-
-        // Return top N movements
-        return scoredMovements.slice(0, maxMovements);
+        // 類別顏色
+        this.categoryColors = {
+            'arm': '#4CAF50',
+            'leg': '#2196F3',
+            'torso': '#FF9800',
+            'head': '#9C27B0',
+            'combo': '#E91E63'
+        };
     }
 
     /**
-     * Format movements for display
-     * 
-     * Converts movement objects to display-ready format with descriptors.
-     * 
-     * @param {Array<Object>} movements - Array of movements
-     * @returns {Array<Object>} Formatted movements with descriptors
+     * 設定語言
      */
-    formatMovements(movements) {
-        if (!movements || movements.length === 0) {
+    setLanguage(language) {
+        this.config.language = language;
+    }
+
+    /**
+     * 格式化固定動作
+     * 
+     * 將 ActionDetector 偵測到的動作格式化為顯示用格式
+     * 
+     * @param {Array<Object>} actions - ActionDetector 回傳的動作陣列
+     * @returns {Array<Object>} 格式化後的動作
+     */
+    formatActions(actions) {
+        if (!actions || actions.length === 0) {
             return [];
         }
 
-        return movements.map(movement => {
-            // Generate descriptor if not already present
-            if (!movement.descriptor) {
-                movement.descriptor = this.generateDescriptor(
-                    movement.bodyPart,
-                    movement.movementType,
-                    movement.delta,
-                    movement.confidence
-                );
-            }
+        return actions.map(action => {
+            const name = this.config.language === 'zh' ? action.nameZh : action.name;
+            const iconPrefix = this.config.showIcon ? `${action.icon} ` : '';
 
             return {
-                bodyPart: movement.bodyPart,
-                movementType: movement.movementType,
-                descriptor: movement.descriptor,
-                confidence: movement.confidence,
-                magnitude: movement.magnitude,
-                timestamp: movement.timestamp
+                id: action.id,
+                name: action.name,
+                nameZh: action.nameZh,
+                category: action.category,
+                categoryName: this.getCategoryName(action.category),
+                categoryColor: this.getCategoryColor(action.category),
+                icon: action.icon,
+                descriptor: `${iconPrefix}${name}`,
+                confidence: action.confidence,
+                confidencePercent: Math.round(action.confidence * 100),
+                timestamp: action.timestamp
             };
         });
     }
 
     /**
-     * Get primary movement
-     * 
-     * Returns the single most significant movement from a list.
-     * 
-     * @param {Array<Object>} movements - Array of movements
-     * @returns {Object|null} Primary movement or null if no movements
+     * 取得類別名稱
      */
-    getPrimaryMovement(movements) {
-        if (!movements || movements.length === 0) {
-            return null;
+    getCategoryName(category) {
+        const names = this.categoryNames[category];
+        if (names) {
+            return this.config.language === 'zh' ? names.zh : names.en;
         }
-
-        const prioritized = this.prioritizeMovements(movements, 1);
-        return prioritized.length > 0 ? prioritized[0] : null;
+        return category;
     }
 
     /**
-     * Generate summary text
-     * 
-     * Creates a summary string of all detected movements.
-     * 
-     * @param {Array<Object>} movements - Array of movements
-     * @param {number} maxMovements - Maximum movements to include. Default: 3
-     * @returns {string} Summary text
+     * 取得類別顏色
      */
-    generateSummary(movements, maxMovements = 3) {
-        if (!movements || movements.length === 0) {
-            return 'No movement detected';
+    getCategoryColor(category) {
+        return this.categoryColors[category] || '#667eea';
+    }
+
+    /**
+     * 生成動作摘要
+     * 
+     * @param {Array<Object>} actions - 偵測到的動作
+     * @param {number} maxActions - 最大動作數
+     * @returns {string} 摘要文字
+     */
+    generateSummary(actions, maxActions = 3) {
+        if (!actions || actions.length === 0) {
+            return this.config.language === 'zh' ? '未偵測到動作' : 'No action detected';
         }
 
-        const prioritized = this.prioritizeMovements(movements, maxMovements);
-        const descriptors = prioritized.map(m => m.descriptor || '');
+        const topActions = actions.slice(0, maxActions);
+        const names = topActions.map(a => {
+            const name = this.config.language === 'zh' ? a.nameZh : a.name;
+            return this.config.showIcon ? `${a.icon} ${name}` : name;
+        });
 
-        if (descriptors.length === 0) {
-            return 'No movement detected';
-        } else if (descriptors.length === 1) {
-            return descriptors[0];
-        } else if (descriptors.length === 2) {
-            return `${descriptors[0]} and ${descriptors[1]}`;
+        if (names.length === 1) {
+            return names[0];
+        } else if (names.length === 2) {
+            const connector = this.config.language === 'zh' ? ' 和 ' : ' and ';
+            return `${names[0]}${connector}${names[1]}`;
         } else {
-            const last = descriptors.pop();
-            return `${descriptors.join(', ')}, and ${last}`;
+            const last = names.pop();
+            const connector = this.config.language === 'zh' ? '，和 ' : ', and ';
+            return `${names.join(', ')}${connector}${last}`;
         }
+    }
+
+    /**
+     * 取得主要動作
+     * 
+     * @param {Array<Object>} actions - 動作陣列
+     * @returns {Object|null} 主要動作或 null
+     */
+    getPrimaryAction(actions) {
+        if (!actions || actions.length === 0) {
+            return null;
+        }
+        return actions[0]; // Actions are already sorted by confidence
+    }
+
+    /**
+     * 依類別分組動作
+     * 
+     * @param {Array<Object>} actions - 動作陣列
+     * @returns {Object} 依類別分組的動作
+     */
+    groupActionsByCategory(actions) {
+        const grouped = {
+            arm: [],
+            leg: [],
+            torso: [],
+            head: [],
+            combo: []
+        };
+
+        actions.forEach(action => {
+            if (grouped[action.category]) {
+                grouped[action.category].push(action);
+            }
+        });
+
+        return grouped;
+    }
+
+    /**
+     * 生成 HTML 顯示
+     * 
+     * @param {Array<Object>} actions - 動作陣列
+     * @param {Object} options - 顯示選項
+     * @returns {string} HTML 字串
+     */
+    generateHTML(actions, options = {}) {
+        const {
+            showConfidence = true,
+            showIcon = true,
+            showCategory = true,
+            maxActions = 5
+        } = options;
+
+        if (!actions || actions.length === 0) {
+            const noAction = this.config.language === 'zh' ? '未偵測到動作' : 'No action detected';
+            return `<div class="no-action">${noAction}</div>`;
+        }
+
+        const displayActions = actions.slice(0, maxActions);
+        
+        return displayActions.map(action => {
+            const name = this.config.language === 'zh' ? action.nameZh : action.name;
+            const confidence = Math.round(action.confidence * 100);
+            const categoryColor = this.getCategoryColor(action.category);
+            const categoryName = this.getCategoryName(action.category);
+            
+            return `
+                <div class="action-item" data-category="${action.category}" style="border-left: 3px solid ${categoryColor};">
+                    ${showIcon ? `<span class="action-icon">${action.icon}</span>` : ''}
+                    <span class="action-name">${name}</span>
+                    ${showCategory ? `<span class="action-category" style="color: ${categoryColor};">${categoryName}</span>` : ''}
+                    ${showConfidence ? `<span class="action-confidence">${confidence}%</span>` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+
+    /**
+     * 計算動作統計
+     * 
+     * @param {Array<Object>} actions - 動作陣列
+     * @returns {Object} 統計資料
+     */
+    calculateStats(actions) {
+        const stats = {
+            total: actions.length,
+            byCategory: {
+                arm: 0,
+                leg: 0,
+                torso: 0,
+                head: 0,
+                combo: 0
+            },
+            averageConfidence: 0,
+            highConfidenceCount: 0
+        };
+
+        if (actions.length === 0) {
+            return stats;
+        }
+
+        let totalConfidence = 0;
+
+        actions.forEach(action => {
+            // 按類別統計
+            if (stats.byCategory.hasOwnProperty(action.category)) {
+                stats.byCategory[action.category]++;
+            }
+
+            // 信心度統計
+            totalConfidence += action.confidence;
+            if (action.confidence >= 0.8) {
+                stats.highConfidenceCount++;
+            }
+        });
+
+        stats.averageConfidence = totalConfidence / actions.length;
+
+        return stats;
+    }
+
+    /**
+     * 取得信心度等級
+     */
+    getConfidenceLevel(confidence) {
+        if (confidence >= 0.8) return { level: 'high', color: '#4CAF50' };
+        if (confidence >= 0.6) return { level: 'medium', color: '#FFC107' };
+        return { level: 'low', color: '#FF5722' };
     }
 }
 
-// Export for use in other modules
+// 匯出供其他模組使用
 window.MovementDescriptorGenerator = MovementDescriptorGenerator;

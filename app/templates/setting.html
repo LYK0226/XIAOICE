@@ -106,16 +106,16 @@
                         <label data-i18n="settings.personalization.language">界面語言</label>
                         <div class="language-grid">
                             <div class="lang-option active" data-lang="zh-TW">
-                                <i class="fas fa-circle"></i>
-                                <span>繁體中文</span>
+                                <i class="fas fa-font"></i>
+                                <span data-i18n="settings.personalization.language.zh-TW">繁體中文</span>
                             </div>
                             <div class="lang-option" data-lang="en">
-                                <i class="fas fa-check-circle"></i>
-                                <span>English</span>
+                                <i class="fas fa-language"></i>
+                                <span data-i18n="settings.personalization.language.en">English</span>
                             </div>
                             <div class="lang-option" data-lang="ja">
-                                <i class="fas fa-circle"></i>
-                                <span>日本語</span>
+                                <i class="fas fa-comment-dots"></i>
+                                <span data-i18n="settings.personalization.language.ja">日本語</span>
                             </div>
                         </div>
                     </div>
@@ -161,31 +161,31 @@
 
 <!-- Custom Alert Modal -->
 <div id="customAlertModal" class="modal">
-    <div class="modal-content" style="max-width: 450px;">
-        <p id="customAlertMessage" style="margin: 20px 0; text-align: center;"></p>
-        <button id="customAlertCloseBtn" class="sidebar-btn" style="width: 50%; margin: 0 auto; text-align: center; display: block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold;" data-i18n="alert.confirm">确定</button>
+    <div class="modal-content custom-modal-mini">
+        <p id="customAlertMessage" class="custom-modal-message"></p>
+        <button id="customAlertCloseBtn" class="custom-modal-btn primary" data-i18n="alert.confirm">确定</button>
     </div>
 </div>
 
 <!-- Custom Confirm Modal -->
 <div id="customConfirmModal" class="modal">
-    <div class="modal-content" style="max-width: 450px;">
-        <p id="customConfirmMessage" style="margin: 20px 0; text-align: center;"></p>
-        <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="customConfirmOkBtn" class="sidebar-btn" style="flex: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold;" data-i18n="alert.confirm">确定</button>
-            <button id="customConfirmCancelBtn" class="sidebar-btn" style="flex: 1; background: #6c757d; color: white;" data-i18n="alert.cancel">取消</button>
+    <div class="modal-content custom-modal-mini">
+        <p id="customConfirmMessage" class="custom-modal-message"></p>
+        <div class="custom-modal-actions">
+            <button id="customConfirmOkBtn" class="custom-modal-btn primary" data-i18n="alert.confirm">确定</button>
+            <button id="customConfirmCancelBtn" class="custom-modal-btn secondary" data-i18n="alert.cancel">取消</button>
         </div>
     </div>
 </div>
 
 <!-- Custom Prompt Modal -->
 <div id="customPromptModal" class="modal">
-    <div class="modal-content" style="max-width: 450px;">
-        <p id="customPromptMessage" style="margin: 20px 0; text-align: center;"></p>
-        <input type="text" id="customPromptInput" style="width: 100%; padding: 10px; margin-bottom: 20px; border: 1px solid #ddd; border-radius: 4px;">
-        <div style="display: flex; gap: 10px; justify-content: center;">
-            <button id="customPromptOkBtn" class="sidebar-btn" style="flex: 1; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; font-weight: bold;" data-i18n="alert.confirm">确定</button>
-            <button id="customPromptCancelBtn" class="sidebar-btn" style="flex: 1; background: #6c757d; color: white;" data-i18n="alert.cancel">取消</button>
+    <div class="modal-content custom-modal-mini">
+        <p id="customPromptMessage" class="custom-modal-message"></p>
+        <input type="text" id="customPromptInput" class="custom-modal-input">
+        <div class="custom-modal-actions">
+            <button id="customPromptOkBtn" class="custom-modal-btn primary" data-i18n="alert.confirm">确定</button>
+            <button id="customPromptCancelBtn" class="custom-modal-btn secondary" data-i18n="alert.cancel">取消</button>
         </div>
     </div>
 </div>
@@ -202,25 +202,23 @@
 
 <!-- API Key Modal -->
 <div id="apiKeyModal" class="modal">
-    <div class="modal-content" style="max-width: 500px;">
-        
+    <div class="modal-content custom-modal-mini">
+        <h2 data-i18n="api_key_modal.title">添加 API 金鑰</h2>
         <div class="api-key-form">
             <div class="form-group">
-                <label for="apiKeyName" data-i18n="api_key_modal.name_label">金鑰名稱</label>
-                <input type="text" id="apiKeyName" placeholder="例如：我的 Google API" required>
+                <input type="text" id="apiKeyName" class="custom-modal-input" placeholder="金鑰名稱 (例如：My Gemini Key)" required>
             </div>
             
             <div class="form-group">
-                <label for="apiKeyValue" data-i18n="api_key_modal.key_label">API 金鑰</label>
-                <input type="password" id="apiKeyValue" placeholder="輸入您的 Google AI API 金鑰" required>
-                <small class="form-hint" data-i18n="api_key_modal.hint">您的 API 金鑰將被加密存儲</small>
+                <input type="password" id="apiKeyValue" class="custom-modal-input" placeholder="輸入您的 Google AI API 金鑰" required>
+                <small class="form-hint" style="display: block; text-align: center; margin-bottom: 20px; color: #8B7AA8; font-weight: 600;" data-i18n="api_key_modal.hint">您的 API 金鑰將被加密存儲</small>
             </div>
             
-            <div class="form-actions">
-                <button id="saveApiKeyBtn" class="sidebar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+            <div class="custom-modal-actions">
+                <button id="saveApiKeyBtn" class="custom-modal-btn primary">
                     <i class="fas fa-save"></i> <span data-i18n="api_key_modal.save">保存</span>
                 </button>
-                <button id="cancelApiKeyBtn" class="sidebar-btn" style="background: #6c757d;">
+                <button id="cancelApiKeyBtn" class="custom-modal-btn secondary">
                     <i class="fas fa-times"></i> <span data-i18n="api_key_modal.cancel">取消</span>
                 </button>
             </div>
@@ -230,17 +228,16 @@
 
 <!-- Edit Username Modal -->
 <div id="editUsernameModal" class="modal">
-    <div class="modal-content" style="max-width: 450px;">
-        <h3 style="margin-bottom: 20px; text-align: center;" data-i18n="settings.profile.edit_username">編輯用戶名稱</h3>
+    <div class="modal-content custom-modal-mini">
+        <h2 data-i18n="settings.profile.edit_username">編輯用戶名稱</h2>
         <div class="form-group">
-            <label for="editUsernameInput" data-i18n="settings.profile.username">用戶名稱</label>
-            <input type="text" id="editUsernameInput" placeholder="輸入新的用戶名稱" required>
+            <input type="text" id="editUsernameInput" class="custom-modal-input" placeholder="輸入新的用戶名稱" required>
         </div>
-        <div class="form-actions">
-            <button id="saveUsernameBtn" class="sidebar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div class="custom-modal-actions">
+            <button id="saveUsernameBtn" class="custom-modal-btn primary">
                 <i class="fas fa-save"></i> <span data-i18n="settings.profile.save">保存</span>
             </button>
-            <button id="cancelUsernameBtn" class="sidebar-btn" style="background: #6c757d;">
+            <button id="cancelUsernameBtn" class="custom-modal-btn secondary">
                 <i class="fas fa-times"></i> <span data-i18n="settings.profile.cancel">取消</span>
             </button>
         </div>
@@ -249,17 +246,16 @@
 
 <!-- Edit Email Modal -->
 <div id="editEmailModal" class="modal">
-    <div class="modal-content" style="max-width: 450px;">
-        <h3 style="margin-bottom: 20px; text-align: center;" data-i18n="settings.profile.edit_email">編輯電子郵件</h3>
+    <div class="modal-content custom-modal-mini">
+        <h2 data-i18n="settings.profile.edit_email">編輯電子郵件</h2>
         <div class="form-group">
-            <label for="editEmailInput" data-i18n="settings.profile.email">電子郵件</label>
-            <input type="email" id="editEmailInput" placeholder="輸入新的電子郵件地址" required>
+            <input type="email" id="editEmailInput" class="custom-modal-input" placeholder="輸入新的電子郵件地址" required>
         </div>
-        <div class="form-actions">
-            <button id="saveEmailBtn" class="sidebar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div class="custom-modal-actions">
+            <button id="saveEmailBtn" class="custom-modal-btn primary">
                 <i class="fas fa-save"></i> <span data-i18n="settings.profile.save">保存</span>
             </button>
-            <button id="cancelEmailBtn" class="sidebar-btn" style="background: #6c757d;">
+            <button id="cancelEmailBtn" class="custom-modal-btn secondary">
                 <i class="fas fa-times"></i> <span data-i18n="settings.profile.cancel">取消</span>
             </button>
         </div>
@@ -268,25 +264,18 @@
 
 <!-- Change Password Modal -->
 <div id="changePasswordModal" class="modal">
-    <div class="modal-content" style="max-width: 450px;">
-        <h3 style="margin-bottom: 20px; text-align: center;" data-i18n="settings.profile.change_password">變更密碼</h3>
+    <div class="modal-content custom-modal-mini">
+        <h2 data-i18n="settings.profile.change_password">變更密碼</h2>
         <div class="form-group">
-            <label for="oldPasswordInput" data-i18n="settings.profile.old_password">舊密碼</label>
-            <input type="password" id="oldPasswordInput" placeholder="輸入舊密碼" required>
+            <input type="password" id="oldPasswordInput" class="custom-modal-input" placeholder="輸入舊密碼" required>
+            <input type="password" id="newPasswordInput" class="custom-modal-input" placeholder="輸入新密碼" required>
+            <input type="password" id="confirmPasswordInput" class="custom-modal-input" placeholder="再次輸入新密碼" required>
         </div>
-        <div class="form-group">
-            <label for="newPasswordInput" data-i18n="settings.profile.new_password">新密碼</label>
-            <input type="password" id="newPasswordInput" placeholder="輸入新密碼" required>
-        </div>
-        <div class="form-group">
-            <label for="confirmPasswordInput" data-i18n="settings.profile.confirm_password">確認新密碼</label>
-            <input type="password" id="confirmPasswordInput" placeholder="再次輸入新密碼" required>
-        </div>
-        <div class="form-actions">
-            <button id="savePasswordBtn" class="sidebar-btn" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white;">
+        <div class="custom-modal-actions">
+            <button id="savePasswordBtn" class="custom-modal-btn primary">
                 <i class="fas fa-save"></i> <span data-i18n="settings.profile.save">保存</span>
             </button>
-            <button id="cancelPasswordBtn" class="sidebar-btn" style="background: #6c757d;">
+            <button id="cancelPasswordBtn" class="custom-modal-btn secondary">
                 <i class="fas fa-times"></i> <span data-i18n="settings.profile.cancel">取消</span>
             </button>
         </div>

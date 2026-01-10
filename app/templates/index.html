@@ -3,129 +3,162 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聊天盒子 - Chatbox</title>
-    <!-- Main chat interface styles -->
-    <link rel="stylesheet" href="../static/css/chatbox.css">
-    <!-- Sidebar styles -->
-    <link rel="stylesheet" href="../static/css/sidebar.css">
-    <!-- Settings modal styles -->
-    <link rel="stylesheet" href="../static/css/settings.css">
-
+    <title>聊天盒子</title>
+    <!-- Assessment styles -->
+     <link rel="stylesheet" href="../static/css/index.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
-    <div id="sidebar">
-        <div class="sidebar-header">
-            <button type="button" class="sidebar-toggle" id="sidebarToggle" title="Toggle sidebar"><i class="fas fa-bars"></i></button>
-            <i class="fas fa-comment"></i>
-            <h2>聊天盒子</h2>
-        </div>
-        
-        <div class="sidebar-section">
-            <h3>聊天</h3>
-            <ul class="chat-list">
-                <li class="empty-state">載入中...</li>
-            </ul>
-        </div>
-        
-        <div class="sidebar-footer">
-            <button type="button" class="sidebar-btn" id="newChat"><i class="fas fa-plus"></i> 新對話</button>
-            <button type="button" class="sidebar-btn" id="settings"><i class="fas fa-cog"></i> 設定</button>
-            <button type="button" class="sidebar-btn" id="logout"><i class="fas fa-sign-out-alt"></i> 登出</button>
+    <div id="messages" aria-live="polite"></div>
+    
+    <!-- Assessment Container (默認顯示) -->
+    <div id="assessment-container" style="display: flex;">
+        <!-- 左側邊欄 (已移除) -->
+
+        <!-- 主內容區域 -->
+        <div class="assessment-content-area" style="width: 100%;">
+            <!-- 貓頭鷹裝飾 -->
+            <div class="owl-decoration">🦉</div>
+            
+            <!-- Assessment Main -->
+            <div class="assessment-main" id="assessmentMain">
+                <!-- Start Screen -->
+                <div id="startScreen">
+                    <div class="new-start-card">
+                        <h1 class="new-card-title">開始新的評估</h1>
+                        
+                        <div class="new-upload-options">
+                            <!-- Start Assessment (was Upload PDF) -->
+                            <div class="new-upload-item" onclick="showEvaluationModal()">
+                                <div class="new-upload-icon">
+                                    <i class="fas fa-clipboard-list"></i>
+                                </div>
+                                <div class="new-upload-label">開始評估</div>
+                            </div>
+
+                            <!-- Upload Video -->
+                            <div class="new-upload-item" onclick="window.location.href='/video'">
+                                <div class="new-upload-icon">
+                                    <i class="fas fa-video"></i>
+                                </div>
+                                <div class="new-upload-label">
+                                    上傳影片<br>
+                                    <small>（用於動作評估）</small>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- 底部按鈕 -->
+                        <div class="bottom-buttons">
+                            <button class="bottom-btn primary" onclick="window.location.href='/pose_detection'">
+                                <i class="fas fa-running"></i> 姿勢檢測評估
+                            </button>
+                            <button class="bottom-btn primary" onclick="window.location.href='/chatbox'">
+                                <i class="fas fa-comments"></i> 進入聊天室
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Begin Evaluation Modal -->
+                <div id="evaluationModal" class="evaluation-modal">
+                    <div class="modal-content-evaluation">
+                        <h2 class="modal-title">開始評估</h2>
+                        
+                        <div class="modal-form">
+                            <label class="modal-label">選擇評估類型</label>
+                            <select class="modal-input" id="assessmentType" onchange="updateAssessmentInfo()">
+                                <option value="">選擇評估…</option>
+                            </select>
+                            
+                            <div id="assessmentInfoBox" class="assessment-info-box" style="display: none;">
+                                <div class="info-row">
+                                    <span class="info-icon" id="assessmentIcon">👶</span>
+                                    <div class="info-text">
+                                        <div class="info-title" id="assessmentTitle"></div>
+                                        <div class="info-desc" id="assessmentDesc"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <label class="modal-label">兒童姓名</label>
+                            <input type="text" class="modal-input" id="childName" placeholder="輸入兒童姓名">
+                            
+                            <label class="modal-label">兒童年齡（月數）</label>
+                            <input type="number" class="modal-input" id="childAge" placeholder="例如：24" min="0" max="84">
+                            
+                            <button class="modal-btn primary" onclick="startEvaluation()">
+                                <i class="fas fa-play"></i> 開始評估
+                            </button>
+                        </div>
+                        
+                        <button class="modal-close-btn" onclick="hideEvaluationModal()">×</button>
+                        <div class="modal-pointer"></div>
+                    </div>
+                </div>
+
+                <!-- Assessment Screen (評估進行中) -->
+                <div id="assessmentScreen" style="display: none;">
+                    <div class="assessment-screen">
+                        <div class="progress-bar">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+                        
+                        <div id="assessmentContent"></div>
+                        
+                        <div class="control-buttons">
+                            <button class="btn-secondary" onclick="backToAssessmentList()">
+                                ← 返回評估列表
+                            </button>
+                            <button class="btn-primary-submit" id="submitBtn" style="display: none;" onclick="submitAssessment()">
+                                ✓ 提交評估
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
-    
-    <div id="main-content">
-        <div id="chat-container">
-            <div id="chat-header">
-                <div class="chat-title">
-                    <button type="button" class="sidebar-show-btn" id="sidebarShowBtn" style="display: none;" title="Show sidebar"><i class="fas fa-bars"></i></button>
-                    <i class="fas fa-comment"></i>
-                    <span>聊天盒子</span>
-                </div>
-                <div class="chat-actions">
-                    <button type="button" class="icon-btn" title="Search"><i class="fas fa-search"></i></button>
-                    <button type="button" class="icon-btn" title="User profile"><i class="fas fa-user-circle"></i></button>
-                    <button type="button" class="icon-btn" title="More options"><i class="fas fa-ellipsis-h"></i></button>
-                </div>
-            </div>
+
+    <!-- Evaluation Modal -->
+    <div class="evaluation-modal" id="evaluationModal">
+        <div class="modal-content">
+            <h2>🐻 開始評估</h2>
             
-            <div id="messages">
-                <div class="bot-message-container">
-                    <div class="avatar bot-avatar">
-                        <i class="fas fa-robot"></i>
+            <form id="evaluationForm" onsubmit="startEvaluation(event)">
+                <div class="form-group">
+                    <label>評估名稱</label>
+                    <input type="text" id="assessmentName" placeholder="輸入評估名稱" required>
+                </div>
+
+                <div class="form-group">
+                    <label>兒童姓名</label>
+                    <input type="text" id="childName" placeholder="輸入兒童姓名" required>
+                </div>
+
+                <div class="form-group">
+                    <label>兒童年齡（月數）</label>
+                    <input type="number" id="childAge" placeholder="例如：24" min="0" max="84" required>
+                </div>
+
+                <div class="form-group">
+                    <label>選擇影片檔案或貼上 YouTube 連結</label>
+                    <div class="file-input-group" onclick="document.getElementById('videoInput').click()">
+                        <i class="fas fa-video"></i>
+                        <p>選擇影片檔案</p>
+                        <small>或</small>
                     </div>
-                    <div class="message-content">
-                        <p>您好！我是您的智能助理。我可以透過回答您的問題來幫助您。您也可以問我任何問題。</p>
-                    </div>
+                        <input type="file" id="videoInput" accept="video/*" class="hidden" onchange="handleVideoSelect(event)">
+                    <div id="videoFileName" class="file-name-display"></div>
+                    <input type="url" class="youtube-input" id="youtubeUrl" placeholder="貼上 YouTube 連結">
                 </div>
-            </div>
-            
-            <div id="input-container">
-                <div class="input-toolbar">
-                    <button type="button" class="toolbar-btn" id="fileUploadBtn" title="附加文件/圖像"><i class="fas fa-paperclip"></i></button>
-                    <button type="button" class="toolbar-btn" id="emojiBtn" title="表情符號"><i class="fas fa-smile"></i></button>
-                    <button type="button" class="toolbar-btn" id="voiceInputBtn" title="語音輸入"><i class="fas fa-microphone"></i></button>
-                    <button type="button" class="toolbar-btn" id="webcamBtn" title="攝影機"><i class="fas fa-camera"></i></button>
-                </div>
-                <div class="input-wrapper">
-                    <input type="text" id="messageInput" placeholder="在這裡輸入您的問題...">
-                    <input type="file" id="fileInput" accept="image/*,video/*,application/pdf" multiple style="display: none;">
-                    <button type="button" id="sendButton" title="Send message"><i class="fas fa-paper-plane"></i></button>
-                    <button type="button" id="poseDetectionPageBtn" class="pose-page-btn" title="姿態分析" onclick="window.location.href='/pose_detection'"><i class="fas fa-running"></i></button>
-                </div>
-                
-                <!-- File Preview Container -->
-                <div id="filePreviewContainer" class="file-preview-container" style="display: none;"></div>
-                
-                <!-- Emoji Picker -->
-                <div id="emojiPicker" class="emoji-picker" style="display: none;">
-                    <div class="emoji-header">
-                        <span class="emoji-tab active" data-category="smileys">😊</span>
-                        <span class="emoji-tab" data-category="gestures">👋</span>
-                        <span class="emoji-tab" data-category="animals">🐱</span>
-                        <span class="emoji-tab" data-category="food">🍕</span>
-                        <span class="emoji-tab" data-category="activities">⚽</span>
-                        <span class="emoji-tab" data-category="travel">✈️</span>
-                        <span class="emoji-tab" data-category="objects">💡</span>
-                        <span class="emoji-tab" data-category="symbols">❤️</span>
-                    </div>
-                    <div class="emoji-content" id="emojiContent"></div>
-                </div>
-                
-                <!-- Webcam Modal -->
-                <div id="webcamModal" class="webcam-modal" style="display: none;">
-                    <div class="webcam-content">
-                        <div class="webcam-header">
-                            <h3>拍照</h3>
-                            <button type="button" class="close-webcam" id="closeWebcam" title="Close webcam">&times;</button>
-                        </div>
-                        <div class="webcam-body">
-                            <video id="webcamVideo" autoplay playsinline></video>
-                            <canvas id="webcamCanvas" style="display: none;"></canvas>
-                        </div>
-                        <div class="webcam-footer">
-                            <button type="button" class="webcam-action-btn" id="captureBtn"><i class="fas fa-camera"></i> 拍照</button>
-                            <button type="button" class="webcam-action-btn" id="retakeBtn" style="display: none;"><i class="fas fa-redo"></i> 重拍</button>
-                            <button type="button" class="webcam-action-btn primary" id="usePhotoBtn" style="display: none;"><i class="fas fa-check"></i> 使用照片</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Document Preview Panel -->
-        <div id="preview-panel" class="preview-panel" style="display: none;">
-            <div class="preview-header">
-                <h3 id="preview-title">Document Preview</h3>
-                <button type="button" class="close-preview" id="closePreview" title="Close preview">&times;</button>
-            </div>
-            <div class="preview-content" id="preview-content">
-                <!-- Preview content will be inserted here -->
-            </div>
+
+                <button type="submit" class="btn-start">
+                    開始
+                </button>
+            </form>
         </div>
     </div>
-    
 
     <!-- Settings Modal (included from separate file) -->
     {% include 'setting.html' %}
@@ -136,25 +169,283 @@
             window.location.href = '/login';
         }
 
-        // Handle logout
-        document.getElementById('logout').addEventListener('click', async () => {
-            localStorage.removeItem('access_token');
-            window.location.href = '/login';
+        // Handle logout (guarded because sidebar was removed)
+        const logoutBtn = document.getElementById('logout');
+        if (logoutBtn) {
+            logoutBtn.addEventListener('click', async () => {
+                localStorage.removeItem('access_token');
+                window.location.href = '/login';
+            });
+        }
+
+        // Handle child assessment navigation (guarded)
+        const childAssessmentBtn = document.getElementById('childAssessment');
+        if (childAssessmentBtn) {
+            childAssessmentBtn.addEventListener('click', () => {
+                showAssessmentView();
+            });
+        }
+
+        // Assessment Functions
+        function showAssessmentView() {
+            const chatContainer = document.getElementById('chat-container');
+            const assessmentContainer = document.getElementById('assessment-container');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            
+            // Hide chat (sidebar is removed; guard if exists)
+            chatContainer.style.display = 'none';
+            if (sidebar) {
+                sidebar.style.display = 'none';
+                sidebar.classList.add('hidden');
+            }
+            
+            // Show assessment (full screen)
+            assessmentContainer.style.display = 'flex';
+            mainContent.style.marginLeft = '0';
+        }
+
+        function returnToChat() {
+            console.log('返回聊天視圖');
+            const assessmentContainer = document.getElementById('assessment-container');
+            const chatContainer = document.getElementById('chat-container');
+            const sidebar = document.getElementById('sidebar');
+            const mainContent = document.getElementById('main-content');
+            
+            // Hide assessment
+            assessmentContainer.style.display = 'none';
+            
+            // Show chat (sidebar removed; only restore chat)
+            chatContainer.style.display = 'flex';
+            chatContainer.style.visibility = 'visible';
+            chatContainer.style.opacity = '1';
+            if (sidebar) {
+                sidebar.style.display = 'flex';
+                sidebar.style.visibility = 'visible';
+                sidebar.classList.remove('hidden');
+            }
+            
+            // Reset main content margin (sidebar width is 280px)
+            mainContent.style.marginLeft = '280px';
+            mainContent.style.display = 'flex';
+            
+            // Reset assessment view
+            resetAssessmentView();
+        }
+
+        function resetAssessmentView() {
+            document.getElementById('startScreen').style.display = 'block';
+            document.getElementById('assessmentScreen').style.display = 'none';
+        }
+
+        function backToStart() {
+            document.getElementById('assessmentScreen').style.display = 'none';
+            document.getElementById('startScreen').style.display = 'block';
+            if (typeof ChildAssessmentModule !== 'undefined') {
+                ChildAssessmentModule.reset();
+            }
+        }
+
+    // PDF upload removed: UI no longer uses pdf input from this page.
+
+        function openEvaluationModal(assessmentId) {
+            const modal = document.getElementById('evaluationModal');
+            modal.dataset.assessmentId = assessmentId || 'general';
+            modal.classList.add('active');
+        }
+
+        function handleVideoSelect(event) {
+            const file = event.target.files[0];
+            if (file) {
+                document.getElementById('videoFileName').textContent = '✓ ' + file.name;
+                document.getElementById('youtubeUrl').value = '';
+            }
+        }
+
+        function startEvaluation(event) {
+            event.preventDefault();
+            
+            const assessmentName = document.getElementById('assessmentName').value;
+            const childName = document.getElementById('childName').value;
+            const childAge = document.getElementById('childAge').value;
+            const modal = document.getElementById('evaluationModal');
+            const assessmentId = modal.dataset.assessmentId || 'general';
+
+            // 隱藏開始畫面，顯示評估畫面
+            document.getElementById('startScreen').style.display = 'none';
+            document.getElementById('assessmentScreen').style.display = 'block';
+
+            // 使用評估模塊開始評估
+            if (typeof ChildAssessmentModule !== 'undefined') {
+                ChildAssessmentModule.startNewAssessment(childName, childAge, null, assessmentId);
+            }
+
+            // 關閉彈窗並重置表單
+            modal.classList.remove('active');
+            try {
+                event.target.reset();
+            } catch (e) {
+                // event 可能不是來自表單提交，忽略
+            }
+            const vf = document.getElementById('videoFileName');
+            if (vf) vf.textContent = '';
+        }
+
+        function submitAssessment() {
+            if (typeof ChildAssessmentModule !== 'undefined') {
+                ChildAssessmentModule.submitAssessment();
+            }
+        }
+
+        function backToAssessmentList() {
+            // 隱藏評估畫面，顯示開始畫面
+            document.getElementById('assessmentScreen').style.display = 'none';
+            document.getElementById('startScreen').style.display = 'block';
+            
+            // 重置評估數據
+            if (typeof ChildAssessmentModule !== 'undefined') {
+                ChildAssessmentModule.assessmentData = null;
+                ChildAssessmentModule.currentQuestionIndex = 0;
+                ChildAssessmentModule.assessmentAnswers = {};
+            }
+        }
+
+        // Close modal when clicking outside
+        document.getElementById('evaluationModal').addEventListener('click', function(event) {
+            if (event.target === this) {
+                this.classList.remove('active');
+            }
         });
     </script>
     
-    <!-- Socket.IO Client Library -->
-    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
-    <!-- WebSocket Manager Module -->
-    <script src="../static/js/socket_module.js"></script>
-    <!-- 先載入 API 模塊 -->
-    <script src="../static/js/api_module.js"></script>
-    <!-- 載入側邊欄功能 (在 chatbox 之前,因為 chatbox 會呼叫 sidebar 函數) -->
-    <script src="../static/js/sidebar.js"></script>
-    <!-- 然後載入主要腳本 -->
-    <script src="../static/js/chatbox.js"></script>
-    <!-- 最後載入設定功能 -->
-    <script src="../static/js/settings.js"></script>
-
+    <!-- 載入視頻管理模塊 -->
+    <script src="../static/js/video_management.js"></script>
+    <!-- 載入評估配置 -->
+    <script src="../static/js/assessment_config.js"></script>
+    <!-- 載入評估題庫 -->
+    <script src="../static/js/assessment_questions.js"></script>
+    <!-- html2canvas 用於生成PDF報告 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- jsPDF 庫用於生成PDF報告 -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <script src="../static/js/child_assessment.js"></script>
+    
+    <script>
+        // 頁面載入時初始化評估選項
+        document.addEventListener('DOMContentLoaded', function() {
+            loadAssessmentOptions();
+        });
+        
+        // 載入評估選項
+        function loadAssessmentOptions() {
+            const selectElement = document.getElementById('assessmentType');
+            const categories = AssessmentConfig.getEnabledCategories();
+            
+            categories.forEach(cat => {
+                const option = document.createElement('option');
+                option.value = cat.id;
+                option.textContent = `${cat.icon} ${cat.nameEn}`;
+                option.dataset.icon = cat.icon;
+                option.dataset.name = cat.nameEn;
+                option.dataset.desc = cat.descriptionEn;
+                selectElement.appendChild(option);
+            });
+        }
+        
+        // 更新評估資訊顯示
+        function updateAssessmentInfo() {
+            const selectElement = document.getElementById('assessmentType');
+            const selectedOption = selectElement.options[selectElement.selectedIndex];
+            const infoBox = document.getElementById('assessmentInfoBox');
+            
+            if (selectElement.value) {
+                const category = AssessmentConfig.getCategoryById(selectElement.value);
+                document.getElementById('assessmentIcon').textContent = category.icon;
+                document.getElementById('assessmentTitle').textContent = category.nameEn;
+                document.getElementById('assessmentDesc').textContent = category.descriptionEn + ' (' + category.ageRange + ')';
+                infoBox.style.display = 'block';
+            } else {
+                infoBox.style.display = 'none';
+            }
+        }
+        
+        // 處理視頻文件選擇
+        function handleVideoFileSelect(input) {
+            const file = input.files[0];
+            const display = document.getElementById('videoFileName');
+            if (file) {
+                display.textContent = '✓ ' + file.name;
+                display.classList.add('active');
+            }
+        }
+        
+        // 切換YouTube輸入框
+        function toggleYoutubeInput() {
+            const input = document.getElementById('youtubeUrlInput');
+            if (input.style.display === 'none') {
+                input.style.display = 'block';
+                input.focus();
+            } else {
+                input.style.display = 'none';
+            }
+        }
+        
+        // 新設計的彈窗控制
+        function showEvaluationModal() {
+            document.getElementById('evaluationModal').classList.add('active');
+        }
+        
+        function hideEvaluationModal() {
+            document.getElementById('evaluationModal').classList.remove('active');
+            // 重置表單
+            document.getElementById('assessmentType').value = '';
+            document.getElementById('childName').value = '';
+            document.getElementById('childAge').value = '';
+            document.getElementById('assessmentInfoBox').style.display = 'none';
+        }
+        
+        function startEvaluation() {
+            const assessmentType = document.getElementById('assessmentType').value;
+            const childName = document.getElementById('childName').value;
+            const childAge = document.getElementById('childAge').value;
+            
+            if (!assessmentType) {
+                alert('請選擇評估類型');
+                return;
+            }
+            
+            if (!childName) {
+                alert('請輸入兒童姓名');
+                return;
+            }
+            
+            if (!childAge) {
+                alert('請輸入兒童年齡');
+                return;
+            }
+            
+            // 儲存評估資訊
+            const assessmentData = {
+                type: assessmentType,
+                childName: childName,
+                childAge: parseInt(childAge),
+                category: AssessmentConfig.getCategoryById(assessmentType),
+                startTime: new Date().toISOString()
+            };
+            
+            console.log('開始評估，參數：', assessmentData);
+            
+            // 隱藏彈窗
+            hideEvaluationModal();
+            
+            // 直接開始評估（使用正確的方法）
+            if (typeof ChildAssessmentModule !== 'undefined') {
+                ChildAssessmentModule.startNewAssessment(childName, childAge, null, assessmentType);
+            } else {
+                console.error('ChildAssessmentModule 未載入');
+                alert('評估模組未載入。請重新整理頁面。');
+            }
+        }
+    </script>
 </body>
 </html>
