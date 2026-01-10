@@ -578,6 +578,17 @@ function updateFilePreview() {
             previewItem = document.createElement('div');
             previewItem.className = 'file-preview-simple';
             
+            // Add file icon
+            const fileIcon = document.createElement('i');
+            fileIcon.className = 'fas fa-file-pdf'; // Default to PDF for now
+            if (file.type.includes('pdf')) fileIcon.className = 'fas fa-file-pdf';
+            else if (file.type.includes('word')) fileIcon.className = 'fas fa-file-word';
+            else if (file.type.includes('excel')) fileIcon.className = 'fas fa-file-excel';
+            else fileIcon.className = 'fas fa-file-alt';
+            fileIcon.style.fontSize = '20px';
+            fileIcon.style.color = '#A89BC5';
+            previewItem.appendChild(fileIcon);
+
             const fileName = document.createElement('div');
             fileName.className = 'file-name-simple';
             fileName.textContent = file.name;
@@ -596,7 +607,7 @@ function updateFilePreview() {
         // Remove button
         const removeBtn = document.createElement('button');
         removeBtn.className = 'remove-file';
-        removeBtn.innerHTML = '&times;';
+        removeBtn.innerHTML = '<i class="fas fa-times"></i>';
         removeBtn.onclick = () => {
             selectedFiles.splice(index, 1);
             updateFilePreview();
@@ -1153,7 +1164,13 @@ function createMessageWithFiles(text, files, isUser = true, tempId = null) {
                 // Show file name for non-image files (PDFs, etc.)
                 const fileInfo = document.createElement('div');
                 fileInfo.className = 'message-file-info';
-                fileInfo.innerHTML = `<i class="fas fa-file"></i> ${file.name}`;
+                
+                let iconClass = 'fas fa-file-alt';
+                if (file.name.toLowerCase().endsWith('.pdf')) iconClass = 'fas fa-file-pdf';
+                else if (file.name.toLowerCase().endsWith('.doc') || file.name.toLowerCase().endsWith('.docx')) iconClass = 'fas fa-file-word';
+                else if (file.name.toLowerCase().endsWith('.xls') || file.name.toLowerCase().endsWith('.xlsx')) iconClass = 'fas fa-file-excel';
+                
+                fileInfo.innerHTML = `<i class="${iconClass}"></i> <span>${file.name}</span>`;
                 
                 // Create blob URL for preview
                 const fileUrl = URL.createObjectURL(file);
@@ -1280,7 +1297,13 @@ function updateMessageWithServerFiles(messageElement, uploadedFiles) {
             // For non-image/video files, show clickable file info
             const fileInfo = document.createElement('div');
             fileInfo.className = 'message-file-info';
-            fileInfo.innerHTML = `<i class="fas fa-file"></i> ${displayFileName}`;
+            
+            let iconClass = 'fas fa-file-alt';
+            if (displayFileName.toLowerCase().endsWith('.pdf')) iconClass = 'fas fa-file-pdf';
+            else if (displayFileName.toLowerCase().endsWith('.doc') || displayFileName.toLowerCase().endsWith('.docx')) iconClass = 'fas fa-file-word';
+            else if (displayFileName.toLowerCase().endsWith('.xls') || displayFileName.toLowerCase().endsWith('.xlsx')) iconClass = 'fas fa-file-excel';
+            
+            fileInfo.innerHTML = `<i class="${iconClass}"></i> <span>${displayFileName}</span>`;
             
             fileInfo.addEventListener('click', () => {
                 openDocumentPreviewModal(fullPath, displayFileName);
@@ -1442,7 +1465,13 @@ function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
                 // Show file name for non-image files with preview modal
                 const fileInfo = document.createElement('div');
                 fileInfo.className = 'message-file-info';
-                fileInfo.innerHTML = `<i class="fas fa-file"></i> ${displayFileName}`;
+                
+                let iconClass = 'fas fa-file-alt';
+                if (displayFileName.toLowerCase().endsWith('.pdf')) iconClass = 'fas fa-file-pdf';
+                else if (displayFileName.toLowerCase().endsWith('.doc') || displayFileName.toLowerCase().endsWith('.docx')) iconClass = 'fas fa-file-word';
+                else if (displayFileName.toLowerCase().endsWith('.xls') || displayFileName.toLowerCase().endsWith('.xlsx')) iconClass = 'fas fa-file-excel';
+                
+                fileInfo.innerHTML = `<i class="${iconClass}"></i> <span>${displayFileName}</span>`;
 
                 fileInfo.addEventListener('click', () => {
                     openDocumentPreviewModal(fullPath, displayFileName);
