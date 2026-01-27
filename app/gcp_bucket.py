@@ -1,23 +1,29 @@
 import os
 from google.cloud import storage
 import tempfile
-from datetime import datetime
+from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
+import uuid
 
 def get_gcs_client():
-    """Initialize and return GCS client.
-
-    This function reads credentials path from the environment variable
-    `GCS_CREDENTIALS_PATH` (or `GOOGLE_APPLICATION_CREDENTIALS`) and does not
-    require Flask application context. It ensures the streaming generator can
-    call into GCS without depending on `current_app`.
-    """
-    # Prefer explicit GOOGLE_APPLICATION_CREDENTIALS; otherwise read GCS_CREDENTIALS_PATH
     credentials_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS') or os.environ.get('GCS_CREDENTIALS_PATH')
     if credentials_path:
         os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = credentials_path
-
     return storage.Client()
+
+def build_storage_key(category, user_id, original_filename):
+    """Build standardized GCS object key: {category}/{user_id}/{uuid}_{timestamp}.{ext}"""
+    secure_name = secure_filename(original_filename)
+    if '.' in secure_name:
+        _, ext = secure_name.rsplit('.', 1)
+    else:
+        ext = 'bin'
+    
+    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+    unique_id = str(uuid.uuid4())[:8]
+    unique_filename = f"{unique_id}_{timestamp}.{ext}"
+    
+    return f"{category}/{user_id}/{unique_filename}"
 
 def upload_file_to_gcs(file_obj, filename, bucket_name=None):
     """
@@ -172,19 +178,7 @@ def delete_file_from_gcs(gcs_url):
         print(f"Error deleting file from GCS: {e}")
         return False
 
-def upload_files_to_gcs(files, user_id=None, conversation_id=None, message_id=None):
-    """
-    Upload multiple files to Google Cloud Storage and save to database.
-
-    Args:
-        files: List of file objects (from request.files.getlist)
-        user_id: User ID who uploaded the files
-        conversation_id: Optional conversation ID
-        message_id: Optional message ID
-
-    Returns:
-        list: List of GCS URLs for the uploaded files
-    """
+def upload_files_to_gcs(files, user_id=None, conversation_id=None, message_id=None, category='chatbox'):
     from .models import FileUpload, db
 
     uploaded_urls = []
@@ -193,29 +187,32 @@ def upload_files_to_gcs(files, user_id=None, conversation_id=None, message_id=No
             filename = secure_filename(file.filename)
             if not filename:
                 continue
-            name, ext = os.path.splitext(filename)
-            timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-            unique_filename = f"{name}_{timestamp}{ext}" if name else f"upload_{timestamp}{ext}"
-
-            # Get file size before uploading (seek to end, get position, seek back)
-            file.seek(0, 2)  # Seek to end
-            file_size = file.tell()
-            file.seek(0)  # Seek back to beginning
             
-            # Upload to Google Cloud Storage
-            gcs_url = upload_file_to_gcs(file, unique_filename)
-
-            # Save to database if user_id provided
+            file.seek(0, 2)
+            file_size = file.tell()
+            file.seek(0)
+            
+            _, ext = os.path.splitext(filename)
+            file_type = ext[1:].lower() if ext else 'unknown'
+            
             if user_id:
-                # Extract file type (extension without the dot)
-                file_type = ext[1:].lower() if ext else 'unknown'
-                
+                storage_key = build_storage_key(category, user_id, filename)
+            else:
+                timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+                unique_id = str(uuid.uuid4())[:8]
+                storage_key = f"{unique_id}_{timestamp}.{file_type}"
+            
+            gcs_url = upload_file_to_gcs(file, storage_key)
+
+            if user_id:
                 file_upload = FileUpload(
                     user_id=user_id,
-                    filename=file.filename,  # Original filename
+                    filename=file.filename,
                     file_path=gcs_url,
+                    storage_key=storage_key,
                     file_type=file_type,
                     content_type=file.content_type or 'application/octet-stream',
+                    upload_category=category,
                     file_size=file_size,
                     conversation_id=conversation_id,
                     message_id=message_id
@@ -224,53 +221,42 @@ def upload_files_to_gcs(files, user_id=None, conversation_id=None, message_id=No
 
             uploaded_urls.append(gcs_url)
 
-    # Commit database changes
     if user_id:
         db.session.commit()
 
     return uploaded_urls
 
-def upload_image_to_gcs(image_file, filename=None, user_id=None, conversation_id=None, message_id=None):
-    """
-    Upload an image file to Google Cloud Storage with unique naming and save to database.
-
-    Args:
-        image_file: File object
-        filename: Optional base filename
-        user_id: User ID who uploaded the file
-        conversation_id: Optional conversation ID
-        message_id: Optional message ID
-
-    Returns:
-        str: GCS URL of the uploaded image
-    """
+def upload_image_to_gcs(image_file, filename=None, user_id=None, conversation_id=None, message_id=None, category='chatbox'):
     from .models import FileUpload, db
 
     if not filename:
         filename = secure_filename(image_file.filename)
-    name, ext = os.path.splitext(filename)
-    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-    unique_filename = f"{name}_{timestamp}{ext}" if name else f"upload_{timestamp}{ext}"
 
-    # Get file size before uploading
-    image_file.seek(0, 2)  # Seek to end
+    image_file.seek(0, 2)
     file_size = image_file.tell()
-    image_file.seek(0)  # Seek back to beginning
+    image_file.seek(0)
     
-    gcs_url = upload_file_to_gcs(image_file, unique_filename)
-
-    # Save to database if user_id provided
+    _, ext = os.path.splitext(filename)
+    file_type = ext[1:].lower() if ext else 'unknown'
+    
     if user_id:
-        # Extract file type (extension without the dot)
-        _, ext = os.path.splitext(image_file.filename)
-        file_type = ext[1:].lower() if ext else 'unknown'
-        
+        storage_key = build_storage_key(category, user_id, filename)
+    else:
+        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
+        unique_id = str(uuid.uuid4())[:8]
+        storage_key = f"{unique_id}_{timestamp}.{file_type}"
+    
+    gcs_url = upload_file_to_gcs(image_file, storage_key)
+
+    if user_id:
         file_upload = FileUpload(
             user_id=user_id,
-            filename=image_file.filename,  # Original filename
+            filename=image_file.filename,
             file_path=gcs_url,
+            storage_key=storage_key,
             file_type=file_type,
             content_type=image_file.content_type or 'application/octet-stream',
+            upload_category=category,
             file_size=file_size,
             conversation_id=conversation_id,
             message_id=message_id
@@ -279,3 +265,24 @@ def upload_image_to_gcs(image_file, filename=None, user_id=None, conversation_id
         db.session.commit()
 
     return gcs_url
+
+def generate_signed_url(storage_key, bucket_name=None, expiration_minutes=60):
+    """Generate a signed URL for secure file access"""
+    if not bucket_name:
+        bucket_name = os.environ.get('GCS_BUCKET_NAME')
+        if not bucket_name:
+            raise ValueError("GCS_BUCKET_NAME not configured")
+    
+    client = get_gcs_client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(storage_key)
+    
+    expiration = timedelta(minutes=expiration_minutes)
+    
+    signed_url = blob.generate_signed_url(
+        version="v4",
+        expiration=expiration,
+        method="GET"
+    )
+    
+    return signed_url

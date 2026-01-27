@@ -1,0 +1,42 @@
+# APP/AGENT — ADK Multi-Agent System
+
+## OVERVIEW
+Google ADK multi-agent orchestration for XIAOICE chat. Three-agent architecture:
+- **Coordinator** (xiaoice_coordinator): routes tasks, receives analysis, streams to users.
+- **PDF agent**: analyzes PDF docs, returns structured findings to coordinator.
+- **Media agent**: analyzes images/videos, returns structured findings to coordinator.
+
+All agents use same Gemini model (per-user choice). Streaming responses via generator.
+
+## WHERE TO LOOK
+| Task | File | Key Element |
+|------|------|-------------|
+| Agent creation | chat_agent.py | `_create_agent()`, `ChatAgentManager` |
+| Multi-agent wiring | chat_agent.py | `sub_agents=[pdf_agent, media_agent]` |
+| Streaming interface | chat_agent.py | `generate_streaming_response()`, `generate_streaming_response_async()` |
+| System instructions | chat_agent.py | `COORDINATOR_AGENT_INSTRUCTION`, `PDF_AGENT_INSTRUCTION`, `MEDIA_AGENT_INSTRUCTION` |
+| Session management | chat_agent.py | `get_session_id()`, `InMemorySessionService` |
+| File validation | chat_agent.py | `_validate_file()`, `SUPPORTED_MIME_TYPES`, `MAX_FILE_SIZE` |
+| Backward compat shim | \_\_init\_\_.py | `init_gemini()`, re-exported functions |
+
+## CONVENTIONS
+- **Session IDs**: `conv_{user_id}_{conversation_id}` for persistent sessions, `temp_{user_id}` for quick queries.
+- **Per-user API keys**: cached in `ChatAgentManager._api_keys`; each runner tied to user_id + model_name.
+- **Agent/runner caching**: keyed by `{user_id}_{model_name}` to avoid recreating across requests.
+- **ADK Runner app_name**: `"agents"` (must match agent package structure).
+- **Streaming**: uses queue + thread to bridge async ADK runner to sync Flask routes.
+- **Language matching**: coordinator enforces response language matches user input (Chinese/English/Japanese).
+
+## ANTI-PATTERNS
+- **Do NOT set global `GOOGLE_API_KEY`** across threads; use per-user cache in manager.
+- **Do NOT call `generate_streaming_response()` without user_id/conversation_id** if session context needed.
+- **Do NOT rename agents** without updating instructions that reference them (coordinator delegates by name).
+- **Avoid decrypting API keys globally**; pass them per-request to `get_or_create_runner()`.
+
+## NOTES
+- File uploads: supports PDF, images (JPEG/PNG/WebP/HEIC), videos (MP4/MOV/AVI/WEBM/3GPP); 500MB limit enforced in `_validate_file()`.
+- Coordinator delegates via sub_agents; specialists do NOT interact with users directly.
+- History context built in `build_message_content()`; ADK sessions maintain multi-turn context.
+- `__init__.py` provides legacy `init_gemini()` for backward compat; actual logic lives in `chat_agent.py`.
+- Session cleanup: `clear_conversation_session()` removes session data when conversation deleted from DB.
+- Async/sync duality: `generate_streaming_response()` wraps async version with threading.Queue for sync Flask routes.
