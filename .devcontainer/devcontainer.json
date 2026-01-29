@@ -7,10 +7,17 @@
             "installTools": true,
             "optimize": true
         },
+        "ghcr.io/devcontainers/features/node:1": {
+            "version": "lts",
+            "installTools": true
+        },
         "ghcr.io/devcontainers/features/docker-in-docker": {}
     },
-    "postStartCommand": "docker compose -f .devcontainer/docker-compose.yml up -d && grep -q '# auto-activate .venv' /home/vscode/.bashrc || printf '\n# auto-activate .venv\nif git rev-parse --show-toplevel >/dev/null 2>&1; then\n  repo_root=$(git rev-parse --show-toplevel)\n  if [ -f $repo_root/.venv/bin/activate ]; then\n    source $repo_root/.venv/bin/activate\n  fi\nelif [ -f ${PWD}/.venv/bin/activate ]; then\n  source ${PWD}/.venv/bin/activate\nfi\n' >> /home/vscode/.bashrc",
+    "postStartCommand": "docker compose -f .devcontainer/docker-compose.yml up -d",
     "portsAttributes": {
+        "5000": {
+            "label": "webui"
+        },
         "5050": {
             "label": "pgAdmin"
         },
@@ -32,15 +39,7 @@
                 "google.gemini-cli-vscode-ide-companion",
                 "googlecloudtools.cloudcode",
                 "sst-dev.opencode"
-            ],
-            "settings": {
-                "python.defaultInterpreterPath": ".venv/bin/python",
-                "python.terminal.activateEnvironment": true,
-                "terminal.integrated.env.linux": {
-                    "VIRTUAL_ENV": "${workspaceFolder}/.venv",
-                    "PATH": "${workspaceFolder}/.venv/bin:${env:PATH}"
-                }
-            }
+            ]
         }
     }
 }
