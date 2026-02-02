@@ -48,8 +48,12 @@ def create_app():
     # Register blueprints
     from . import routes
     from . import auth
+    # Video endpoints extracted to a separate module (renamed)
+    from . import video_access_routes
+
     app.register_blueprint(routes.bp)
     app.register_blueprint(auth.auth_bp)
+    app.register_blueprint(video_access_routes.bp)
 
     # Import socket events to register WebSocket handlers (must be after socketio exists)
     from . import socket_events

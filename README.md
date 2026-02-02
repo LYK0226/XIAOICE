@@ -241,22 +241,8 @@ XIAOICE/
 └── view_database.py               # 資料庫查看工具
 ```
 
-## Testing
-
-Run the test suite to verify functionality:
-
+# Install opencode and the plugin
 ```bash
-# Run all tests
-pytest
-
-# Run specific test files
-pytest test/test_api.py
-pytest test/test_multi_agent.py
-pytest test/test_3d_pose_module_initialization.py
-
-# Run with verbose output
-pytest -v
-
-# Check API connectivity
-python test/check_api_keys.py
+npm i -g opencode-ai
+npx oh-my-opencode install --no-tui --claude=no --openai=no --gemini=yes --copilot=yes
 ```

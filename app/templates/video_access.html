@@ -8,6 +8,7 @@
     <!-- Reuse existing styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/chatbox.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/video_management.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body class="vm-video-page">
@@ -226,6 +227,25 @@
                                 <button id="backToListBtn" class="btn btn-secondary"><i class="fas fa-arrow-left"></i> 返回列表</button>
                             </div>
                         </section>
+
+                        <!-- Video Upload History Section -->
+                        <section class="vm-card video-history-section" style="margin-top: 30px;">
+                            <div class="vm-card__header">
+                                <h3><i class="fas fa-history"></i> 影片上傳記錄</h3>
+                                <div class="vm-hint">查看和管理您已上傳的影片</div>
+                            </div>
+
+                            <div id="videoUploadsListContainer" class="uploads-list-container">
+                                <div class="loading-spinner" style="display: none;">
+                                    <i class="fas fa-spinner fa-spin"></i> 載入中...
+                                </div>
+                                <div id="videoUploadsList" class="uploads-list"></div>
+                                <div id="videoUploadsEmpty" class="uploads-empty" style="display: none;">
+                                    <i class="fas fa-video"></i>
+                                    <p>沒有影片上傳記錄</p>
+                                </div>
+                            </div>
+                        </section>
                     </div>
                 </div>
             </div>
@@ -258,6 +278,7 @@
 
     <script src="{{ url_for('static', filename='js/video_analysis_results.js') }}"></script>
     <script src="{{ url_for('static', filename='js/video_management.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/uploads.js') }}"></script>
 
     <script>
         // Dedicated page behavior:

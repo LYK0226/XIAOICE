@@ -203,11 +203,14 @@ class FileUpload(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     filename = db.Column(db.String(255), nullable=False)  # Original filename
     file_path = db.Column(db.Text, nullable=False)  # GCS URL or file path
+    storage_key = db.Column(db.String(512), nullable=True, index=True)  # GCS object name/key (e.g., chatbox/123/uuid.ext)
     file_type = db.Column(db.String(50), nullable=False)  # File extension/type (e.g., 'pdf', 'jpg', 'docx')
     content_type = db.Column(db.String(100), nullable=False)  # MIME type
+    upload_category = db.Column(db.String(50), nullable=True, index=True)  # Category: chatbox, video_assess, etc.
     conversation_id = db.Column(db.Integer, db.ForeignKey('conversations.id', ondelete='CASCADE'), nullable=True, index=True)
     file_size = db.Column(db.BigInteger, nullable=False, default=0)  # File size in bytes
     uploaded_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    deleted_at = db.Column(db.DateTime, nullable=True, index=True)  # Soft delete timestamp
     message_id = db.Column(db.Integer, db.ForeignKey('messages.id', ondelete='CASCADE'), nullable=True, index=True)
 
     # Relationships
@@ -224,12 +227,15 @@ class FileUpload(db.Model):
             'user_id': self.user_id,
             'filename': self.filename,
             'file_path': self.file_path,
+            'storage_key': self.storage_key,
             'file_type': self.file_type,
             'content_type': self.content_type,
+            'upload_category': self.upload_category,
             'file_size': self.file_size,
             'conversation_id': self.conversation_id,
             'message_id': self.message_id,
-            'uploaded_at': self.uploaded_at.isoformat() if self.uploaded_at else None
+            'uploaded_at': self.uploaded_at.isoformat() if self.uploaded_at else None,
+            'deleted_at': self.deleted_at.isoformat() if self.deleted_at else None
         }
 class ChildDevelopmentAssessmentRecord(db.Model):
     """
@@ -338,7 +344,6 @@ class PoseAssessmentRun(db.Model):
 
 
 class VideoRecord(db.Model):
-    """Model for storing video records with transcription and analysis"""
     __tablename__ = 'video_records'
     
     id = db.Column(db.Integer, primary_key=True)
@@ -346,12 +351,13 @@ class VideoRecord(db.Model):
     filename = db.Column(db.String(255), nullable=False)
     original_filename = db.Column(db.String(255), nullable=False)
     file_path = db.Column(db.String(500), nullable=False)
-    file_size = db.Column(db.Integer)  # in bytes
-    duration = db.Column(db.Float)  # in seconds
+    storage_key = db.Column(db.String(512), nullable=True, index=True)
+    file_size = db.Column(db.Integer)
+    duration = db.Column(db.Float)
     full_transcription = db.Column(db.Text)
-    transcription_status = db.Column(db.String(50), default='pending')  # pending, processing, completed, failed
-    analysis_report = db.Column(db.JSON)  # Store analysis results as JSON
-    analysis_status = db.Column(db.String(50), default='pending')  # pending, processing, completed, failed
+    transcription_status = db.Column(db.String(50), default='pending')
+    analysis_report = db.Column(db.JSON)
+    analysis_status = db.Column(db.String(50), default='pending')
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     
@@ -367,6 +373,7 @@ class VideoRecord(db.Model):
             'user_id': self.user_id,
             'filename': self.filename,
             'original_filename': self.original_filename,
+            'storage_key': self.storage_key,
             'file_size': self.file_size,
             'duration': self.duration,
             'full_transcription': self.full_transcription,
