@@ -38,7 +38,7 @@
 - ✅ Logout
 
 #### 主要畫面
-- ✅ 頂部貓頭鷹裝飾圖案 (🦉)
+- ✅ 頂部貓頭鷹裝飾圖案 (/workspaces/XIAOICE/app/static/upload/cute-owl-owl.gif)
 - ✅ "Start New Assessment" 主卡片
 - ✅ 兩個上傳選項並排顯示
 - ✅ 底部兩個操作按鈕

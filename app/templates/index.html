@@ -18,7 +18,7 @@
         <!-- 主內容區域 -->
         <div class="assessment-content-area" style="width: 100%;">
             <!-- 貓頭鷹裝飾 -->
-            <div class="owl-decoration">🦉</div>
+            <div class="owl-decoration"><img src="{{ url_for('static', filename='upload/cute-owl-owl.gif') }}" alt="owl" class="cute-owl" /></div>
             
             <!-- Assessment Main -->
             <div class="assessment-main" id="assessmentMain">
@@ -442,6 +442,57 @@
                 console.error('ChildAssessmentModule 未載入');
                 alert('評估模組未載入。請重新整理頁面。');
             }
+        }
+
+        // Owl zoom click handler + dragging
+        const owlDecoration = document.querySelector('.owl-decoration');
+        if (owlDecoration) {
+            let isDragging = false;
+            let dragOffsetX = 0;
+            let dragOffsetY = 0;
+            let lastX = 0;
+            let lastY = 0;
+
+            owlDecoration.addEventListener('mousedown', (e) => {
+                isDragging = true;
+                owlDecoration.style.animation = 'none';
+                const rect = owlDecoration.getBoundingClientRect();
+                dragOffsetX = e.clientX - rect.left;
+                dragOffsetY = e.clientY - rect.top;
+                lastX = e.clientX;
+                lastY = e.clientY;
+                e.preventDefault();
+            });
+
+            document.addEventListener('mousemove', (e) => {
+                if (isDragging && owlDecoration) {
+                    const x = e.clientX - dragOffsetX;
+                    const y = e.clientY - dragOffsetY;
+                    owlDecoration.style.left = x + 'px';
+                    owlDecoration.style.top = y + 'px';
+                    owlDecoration.style.right = 'auto';
+                    owlDecoration.style.bottom = 'auto';
+                    lastX = e.clientX;
+                    lastY = e.clientY;
+                }
+            });
+
+            document.addEventListener('mouseup', (e) => {
+                if (isDragging) {
+                    isDragging = false;
+                    // Resume float animation
+                    owlDecoration.style.animation = '';
+                }
+            });
+
+            owlDecoration.addEventListener('click', () => {
+                if (!isDragging) {
+                    owlDecoration.classList.remove('zoomed');
+                    // Trigger reflow to restart animation
+                    void owlDecoration.offsetWidth;
+                    owlDecoration.classList.add('zoomed');
+                }
+            });
         }
     </script>
 </body>

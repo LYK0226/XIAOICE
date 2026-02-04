@@ -327,6 +327,14 @@ body.dark-theme .message-content {
     transition: transform 0.2s;
 }
 
+/* Inline owl emoji image used in messages and emoji picker */
+.emoji-owl {
+    width: 1.6em;
+    height: 1.6em;
+    vertical-align: -0.15em;
+    display: inline-block;
+    pointer-events: none;
+} 
 .message-image:hover {
     transform: scale(1.02);
 }
