@@ -13,6 +13,8 @@ from .pose_detection.pose_assessment import evaluate_pose_assessment
 
 bp = Blueprint('main', __name__)
 
+SUPPORTED_LOCALES = {'zh-TW', 'en', 'ja'}
+
 @bp.route("/")
 @bp.route("/index")
 def index():
@@ -36,7 +38,26 @@ def login_page():
     """Render the login/signup page."""
     return render_template('login_signup.html')
 
+
+@bp.route('/<lang_code>')
+@bp.route('/<lang_code>/')
+@bp.route('/<lang_code>/<path:subpath>')
+def localized_route(lang_code, subpath=''):
+    """Redirect locale-prefixed URLs to their non-prefixed routes."""
+    if lang_code not in SUPPORTED_LOCALES:
+        return jsonify({'error': 'Not Found'}), 404
+
+    if not subpath or subpath == 'index':
+        return redirect(url_for('main.index'))
+
+    target = f"/{subpath}"
+    if request.query_string:
+        target = f"{target}?{request.query_string.decode('utf-8')}"
+
+    return redirect(target)
+
 @bp.route('/chatbox')
+@bp.route('/chatbox/')
 def chatbox_page():
     """Render the chatbox page."""
     token = request.cookies.get('access_token')
@@ -54,12 +75,14 @@ def chatbox_page():
     return render_template('chatbox.html')
 
 @bp.route('/forgot_password')
+@bp.route('/forgot_password/')
 def forgot_password_page():
     """Render the forgot password page."""
     return render_template('forget_password.html')
 
 
 @bp.route('/child_assessment')
+@bp.route('/child_assessment/')
 def child_assessment_page():
     """Render the child assessment page."""
     token = request.cookies.get('access_token')
@@ -77,6 +100,7 @@ def child_assessment_page():
     return render_template('child_assessment.html')
 
 @bp.route('/pose_detection')
+@bp.route('/pose_detection/')
 def pose_detection_page():
     """Render the pose detection page."""
     token = request.cookies.get('access_token')
@@ -95,6 +119,7 @@ def pose_detection_page():
 
 
 @bp.route('/video')
+@bp.route('/video/')
 def video_management_page():
     """Render the dedicated video upload + analysis page."""
     token = request.cookies.get('access_token')
