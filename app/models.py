@@ -1,6 +1,7 @@
 from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
+from datetime import datetime, date
+from dateutil.relativedelta import relativedelta
 
 db = SQLAlchemy()
 
@@ -14,6 +15,9 @@ class User(db.Model):
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     is_active = db.Column(db.Boolean, default=True)
+    
+    # Relationships
+    children = db.relationship('Child', backref='user', lazy=True, cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<User {self.username}>'
@@ -134,6 +138,45 @@ class UserApiKey(db.Model):
             return cipher.decrypt(self.encrypted_key.encode()).decode()
         except Exception:
             return None
+
+
+class Child(db.Model):
+    """Child profile for tracking child development and assessments."""
+    __tablename__ = 'children'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    name = db.Column(db.String(100), nullable=False)
+    birthdate = db.Column(db.Date, nullable=False)
+    gender = db.Column(db.String(20), nullable=True)  # 'male', 'female', 'other', or null
+    notes = db.Column(db.Text, nullable=True)
+    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    
+    def __repr__(self):
+        return f'<Child {self.name} (user_id={self.user_id})>'
+    
+    def calculate_age_months(self):
+        """Calculate age in months from birthdate to today."""
+        if not self.birthdate:
+            return 0
+        today = date.today()
+        delta = relativedelta(today, self.birthdate)
+        return delta.years * 12 + delta.months + (delta.days / 30.0)
+    
+    def to_dict(self):
+        """Convert to dictionary with computed age_months."""
+        return {
+            'id': self.id,
+            'user_id': self.user_id,
+            'name': self.name,
+            'birthdate': self.birthdate.isoformat() if self.birthdate else None,
+            'age_months': round(self.calculate_age_months(), 1),
+            'gender': self.gender,
+            'notes': self.notes,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None
+        }
 
 
 class Conversation(db.Model):

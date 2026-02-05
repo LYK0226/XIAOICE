@@ -361,6 +361,114 @@ def change_password():
         db.session.rollback()
         return jsonify({'error': f'Password change failed: {str(e)}'}), 500
 
+@auth_bp.route('/delete-account', methods=['POST'])
+@jwt_required()
+def delete_account():
+    """Delete the current user's account and associated files. Requires confirming password."""
+    try:
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        data = request.get_json() or {}
+        password = data.get('password', '')
+        if not password or not user.check_password(password):
+            return jsonify({'error': 'Password is required and must be correct'}), 400
+
+        # Attempt to delete avatar if stored in GCS or locally
+        try:
+            from . import gcp_bucket
+            import os
+            existing = user.avatar
+            if existing and isinstance(existing, str):
+                if existing.startswith('https://storage.googleapis.com/') or existing.startswith('gs://'):
+                    try:
+                        gcp_bucket.delete_file_from_gcs(existing)
+                    except Exception:
+                        current_app.logger.warning('Failed to delete avatar from GCS')
+                else:
+                    upload_folder = current_app.config.get('UPLOAD_FOLDER')
+                    if upload_folder:
+                        local_path = os.path.join(upload_folder, os.path.basename(existing))
+                        try:
+                            if os.path.exists(local_path):
+                                os.remove(local_path)
+                        except Exception:
+                            current_app.logger.warning('Failed to delete local avatar')
+        except Exception:
+            current_app.logger.warning('Error while attempting to remove avatar')
+
+        # Delete file uploads and associated storage
+        try:
+            from .models import FileUpload, VideoRecord, UserApiKey, UserProfile
+            from . import gcp_bucket
+            import os
+
+            # Delete user profile first to avoid FK constraints (selected_api_key_id)
+            profile = UserProfile.query.filter_by(user_id=user.id).first()
+            if profile:
+                db.session.delete(profile)
+                db.session.flush()
+
+            uploads = FileUpload.query.filter_by(user_id=user.id).all()
+            for u in uploads:
+                try:
+                    if u.file_path and isinstance(u.file_path, str) and (u.file_path.startswith('https://storage.googleapis.com/') or u.file_path.startswith('gs://')):
+                        try:
+                            gcp_bucket.delete_file_from_gcs(u.file_path)
+                        except Exception:
+                            current_app.logger.warning(f'Failed to delete file upload from GCS: {u.file_path}')
+                except Exception:
+                    current_app.logger.warning('Error deleting a file upload')
+                try:
+                    db.session.delete(u)
+                except Exception:
+                    current_app.logger.warning('Failed to delete file upload DB entry')
+
+            videos = VideoRecord.query.filter_by(user_id=user.id).all()
+            for v in videos:
+                try:
+                    if v.file_path and isinstance(v.file_path, str) and (v.file_path.startswith('https://storage.googleapis.com/') or v.file_path.startswith('gs://')):
+                        try:
+                            gcp_bucket.delete_file_from_gcs(v.file_path)
+                        except Exception:
+                            current_app.logger.warning(f'Failed to delete video from GCS: {v.file_path}')
+                except Exception:
+                    current_app.logger.warning('Error deleting a video file')
+                try:
+                    db.session.delete(v)
+                except Exception:
+                    current_app.logger.warning('Failed to delete video DB entry')
+
+            # Delete API keys
+            keys = UserApiKey.query.filter_by(user_id=user.id).all()
+            for k in keys:
+                try:
+                    db.session.delete(k)
+                except Exception:
+                    current_app.logger.warning('Failed to delete API key entry')
+        except Exception:
+            current_app.logger.warning('Error while attempting to remove file uploads or videos')
+
+        # Finally delete the user row (cascades should remove related rows)
+        try:
+            db.session.delete(user)
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            current_app.logger.error(f'Failed to delete user: {e}')
+            return jsonify({'error': 'Failed to delete account'}), 500
+
+        response = jsonify({'message': 'Account deleted successfully'})
+        response.delete_cookie('access_token')
+        response.delete_cookie('refresh_token')
+        return response, 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Deletion failed: {str(e)}'}), 500
+
 # ============================================================================
 # Password Reset Functionality
 # ============================================================================

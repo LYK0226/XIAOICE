@@ -39,7 +39,22 @@
                 "google.gemini-cli-vscode-ide-companion",
                 "googlecloudtools.cloudcode",
                 "sst-dev.opencode"
-            ]
+            ],
+            "settings": {
+                "python.defaultInterpreterPath": "${containerWorkspaceFolder}/.venv/bin/python",
+                "python.terminal.activateEnvironment": true,
+                "terminal.integrated.env.linux": {
+                    "VIRTUAL_ENV": "${containerWorkspaceFolder}/.venv",
+                    "PATH": "${containerWorkspaceFolder}/.venv/bin:${env:PATH}"
+                },
+                "terminal.integrated.profiles.linux": {
+                    "venv-bash": {
+                        "path": "/bin/bash",
+                        "args": ["-lc", "source ${containerWorkspaceFolder}/.venv/bin/activate; exec bash -l"]
+                    }
+                },
+                "terminal.integrated.defaultProfile.linux": "venv-bash"
+            }
         }
     }
 }

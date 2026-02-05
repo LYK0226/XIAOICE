@@ -11,6 +11,24 @@ loginBtn.addEventListener('click', () => {
     container.classList.remove("active");
 });
 
+// Password visibility toggles
+document.querySelectorAll('.toggle-password').forEach((btn) => {
+    btn.addEventListener('click', () => {
+        const targetId = btn.getAttribute('data-target');
+        const input = document.getElementById(targetId);
+        if (!input) return;
+        const isVisible = input.type === 'text';
+        input.type = isVisible ? 'password' : 'text';
+
+        const icon = btn.querySelector('i');
+        if (icon) {
+            icon.classList.toggle('fa-eye', isVisible);
+            icon.classList.toggle('fa-eye-slash', !isVisible);
+        }
+        btn.setAttribute('aria-pressed', String(!isVisible));
+    });
+});
+
 // Handle Sign Up form submission
 document.getElementById('signup-form').addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -40,7 +58,12 @@ document.getElementById('signup-form').addEventListener('submit', async (e) => {
         const data = await response.json();
         
         if (response.ok) {
-            alert('Registration successful! Please sign in.');
+            // Show inline success message on sign-in form instead of alert
+            const signinSuccessDiv = document.getElementById('signin-error');
+            if (signinSuccessDiv) {
+                signinSuccessDiv.style.color = 'green';
+                signinSuccessDiv.textContent = 'Registration successful! Please sign in.';
+            }
             // Switch to sign-in form
             container.classList.remove("active");
             // Clear the form

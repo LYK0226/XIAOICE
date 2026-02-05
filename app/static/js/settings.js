@@ -44,6 +44,10 @@ function updateSettingsLanguage(lang) {
     if (oldPasswordInput && t['placeholder.oldPassword']) oldPasswordInput.placeholder = t['placeholder.oldPassword'];
     if (newPasswordInput && t['placeholder.newPassword']) newPasswordInput.placeholder = t['placeholder.newPassword'];
     if (confirmPasswordInput && t['placeholder.confirmPassword']) confirmPasswordInput.placeholder = t['placeholder.confirmPassword'];
+    
+    // Delete Account Password Input
+    const deleteAccountPasswordInput = document.getElementById('deleteAccountPasswordInput');
+    if (deleteAccountPasswordInput && t['placeholder.confirmDeletionPassword']) deleteAccountPasswordInput.placeholder = t['placeholder.confirmDeletionPassword'];
 }
 
 // ===== Custom Modal Functions =====
@@ -149,16 +153,49 @@ function showCustomConfirm(message, callback) {
 }
 
 // Custom prompt function using modal instead of browser prompt
-function showCustomPrompt(message, defaultValue, callback) {
+function showCustomPrompt(message, defaultValue, callback, options = {}) {
     const modal = document.getElementById('customPromptModal');
     const messageElement = document.getElementById('customPromptMessage');
     const inputElement = document.getElementById('customPromptInput');
+    const toggleBtn = document.getElementById('customPromptToggle');
     const okBtn = document.getElementById('customPromptOkBtn');
     const cancelBtn = document.getElementById('customPromptCancelBtn');
 
     if (modal && messageElement && inputElement && okBtn && cancelBtn) {
+        const inputType = options.inputType || 'text';
+        const showToggle = inputType === 'password';
+        let toggleHandler = null;
+
+        const setPromptVisibility = (visible) => {
+            inputElement.type = visible ? 'text' : 'password';
+            if (toggleBtn) {
+                const icon = toggleBtn.querySelector('i');
+                if (icon) {
+                    icon.classList.toggle('fa-eye', !visible);
+                    icon.classList.toggle('fa-eye-slash', visible);
+                }
+                toggleBtn.setAttribute('aria-pressed', String(visible));
+            }
+        };
+
         messageElement.textContent = message;
         inputElement.value = defaultValue || '';
+        if (inputType === 'password') {
+            setPromptVisibility(false);
+        } else {
+            inputElement.type = 'text';
+        }
+
+        if (toggleBtn) {
+            toggleBtn.style.display = showToggle ? 'inline-flex' : 'none';
+            if (showToggle) {
+                toggleHandler = () => {
+                    const isVisible = inputElement.type === 'text';
+                    setPromptVisibility(!isVisible);
+                };
+                toggleBtn.addEventListener('click', toggleHandler);
+            }
+        }
         modal.style.display = 'block';
         inputElement.focus();
         
@@ -174,6 +211,9 @@ function showCustomPrompt(message, defaultValue, callback) {
             cancelBtn.removeEventListener('click', cancelHandler);
             window.removeEventListener('click', outsideClickHandler);
             inputElement.removeEventListener('keypress', enterHandler);
+            if (toggleBtn && toggleHandler) {
+                toggleBtn.removeEventListener('click', toggleHandler);
+            }
         };
 
         const okHandler = () => {
@@ -292,7 +332,68 @@ window.addEventListener('load', () => {
     
     // Load user profile settings
     loadUserProfileSettings();
+    
+    // Check if user needs to add children profiles (once per session)
+    checkChildrenReminder();
 });
+
+// Check if user has children profiles and show reminder if needed
+async function checkChildrenReminder() {
+    // Only check if user is logged in
+    const token = localStorage.getItem('access_token');
+    if (!token) {
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/children', {
+            headers: {
+                'Authorization': `Bearer ${token}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            const childrenCount = typeof data.count === 'number'
+                ? data.count
+                : (Array.isArray(data.children) ? data.children.length : 0);
+
+            if (childrenCount === 0) {
+                // Show reminder after a short delay to let the page settle
+                setTimeout(() => {
+                    showChildrenReminder();
+                }, 1500);
+            }
+        }
+    } catch (error) {
+        console.error('Error checking children profiles:', error);
+    }
+}
+
+// Show children reminder modal
+function showChildrenReminder() {
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const t = window.translations && window.translations[currentLang] ? window.translations[currentLang] : {};
+    
+    const message = t['settings.children.reminder'] || 
+        '建議您先添加小朋友的基本資料，這樣在使用評估功能時會有更好的體驗。\n\n是否現在前往設定頁面添加？';
+    
+    showCustomConfirm(message, (confirmed) => {
+        if (confirmed) {
+            const settingsBtn = document.getElementById('settings');
+            if (settingsBtn) {
+                settingsBtn.click();
+                // Wait for modal to open then switch tab
+                setTimeout(() => {
+                    const childrenGroup = document.querySelector('.settings-group[data-group="children"]');
+                    if (childrenGroup) {
+                        childrenGroup.click();
+                    }
+                }, 200);
+            }
+        }
+    });
+}
 
 // Load user profile information
 async function loadUserProfile() {
@@ -393,6 +494,50 @@ function openEditEmailModal() {
     input.focus();
 }
 
+function setPasswordToggleState(inputId, toggleId, visible) {
+    const input = document.getElementById(inputId);
+    const toggle = document.getElementById(toggleId);
+
+    if (!input || !toggle) {
+        return;
+    }
+
+    input.type = visible ? 'text' : 'password';
+
+    const icon = toggle.querySelector('i');
+    if (icon) {
+        icon.className = visible ? 'fas fa-eye-slash' : 'fas fa-eye';
+    }
+
+    toggle.setAttribute('aria-pressed', String(visible));
+    toggle.style.display = 'inline-flex';
+}
+
+function setupPasswordToggle(inputId, toggleId) {
+    const toggle = document.getElementById(toggleId);
+    if (!toggle) {
+        return;
+    }
+
+    toggle.addEventListener('click', () => {
+        const input = document.getElementById(inputId);
+        if (!input) {
+            return;
+        }
+
+        const shouldShow = input.type === 'password';
+        setPasswordToggleState(inputId, toggleId, shouldShow);
+    });
+
+    setPasswordToggleState(inputId, toggleId, false);
+}
+
+function resetChangePasswordVisibility() {
+    setPasswordToggleState('oldPasswordInput', 'oldPasswordToggle', false);
+    setPasswordToggleState('newPasswordInput', 'newPasswordToggle', false);
+    setPasswordToggleState('confirmPasswordInput', 'confirmPasswordToggle', false);
+}
+
 // Modal functionality for password change
 function openChangePasswordModal() {
     const modal = document.getElementById('changePasswordModal');
@@ -409,10 +554,16 @@ function openChangePasswordModal() {
     document.getElementById('oldPasswordInput').value = '';
     document.getElementById('newPasswordInput').value = '';
     document.getElementById('confirmPasswordInput').value = '';
+
+    resetChangePasswordVisibility();
     
     // Focus on old password input
     document.getElementById('oldPasswordInput').focus();
 }
+
+setupPasswordToggle('oldPasswordInput', 'oldPasswordToggle');
+setupPasswordToggle('newPasswordInput', 'newPasswordToggle');
+setupPasswordToggle('confirmPasswordInput', 'confirmPasswordToggle');
 
 // Save username from modal
 document.getElementById('saveUsernameBtn').addEventListener('click', async () => {
@@ -680,6 +831,106 @@ document.getElementById('cancelPasswordBtn').addEventListener('click', () => {
     document.getElementById('changePasswordModal').style.display = 'none';
 });
 
+// Delete Account Handler - Modal logic
+const deleteAccountBtn = document.getElementById('deleteAccountBtn');
+if (deleteAccountBtn) {
+    deleteAccountBtn.addEventListener('click', () => {
+        const modal = document.getElementById('deleteAccountModal');
+        const input = document.getElementById('deleteAccountPasswordInput');
+        const toggleBtn = document.getElementById('deleteAccountToggle');
+        
+        // Reset state
+        input.value = '';
+        input.type = 'password';
+        if (toggleBtn) {
+            toggleBtn.style.display = 'inline-flex';
+            toggleBtn.querySelector('i').className = 'fas fa-eye';
+            toggleBtn.setAttribute('aria-pressed', 'false');
+        }
+        
+        modal.style.display = 'block';
+
+        // Update language for the modal
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        updateSettingsLanguage(langToUse);
+
+        input.focus();
+    });
+}
+
+// Confirm Delete Account
+document.getElementById('confirmDeleteAccountBtn').addEventListener('click', async () => {
+    const passwordInput = document.getElementById('deleteAccountPasswordInput');
+    const password = passwordInput.value;
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+
+    if (!password) {
+        showCustomAlert({ 'zh-TW': '請輸入密碼以確認刪除', 'en': 'Please enter your password to confirm deletion', 'ja': '削除を確認するためにパスワードを入力してください' }[currentLang] || '請輸入密碼以確認刪除');
+        return;
+    }
+
+    try {
+        const token = localStorage.getItem('access_token');
+        const response = await fetch('/auth/delete-account', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ password })
+        });
+
+        if (response.ok) {
+            // Clear local tokens and cookies, then redirect to home
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+
+            // Try to call logout to clear cookies server-side (best-effort)
+            try {
+                await fetch('/auth/logout', { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+            } catch (e) {
+                // ignore
+            }
+
+            document.getElementById('deleteAccountModal').style.display = 'none';
+            showCustomAlert((currentLang === 'zh-TW') ? '帳號已刪除，將自動跳轉至首頁' : ((currentLang === 'en') ? 'Account deleted, redirecting to homepage' : 'アカウントは削除されました。ホームにリダイレクトします'));
+            setTimeout(() => { window.location.href = '/'; }, 1500);
+        } else {
+            const data = await response.json().catch(() => ({}));
+            showCustomAlert(data.error || ((currentLang === 'zh-TW') ? '刪除失敗' : ((currentLang === 'en') ? 'Deletion failed' : '削除に失敗しました')));
+        }
+    } catch (err) {
+        console.error('Error deleting account:', err);
+        showCustomAlert((currentLang === 'zh-TW') ? '刪除失敗，請稍後重試' : ((currentLang === 'en') ? 'Deletion failed, try again later' : '削除に失敗しました。後でもう一度お試しください'));
+    }
+});
+
+// Cancel Delete Account
+document.getElementById('cancelDeleteAccountBtn').addEventListener('click', () => {
+    document.getElementById('deleteAccountModal').style.display = 'none';
+});
+
+// Toggle Password Visibility for Delete Account
+const deleteAccountToggle = document.getElementById('deleteAccountToggle');
+if (deleteAccountToggle) {
+    deleteAccountToggle.addEventListener('click', () => {
+        const input = document.getElementById('deleteAccountPasswordInput');
+        const icon = deleteAccountToggle.querySelector('i');
+        
+        if (input.type === 'password') {
+            input.type = 'text';
+            icon.className = 'fas fa-eye-slash';
+            deleteAccountToggle.setAttribute('aria-pressed', 'true');
+        } else {
+            input.type = 'password';
+            icon.className = 'fas fa-eye';
+            deleteAccountToggle.setAttribute('aria-pressed', 'false');
+        }
+    });
+}
+
 // Close modals when clicking outside
 window.onclick = function(event) {
     const avatarModal = document.getElementById('avatarModal');
@@ -687,6 +938,7 @@ window.onclick = function(event) {
     const editUsernameModal = document.getElementById('editUsernameModal');
     const editEmailModal = document.getElementById('editEmailModal');
     const changePasswordModal = document.getElementById('changePasswordModal');
+    const deleteAccountModal = document.getElementById('deleteAccountModal');
     
     if (event.target == avatarModal) {
         avatarModal.style.display = 'none';
@@ -703,6 +955,9 @@ window.onclick = function(event) {
     }
     if (event.target == changePasswordModal) {
         changePasswordModal.style.display = 'none';
+    }
+    if (event.target == deleteAccountModal) {
+        deleteAccountModal.style.display = 'none';
     }
 };
 
@@ -846,32 +1101,48 @@ langOptions.forEach(option => {
         };
         
         const bannerMessage = bannerMessages[lang] || bannerMessages['en'];
-        
-        // Remove any existing language change banners
-        const existingBanners = document.querySelectorAll('.language-change-banner');
-        existingBanners.forEach(banner => {
-            if (banner.parentNode) {
-                banner.parentNode.removeChild(banner);
-            }
-        });
-        
-        // Create and show banner notification
-        const banner = document.createElement('div');
-        banner.className = 'language-change-banner';
-        banner.textContent = bannerMessage;
-        document.body.appendChild(banner);
-        
-        // Remove banner after 3 seconds
-        setTimeout(() => {
-            banner.style.animation = 'slideUp 0.3s ease-in';
-            setTimeout(() => {
-                if (banner.parentNode) {
-                    document.body.removeChild(banner);
-                }
-            }, 300);
-        }, 3000);
+        showBannerMessage(bannerMessage);
     });
 });
+
+function showBannerMessage(message, options = {}) {
+    if (!message) {
+        return;
+    }
+
+    // Remove any existing banners
+    const existingBanners = document.querySelectorAll('.language-change-banner');
+    existingBanners.forEach(banner => {
+        if (banner.parentNode) {
+            banner.parentNode.removeChild(banner);
+        }
+    });
+
+    // Create and show banner notification
+    const banner = document.createElement('div');
+    banner.className = 'language-change-banner';
+    banner.textContent = message;
+    if (options.clickable) {
+        banner.style.cursor = 'pointer';
+        banner.setAttribute('role', 'button');
+        banner.addEventListener('click', () => {
+            if (typeof options.onClick === 'function') {
+                options.onClick();
+            }
+        });
+    }
+    document.body.appendChild(banner);
+
+    // Remove banner after 3 seconds
+    setTimeout(() => {
+        banner.style.animation = 'slideUp 0.3s ease-in';
+        setTimeout(() => {
+            if (banner.parentNode) {
+                document.body.removeChild(banner);
+            }
+        }, 300);
+    }, 3000);
+}
 
 // ===== API Key Management =====
 
@@ -1393,5 +1664,293 @@ document.getElementById('settings').addEventListener('click', () => {
         loadApiKeys();
         loadUserModel();
         loadUserProfileSettings();
+        loadChildren(); // Load children profiles
     }, 100);
 })
+
+// ===== Children Management =====
+
+let editingChildId = null; // Track which child is being edited
+
+// Load children profiles
+async function loadChildren() {
+    try {
+        const response = await fetch('/api/children', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const data = await response.json();
+            renderChildren(data.children || []);
+        } else {
+            console.error('Failed to load children profiles');
+        }
+    } catch (error) {
+        console.error('Error loading children profiles:', error);
+    }
+}
+
+// Render children list
+function renderChildren(children) {
+    const childrenList = document.getElementById('childrenList');
+    const childrenEmpty = document.getElementById('childrenEmpty');
+    const childForm = document.getElementById('childForm');
+    
+    // Clear previous content except empty state and form
+    const existingCards = childrenList.querySelectorAll('.child-card');
+    existingCards.forEach(card => card.remove());
+    
+    if (children.length === 0) {
+        childrenEmpty.style.display = 'block';
+        childForm.style.display = 'none';
+        return;
+    }
+    
+    childrenEmpty.style.display = 'none';
+    
+    // Get current language for translations
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const t = window.translations && window.translations[currentLang] ? window.translations[currentLang] : {};
+    
+    children.forEach(child => {
+        const childCard = document.createElement('div');
+        childCard.className = 'child-card';
+        
+        // Format details
+        const genderMap = {
+            'male': t['settings.children.form.gender.male'] || '男',
+            'female': t['settings.children.form.gender.female'] || '女',
+            'other': t['settings.children.form.gender.other'] || '其他'
+        };
+        const genderText = child.gender ? genderMap[child.gender] || child.gender : '';
+        const ageText = `${child.age_months} ${t['settings.children.months'] || '個月'}`;
+        const details = [genderText, ageText].filter(Boolean).join(' · ');
+        
+        const encodedName = encodeURIComponent(child.name);
+        childCard.innerHTML = `
+            <div class="child-avatar">${child.gender === 'male' ? '👦' : child.gender === 'female' ? '👧' : '👶'}</div>
+            <div class="child-info">
+                <div class="child-name">${child.name}</div>
+                <div class="child-details">${details}</div>
+            </div>
+            <div class="child-actions">
+                <button class="child-action-btn child-edit-btn" data-child-id="${child.id}">
+                    <i class="fas fa-edit"></i> ${t['settings.profile.edit'] || '編輯'}
+                </button>
+                <button class="child-action-btn delete child-delete-btn" data-child-id="${child.id}" data-child-name="${encodedName}">
+                    <i class="fas fa-trash"></i> ${t['alert.delete'] || '刪除'}
+                </button>
+            </div>
+        `;
+        
+        childrenList.insertBefore(childCard, childrenEmpty);
+    });
+}
+
+// Children list event delegation
+const childrenList = document.getElementById('childrenList');
+if (childrenList) {
+    childrenList.addEventListener('click', (event) => {
+        const editBtn = event.target.closest('.child-edit-btn');
+        if (editBtn) {
+            const childId = Number(editBtn.dataset.childId);
+            if (Number.isFinite(childId)) {
+                editChild(childId);
+            }
+            return;
+        }
+
+        const deleteBtn = event.target.closest('.child-delete-btn');
+        if (deleteBtn) {
+            const childId = Number(deleteBtn.dataset.childId);
+            const childName = decodeURIComponent(deleteBtn.dataset.childName || '');
+            if (Number.isFinite(childId)) {
+                confirmDeleteChild(childId, childName);
+            }
+        }
+    });
+}
+
+// Show add child form
+document.getElementById('addChildBtn').addEventListener('click', () => {
+    showChildForm();
+});
+
+// Show child form (add or edit mode)
+function showChildForm(child = null) {
+    const childForm = document.getElementById('childForm');
+    const formTitle = document.getElementById('childFormTitle');
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const t = window.translations && window.translations[currentLang] ? window.translations[currentLang] : {};
+    
+    if (child) {
+        // Edit mode
+        editingChildId = child.id;
+        formTitle.textContent = t['settings.children.form.edit'] || '編輯小朋友';
+        document.getElementById('childProfileName').value = child.name;
+        document.getElementById('childProfileBirthdate').value = child.birthdate;
+        document.getElementById('childProfileGender').value = child.gender || '';
+        document.getElementById('childProfileNotes').value = child.notes || '';
+    } else {
+        // Add mode
+        editingChildId = null;
+        formTitle.textContent = t['settings.children.form.add'] || '添加小朋友';
+        document.getElementById('childProfileName').value = '';
+        document.getElementById('childProfileBirthdate').value = '';
+        document.getElementById('childProfileGender').value = '';
+        document.getElementById('childProfileNotes').value = '';
+    }
+    
+    childForm.style.display = 'block';
+    childForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+}
+
+// Close child form
+document.getElementById('closeChildForm').addEventListener('click', () => {
+    hideChildForm();
+});
+
+document.getElementById('cancelChildForm').addEventListener('click', () => {
+    hideChildForm();
+});
+
+function hideChildForm() {
+    document.getElementById('childForm').style.display = 'none';
+    editingChildId = null;
+}
+
+// Save child (create or update)
+document.getElementById('saveChildForm').addEventListener('click', async () => {
+    const name = document.getElementById('childProfileName').value.trim();
+    const birthdate = document.getElementById('childProfileBirthdate').value;
+    const genderValue = document.getElementById('childProfileGender').value;
+    const notesValue = document.getElementById('childProfileNotes').value.trim();
+    
+    // Convert empty strings to null
+    const gender = genderValue || null;
+    const notes = notesValue || null;
+    
+    if (!name || !birthdate) {
+        showCustomAlert(window.translations && window.translations[currentLanguage] ? 
+            window.translations[currentLanguage]['settings.children.form.required'] || '請填寫姓名和生日' : 
+            '請填寫姓名和生日');
+        return;
+    }
+    
+    const payload = { name, birthdate, gender, notes };
+    
+    try {
+        let response;
+        if (editingChildId) {
+            // Update existing child
+            response = await fetch(`/api/children/${editingChildId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                },
+                body: JSON.stringify(payload)
+            });
+        } else {
+            // Create new child
+            response = await fetch('/api/children', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                },
+                body: JSON.stringify(payload)
+            });
+        }
+        
+        if (response.ok) {
+            hideChildForm();
+            loadChildren(); // Reload list
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const t = window.translations && window.translations[currentLang] ? window.translations[currentLang] : {};
+            if (editingChildId) {
+                showCustomAlert(t['settings.children.updated'] || '小朋友資料已更新');
+            } else {
+                showBannerMessage(t['settings.children.created'] || '小朋友資料已添加');
+            }
+        } else {
+            const error = await response.json();
+            showCustomAlert(error.error || 'Failed to save child profile');
+        }
+    } catch (error) {
+        console.error('Error saving child:', error);
+        showCustomAlert('An error occurred. Please try again.');
+    }
+});
+
+// Edit child - fetch and show form
+async function editChild(childId) {
+    try {
+        const response = await fetch(`/api/children/${childId}`, {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            const child = await response.json();
+            showChildForm(child);
+        } else {
+            showCustomAlert('Failed to load child profile');
+        }
+    } catch (error) {
+        console.error('Error loading child:', error);
+        showCustomAlert('An error occurred. Please try again.');
+    }
+}
+
+// Confirm and delete child
+function confirmDeleteChild(childId, childName) {
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const t = window.translations && window.translations[currentLang] ? window.translations[currentLang] : {};
+    const message = (t['settings.children.confirm_delete'] || '確定要刪除 {name} 的資料嗎？').replace('{name}', childName);
+    
+    showCustomConfirm(message, (confirmed) => {
+        if (confirmed) {
+            deleteChildProfile(childId);
+        }
+    });
+}
+
+// Delete child profile
+async function deleteChildProfile(childId) {
+    try {
+        const response = await fetch(`/api/children/${childId}`, {
+            method: 'DELETE',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+        
+        if (response.ok) {
+            loadChildren(); // Reload list
+        } else {
+            let errorMessage = 'Failed to delete child profile';
+            const contentType = response.headers.get('content-type') || '';
+            if (contentType.includes('application/json')) {
+                const error = await response.json();
+                errorMessage = error.error || errorMessage;
+            } else {
+                const errorText = await response.text();
+                if (errorText) {
+                    errorMessage = errorText;
+                }
+            }
+            showCustomAlert(errorMessage);
+        }
+    } catch (error) {
+        console.error('Error deleting child:', error);
+        showCustomAlert('An error occurred. Please try again.');
+    }
+}
+
+// Make functions globally accessible
+window.editChild = editChild;
+window.confirmDeleteChild = confirmDeleteChild;

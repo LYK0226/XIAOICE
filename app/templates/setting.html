@@ -9,6 +9,10 @@
                     <i class="fas fa-user-circle"></i>
                     <span data-i18n="settings.profile">個人資料</span>
                 </div>
+                <div class="settings-group" data-group="children">
+                    <i class="fas fa-child"></i>
+                    <span data-i18n="settings.children">小朋友</span>
+                </div>
                 <div class="settings-group" data-group="personalization">
                     <i class="fas fa-palette"></i>
                     <span data-i18n="settings.personalization">個人化</span>
@@ -84,6 +88,78 @@
                                     <i class="fas fa-edit"></i> <span data-i18n="settings.profile.edit">編輯</span>
                                 </button>
                             </div>
+                        </div>
+
+                        <!-- Delete Account -->
+                        <div class="profile-item">
+                            <label class="field-label" data-i18n="settings.profile.delete_account">刪除帳號</label>
+                            <div class="field-content">
+                                <p style="color:#b00020; font-size:14px; margin: 0;" data-i18n="settings.profile.delete_account.desc">刪除帳號會永久移除您的所有資料，無法復原。</p>
+                            </div>
+                            <div class="field-actions">
+                                <button id="deleteAccountBtn" class="clear-btn">
+                                    <i class="fas fa-trash"></i> <span data-i18n="settings.profile.delete_account">刪除帳號</span>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Children Settings -->
+                <div class="settings-content" id="childrenTab">
+                    <div class="settings-header">
+                        <h3><i class="fas fa-child"></i> <span data-i18n="settings.children.title">小朋友資料</span></h3>
+                        <p class="settings-description" data-i18n="settings.children.description">管理小朋友的基本資料，用於評估和追蹤發展進度</p>
+                    </div>
+                    
+                    <!-- Children List -->
+                    <div class="setting-item">
+                        <div class="children-list" id="childrenList">
+                            <!-- Children will be loaded here dynamically -->
+                            <div class="children-empty" id="childrenEmpty" style="display: none;">
+                                <i class="fas fa-child" style="font-size: 48px; opacity: 0.3; margin-bottom: 12px;"></i>
+                                <p data-i18n="settings.children.empty">尚未添加小朋友資料</p>
+                                <p style="font-size: 14px; opacity: 0.7; margin-top: 8px;" data-i18n="settings.children.empty.hint">點擊下方按鈕添加第一筆資料</p>
+                            </div>
+                        </div>
+                        
+                        <button class="add-api-key-btn" id="addChildBtn" style="margin-top: 16px;">
+                            <i class="fas fa-plus"></i> <span data-i18n="settings.children.add">添加小朋友</span>
+                        </button>
+                    </div>
+                    
+                    <!-- Child Form (shown when adding/editing) -->
+                    <div class="child-form" id="childForm" style="display: none;">
+                        <div class="form-header">
+                            <h4 id="childFormTitle" data-i18n="settings.children.form.add">添加小朋友</h4>
+                            <button class="form-close" id="closeChildForm">&times;</button>
+                        </div>
+                        <div class="form-body">
+                            <div class="form-field">
+                                <label data-i18n="settings.children.form.name">姓名 *</label>
+                                <input type="text" id="childProfileName" placeholder="例如：小明" required>
+                            </div>
+                            <div class="form-field">
+                                <label data-i18n="settings.children.form.birthdate">生日 *</label>
+                                <input type="date" id="childProfileBirthdate" required>
+                            </div>
+                            <div class="form-field">
+                                <label data-i18n="settings.children.form.gender">性別</label>
+                                <select id="childProfileGender">
+                                    <option value="" data-i18n="settings.children.form.gender.unspecified">不透露</option>
+                                    <option value="male" data-i18n="settings.children.form.gender.male">男</option>
+                                    <option value="female" data-i18n="settings.children.form.gender.female">女</option>
+                                    <option value="other" data-i18n="settings.children.form.gender.other">其他</option>
+                                </select>
+                            </div>
+                            <div class="form-field">
+                                <label data-i18n="settings.children.form.notes">備註</label>
+                                <textarea id="childProfileNotes" rows="3" placeholder="例如：早產、過敏等特殊情況"></textarea>
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button class="form-btn cancel" id="cancelChildForm" data-i18n="alert.cancel">取消</button>
+                            <button class="form-btn save" id="saveChildForm" data-i18n="alert.save">保存</button>
                         </div>
                     </div>
                 </div>
@@ -265,15 +341,51 @@
     <div class="modal-content custom-modal-mini">
         <h2 data-i18n="settings.profile.change_password">變更密碼</h2>
         <div class="form-group">
-            <input type="password" id="oldPasswordInput" class="custom-modal-input" placeholder="輸入舊密碼" required>
-            <input type="password" id="newPasswordInput" class="custom-modal-input" placeholder="輸入新密碼" required>
-            <input type="password" id="confirmPasswordInput" class="custom-modal-input" placeholder="再次輸入新密碼" required>
+            <div class="custom-modal-input-group">
+                <input type="password" id="oldPasswordInput" class="custom-modal-input" placeholder="輸入舊密碼" required>
+                <button type="button" id="oldPasswordToggle" class="custom-modal-toggle" aria-label="Toggle password visibility">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
+            <div class="custom-modal-input-group">
+                <input type="password" id="newPasswordInput" class="custom-modal-input" placeholder="輸入新密碼" required>
+                <button type="button" id="newPasswordToggle" class="custom-modal-toggle" aria-label="Toggle password visibility">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
+            <div class="custom-modal-input-group">
+                <input type="password" id="confirmPasswordInput" class="custom-modal-input" placeholder="再次輸入新密碼" required>
+                <button type="button" id="confirmPasswordToggle" class="custom-modal-toggle" aria-label="Toggle password visibility">
+                    <i class="fas fa-eye"></i>
+                </button>
+            </div>
         </div>
         <div class="custom-modal-actions">
             <button id="savePasswordBtn" class="custom-modal-btn primary">
                 <i class="fas fa-save"></i> <span data-i18n="settings.profile.save">保存</span>
             </button>
             <button id="cancelPasswordBtn" class="custom-modal-btn secondary">
+                <i class="fas fa-times"></i> <span data-i18n="settings.profile.cancel">取消</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Account Modal -->
+<div id="deleteAccountModal" class="modal">
+    <div class="modal-content custom-modal-mini">
+        <h2 data-i18n="settings.profile.delete_account">刪除帳號</h2>
+        <div class="custom-modal-input-group">
+            <input type="password" id="deleteAccountPasswordInput" class="custom-modal-input" placeholder="輸入密碼" required>
+            <button type="button" id="deleteAccountToggle" class="custom-modal-toggle" aria-label="Toggle password visibility">
+                <i class="fas fa-eye"></i>
+            </button>
+        </div>
+        <div class="custom-modal-actions">
+            <button id="confirmDeleteAccountBtn" class="custom-modal-btn delete-btn" style="background-color: #b00020; color: white;">
+                <i class="fas fa-trash"></i> <span data-i18n="settings.profile.delete_account.confirm_btn">確認刪除</span>
+            </button>
+            <button id="cancelDeleteAccountBtn" class="custom-modal-btn secondary">
                 <i class="fas fa-times"></i> <span data-i18n="settings.profile.cancel">取消</span>
             </button>
         </div>
