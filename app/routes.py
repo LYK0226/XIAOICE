@@ -217,7 +217,7 @@ def chat_stream():
             api_key = user_profile.selected_api_key.get_decrypted_key()
 
         # Get user's selected AI model
-        ai_model = 'gemini-2.5-flash'  # default
+        ai_model = 'gemini-3-flash'  # default
         if user_profile and user_profile.ai_model:
             ai_model = user_profile.ai_model
 
@@ -406,9 +406,9 @@ def get_user_model():
         user_profile = UserProfile.query.filter_by(user_id=user_id).first()
         if not user_profile:
             # Return default model if no profile exists
-            return jsonify({'ai_model': 'gemini-2.5-flash'})
+            return jsonify({'ai_model': 'gemini-3-flash'})
         
-        return jsonify({'ai_model': user_profile.ai_model or 'gemini-2.5-flash'})
+        return jsonify({'ai_model': user_profile.ai_model or 'gemini-3-flash'})
     except Exception as e:
         current_app.logger.error(f"Error getting user model: {e}")
         return jsonify({'error': 'Failed to get user model'}), 500
@@ -427,7 +427,7 @@ def set_user_model():
         return jsonify({'error': 'ai_model is required'}), 400
     
     ai_model = data['ai_model']
-    allowed_models = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview', 'gemini-3-pro-preview']
+    allowed_models = ['gemini-3-flash', 'gemini-3-pro']
     
     if ai_model not in allowed_models:
         return jsonify({'error': f'Invalid model. Allowed: {", ".join(allowed_models)}'}), 400
@@ -465,7 +465,7 @@ def get_user_profile():
                 'theme': 'light',
                 'bot_avatar': None,
                 'selected_api_key_id': None,
-                'ai_model': 'gemini-2.5-flash'
+                'ai_model': 'gemini-3-flash'
             })
         
         return jsonify(user_profile.to_dict())

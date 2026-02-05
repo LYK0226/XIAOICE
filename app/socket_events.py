@@ -206,7 +206,7 @@ def handle_send_message(data):
         # Get user's API key and model settings
         user_profile = UserProfile.query.filter_by(user_id=user_id).first()
         api_key = None
-        ai_model = 'gemini-2.5-flash'
+        ai_model = 'gemini-3-flash'
         
         if user_profile:
             if user_profile.selected_api_key:

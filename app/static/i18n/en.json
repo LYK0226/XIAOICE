@@ -57,8 +57,6 @@
   "settings.advanced.title": "API Key Management",
   "settings.advanced.description": "Manage your Google AI API keys",
   "settings.advanced.model": "AI Model Selection",
-  "settings.advanced.model.gemini-2.5-flash": "Gemini 2.5 Flash",
-    "settings.advanced.model.gemini-2.5-pro": "Gemini 2.5 Pro",
   "settings.advanced.model.gemini-3-flash": "Gemini 3 Flash",
   "settings.advanced.model.gemini-3-pro": "Gemini 3 Pro",
   "settings.advanced.api_key": "API Key",

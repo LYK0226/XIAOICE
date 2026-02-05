@@ -42,7 +42,7 @@ class UserProfile(db.Model):
     theme = db.Column(db.String(20), default='light')
     bot_avatar = db.Column(db.Text)
     selected_api_key_id = db.Column(db.Integer, db.ForeignKey('user_api_keys.id'), nullable=True)
-    ai_model = db.Column(db.String(50), default='gemini-2.5-flash')  # Add AI model selection
+    ai_model = db.Column(db.String(50), default='gemini-3-flash')  # Add AI model selection
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user = db.relationship('User', backref='profile')

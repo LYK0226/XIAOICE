@@ -54,7 +54,7 @@
 ┌─────────────────┐   Google AI API   ┌─────────────────┐
 │   Google AI     │ ◄──────────────── │   API Calls     │
 │   Services      │                   │                 │
-│ Gemini 2.5      │                   │ Streaming        │
+│ Gemini 3      │                   │ Streaming        │
 │ Flash/Pro       │                   │ Responses       │
 └─────────────────┘                   └─────────────────┘
 ```
@@ -67,7 +67,7 @@ CREATE TABLE user_profiles (
     id INTEGER PRIMARY KEY,
     user_id INTEGER NOT NULL,
     selected_api_key_id INTEGER,  -- ← Points to user_api_keys.id
-    ai_model VARCHAR(50) DEFAULT 'gemini-2.5-flash',
+    ai_model VARCHAR(50) DEFAULT 'gemini-3-flash',
     FOREIGN KEY (user_id) REFERENCES users(id),
     FOREIGN KEY (selected_api_key_id) REFERENCES user_api_keys(id)
 );
