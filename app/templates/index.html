@@ -5,7 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>聊天盒子</title>
     <!-- Assessment styles -->
-     <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/index.css">
+    <link rel="stylesheet" href="../static/css/settings.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
@@ -120,6 +121,17 @@
         </div>
     </div>
 
+    <div class="floating-actions" aria-label="快速操作">
+        <button id="settings" class="floating-btn" type="button" title="設定">
+            <i class="fas fa-gear"></i>
+            <span>設定</span>
+        </button>
+        <button id="logout" class="floating-btn danger" type="button" title="登出">
+            <i class="fas fa-right-from-bracket"></i>
+            <span>登出</span>
+        </button>
+    </div>
+
     <!-- Evaluation Modal -->
     <div class="evaluation-modal" id="evaluationModal">
         <div class="modal-content">
@@ -162,6 +174,8 @@
 
     <!-- Settings Modal (included from separate file) -->
     {% include 'setting.html' %}
+
+    <script src="../static/js/settings.js"></script>
     
     <!-- Auth check script -->
     <script>

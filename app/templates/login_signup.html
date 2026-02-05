@@ -13,7 +13,12 @@
 
     <div class="container" id="container">
         <div class="form-container sign-up">
-            <form id="signup-form">
+            <!-- Add autocomplete and hidden dummy fields to reduce browser "save password" prompts -->
+            <form id="signup-form" autocomplete="off" novalidate>
+                <!-- Hidden dummy fields to prevent password managers from prompting to save passwords -->
+                <input type="text" name="fake-username" id="fake-username" autocomplete="username" style="position: absolute; left: -9999px; top: -9999px;" aria-hidden="true">
+                <input type="password" name="fake-password" id="fake-password" autocomplete="new-password" style="position: absolute; left: -9999px; top: -9999px;" aria-hidden="true">
+
                 <h1>Create Account</h1>
                 <div class="social-icons">
                     <a href="#" class="icon"><i class="fa-brands fa-google-plus-g"></i></a>
@@ -23,16 +28,26 @@
                     <a href="#" class="icon"><i class="fa-brands fa-apple"></i></a>
                 </div>
                 <span>or use your email for registration</span>
-                <input type="text" id="signup-username" name="username" placeholder="Username" required>
-                <input type="email" id="signup-email" name="email" placeholder="Email" required>
-                <input type="password" id="signup-password" name="password" placeholder="Password" required>
-                <input type="password" id="signup-confirm-password" name="confirm-password" placeholder="Confirm Password" required>
+                <input type="text" id="signup-username" name="username" placeholder="Username" autocomplete="username" required>
+                <input type="email" id="signup-email" name="email" placeholder="Email" autocomplete="email" required>
+                <div class="password-field">
+                    <input type="password" id="signup-password" name="password" placeholder="Password" autocomplete="new-password" required>
+                    <button type="button" class="toggle-password" data-target="signup-password" aria-label="Toggle password visibility">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
+                <div class="password-field">
+                    <input type="password" id="signup-confirm-password" name="confirm-password" placeholder="Confirm Password" autocomplete="new-password" required>
+                    <button type="button" class="toggle-password" data-target="signup-confirm-password" aria-label="Toggle password visibility">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
                 <div id="signup-error" style="color: red; font-size: 12px; margin-top: 5px;"></div>
                 <button type="submit">Sign Up</button>
             </form>
         </div>
         <div class="form-container sign-in">
-            <form id="signin-form">
+            <form id="signin-form" autocomplete="on">
                 <h1>Sign In</h1>
                 <div class="social-icons">
                     <a href="#" class="icon"><i class="fa-brands fa-google-plus-g"></i></a>
@@ -42,8 +57,13 @@
                     <a href="#" class="icon"><i class="fa-brands fa-apple"></i></a>
                 </div>
                 <span>or use your email and password</span>
-                <input type="email" id="signin-email" name="email" placeholder="Email" required>
-                <input type="password" id="signin-password" name="password" placeholder="Password" required>
+                <input type="email" id="signin-email" name="email" placeholder="Email" autocomplete="username" required>
+                <div class="password-field">
+                    <input type="password" id="signin-password" name="password" placeholder="Password" autocomplete="current-password" required>
+                    <button type="button" class="toggle-password" data-target="signin-password" aria-label="Toggle password visibility">
+                        <i class="fas fa-eye"></i>
+                    </button>
+                </div>
                 <div class="remember-me-container">
                     <input type="checkbox" id="remember-me" name="remember-me">
                     <label for="remember-me">Remember Me</label>

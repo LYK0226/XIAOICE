@@ -86,6 +86,41 @@ body{
     outline: none;
 }
 
+.password-field {
+    position: relative;
+    width: 100%;
+}
+
+.password-field input {
+    padding-right: 44px;
+}
+
+.container .toggle-password {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: transparent !important;
+    background-color: transparent !important;
+    border: none;
+    color: #777;
+    cursor: pointer;
+    font-size: 14px;
+    padding: 2px;
+    width: auto;
+    height: auto;
+    margin: 0;
+    box-shadow: none;
+    text-transform: none;
+    border-radius: 0;
+}
+
+.container .toggle-password:hover {
+    color: #333;
+    background: transparent !important;
+    transform: translateY(-50%);
+}
+
 .form-container{
     position: absolute;
     top: 0;

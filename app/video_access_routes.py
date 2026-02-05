@@ -84,7 +84,7 @@ def upload_video():
         if user_profile and user_profile.selected_api_key:
             api_key = user_profile.selected_api_key.get_decrypted_key()
 
-        ai_model = user_profile.ai_model if (user_profile and user_profile.ai_model) else 'gemini-2.5-flash'
+        ai_model = user_profile.ai_model if (user_profile and user_profile.ai_model) else 'gemini-3-flash'
         mime_type = video_file.content_type or gcp_bucket.get_content_type_from_url(gcs_url)
 
         app_obj = current_app._get_current_object()
@@ -222,7 +222,7 @@ def analyze_video(video_id):
         api_key = None
         if user_profile and user_profile.selected_api_key:
             api_key = user_profile.selected_api_key.get_decrypted_key()
-        ai_model = user_profile.ai_model if (user_profile and user_profile.ai_model) else 'gemini-2.5-flash'
+        ai_model = user_profile.ai_model if (user_profile and user_profile.ai_model) else 'gemini-3-flash'
 
         app_obj = current_app._get_current_object()
 

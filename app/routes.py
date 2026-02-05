@@ -13,6 +13,8 @@ from .pose_detection.pose_assessment import evaluate_pose_assessment
 
 bp = Blueprint('main', __name__)
 
+SUPPORTED_LOCALES = {'zh-TW', 'en', 'ja'}
+
 @bp.route("/")
 @bp.route("/index")
 def index():
@@ -36,7 +38,26 @@ def login_page():
     """Render the login/signup page."""
     return render_template('login_signup.html')
 
+
+@bp.route('/<lang_code>')
+@bp.route('/<lang_code>/')
+@bp.route('/<lang_code>/<path:subpath>')
+def localized_route(lang_code, subpath=''):
+    """Redirect locale-prefixed URLs to their non-prefixed routes."""
+    if lang_code not in SUPPORTED_LOCALES:
+        return jsonify({'error': 'Not Found'}), 404
+
+    if not subpath or subpath == 'index':
+        return redirect(url_for('main.index'))
+
+    target = f"/{subpath}"
+    if request.query_string:
+        target = f"{target}?{request.query_string.decode('utf-8')}"
+
+    return redirect(target)
+
 @bp.route('/chatbox')
+@bp.route('/chatbox/')
 def chatbox_page():
     """Render the chatbox page."""
     token = request.cookies.get('access_token')
@@ -54,12 +75,14 @@ def chatbox_page():
     return render_template('chatbox.html')
 
 @bp.route('/forgot_password')
+@bp.route('/forgot_password/')
 def forgot_password_page():
     """Render the forgot password page."""
     return render_template('forget_password.html')
 
 
 @bp.route('/child_assessment')
+@bp.route('/child_assessment/')
 def child_assessment_page():
     """Render the child assessment page."""
     token = request.cookies.get('access_token')
@@ -77,6 +100,7 @@ def child_assessment_page():
     return render_template('child_assessment.html')
 
 @bp.route('/pose_detection')
+@bp.route('/pose_detection/')
 def pose_detection_page():
     """Render the pose detection page."""
     token = request.cookies.get('access_token')
@@ -95,6 +119,7 @@ def pose_detection_page():
 
 
 @bp.route('/video')
+@bp.route('/video/')
 def video_management_page():
     """Render the dedicated video upload + analysis page."""
     token = request.cookies.get('access_token')
@@ -192,7 +217,7 @@ def chat_stream():
             api_key = user_profile.selected_api_key.get_decrypted_key()
 
         # Get user's selected AI model
-        ai_model = 'gemini-2.5-flash'  # default
+        ai_model = 'gemini-3-flash-preview'  # default
         if user_profile and user_profile.ai_model:
             ai_model = user_profile.ai_model
 
@@ -381,9 +406,9 @@ def get_user_model():
         user_profile = UserProfile.query.filter_by(user_id=user_id).first()
         if not user_profile:
             # Return default model if no profile exists
-            return jsonify({'ai_model': 'gemini-2.5-flash'})
+            return jsonify({'ai_model': 'gemini-3-flash-preview'})
         
-        return jsonify({'ai_model': user_profile.ai_model or 'gemini-2.5-flash'})
+        return jsonify({'ai_model': user_profile.ai_model or 'gemini-3-flash-preview'})
     except Exception as e:
         current_app.logger.error(f"Error getting user model: {e}")
         return jsonify({'error': 'Failed to get user model'}), 500
@@ -402,7 +427,7 @@ def set_user_model():
         return jsonify({'error': 'ai_model is required'}), 400
     
     ai_model = data['ai_model']
-    allowed_models = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview', 'gemini-3-pro-preview']
+    allowed_models = ['gemini-3-flash-preview', 'gemini-3-pro-preview']
     
     if ai_model not in allowed_models:
         return jsonify({'error': f'Invalid model. Allowed: {", ".join(allowed_models)}'}), 400
@@ -440,7 +465,7 @@ def get_user_profile():
                 'theme': 'light',
                 'bot_avatar': None,
                 'selected_api_key_id': None,
-                'ai_model': 'gemini-2.5-flash'
+                'ai_model': 'gemini-3-flash-preview'
             })
         
         return jsonify(user_profile.to_dict())
@@ -493,6 +518,216 @@ def update_user_profile():
         db.session.rollback()
         current_app.logger.error(f"Error updating user profile: {e}")
         return jsonify({'error': 'Failed to update profile'}), 500
+
+
+# ===== Children Management Routes =====
+
+@bp.route('/api/children', methods=['GET'])
+@jwt_required()
+def get_children():
+    """Get all children profiles for the current user."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import Child
+    
+    user_id = get_jwt_identity()
+    
+    try:
+        children = Child.query.filter_by(user_id=user_id).order_by(Child.created_at.desc()).all()
+        return jsonify({
+            'children': [child.to_dict() for child in children],
+            'count': len(children)
+        })
+    except Exception as e:
+        current_app.logger.error(f"Error getting children: {e}")
+        return jsonify({'error': 'Failed to retrieve children profiles'}), 500
+
+@bp.route('/api/children', methods=['POST'])
+@jwt_required()
+def create_child():
+    """Create a new child profile for the current user."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import Child, db
+    from datetime import datetime
+    
+    user_id = get_jwt_identity()
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    # Validate required fields
+    if 'name' not in data or not data['name'].strip():
+        return jsonify({'error': 'Name is required'}), 400
+    
+    if 'birthdate' not in data or not data['birthdate']:
+        return jsonify({'error': 'Birthdate is required'}), 400
+    
+    try:
+        # Parse birthdate
+        birthdate_str = data['birthdate']
+        try:
+            birthdate = datetime.strptime(birthdate_str, '%Y-%m-%d').date()
+        except ValueError:
+            return jsonify({'error': 'Invalid birthdate format. Use YYYY-MM-DD'}), 400
+        
+        # Validate birthdate is not in the future
+        from datetime import date
+        if birthdate > date.today():
+            return jsonify({'error': 'Birthdate cannot be in the future'}), 400
+        
+        # Validate gender if provided
+        gender = data.get('gender')
+        if gender:
+            gender = gender.strip() if isinstance(gender, str) else None
+            if gender and gender not in ['male', 'female', 'other']:
+                return jsonify({'error': 'Invalid gender. Allowed: male, female, other'}), 400
+        else:
+            gender = None
+        
+        # Handle notes
+        notes = data.get('notes')
+        if notes:
+            notes = notes.strip() if isinstance(notes, str) else None
+            if not notes:
+                notes = None
+        else:
+            notes = None
+        
+        # Create new child profile
+        new_child = Child(
+            user_id=user_id,
+            name=data['name'].strip(),
+            birthdate=birthdate,
+            gender=gender,
+            notes=notes
+        )
+        
+        db.session.add(new_child)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Child profile created successfully',
+            'child': new_child.to_dict()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating child profile: {e}")
+        return jsonify({'error': 'Failed to create child profile'}), 500
+
+@bp.route('/api/children/<int:child_id>', methods=['GET'])
+@jwt_required()
+def get_child(child_id):
+    """Get a specific child profile."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import Child
+    
+    user_id = get_jwt_identity()
+    
+    try:
+        child = Child.query.filter_by(id=child_id, user_id=user_id).first()
+        if not child:
+            return jsonify({'error': 'Child profile not found'}), 404
+        
+        return jsonify(child.to_dict())
+    except Exception as e:
+        current_app.logger.error(f"Error getting child profile: {e}")
+        return jsonify({'error': 'Failed to retrieve child profile'}), 500
+
+@bp.route('/api/children/<int:child_id>', methods=['PUT'])
+@jwt_required()
+def update_child(child_id):
+    """Update a child profile."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import Child, db
+    from datetime import datetime
+    
+    user_id = get_jwt_identity()
+    data = request.get_json()
+    
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    try:
+        child = Child.query.filter_by(id=child_id, user_id=user_id).first()
+        if not child:
+            return jsonify({'error': 'Child profile not found'}), 404
+        
+        # Update name if provided
+        if 'name' in data:
+            name = data['name'].strip()
+            if not name:
+                return jsonify({'error': 'Name cannot be empty'}), 400
+            child.name = name
+        
+        # Update birthdate if provided
+        if 'birthdate' in data:
+            birthdate_str = data['birthdate']
+            try:
+                birthdate = datetime.strptime(birthdate_str, '%Y-%m-%d').date()
+            except ValueError:
+                return jsonify({'error': 'Invalid birthdate format. Use YYYY-MM-DD'}), 400
+            
+            from datetime import date
+            if birthdate > date.today():
+                return jsonify({'error': 'Birthdate cannot be in the future'}), 400
+            
+            child.birthdate = birthdate
+        
+        # Update gender if provided
+        if 'gender' in data:
+            gender = data['gender']
+            if gender:
+                gender = gender.strip() if isinstance(gender, str) else None
+                if gender and gender not in ['male', 'female', 'other']:
+                    return jsonify({'error': 'Invalid gender. Allowed: male, female, other'}), 400
+            else:
+                gender = None
+            child.gender = gender
+        
+        # Update notes if provided
+        if 'notes' in data:
+            notes = data['notes']
+            if notes:
+                notes = notes.strip() if isinstance(notes, str) else None
+                if not notes:
+                    notes = None
+            else:
+                notes = None
+            child.notes = notes
+        
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'Child profile updated successfully',
+            'child': child.to_dict()
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating child profile: {e}")
+        return jsonify({'error': 'Failed to update child profile'}), 500
+
+@bp.route('/api/children/<int:child_id>', methods=['DELETE'])
+@jwt_required()
+def delete_child(child_id):
+    """Delete a child profile."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import Child, db
+    
+    user_id = get_jwt_identity()
+    
+    try:
+        child = Child.query.filter_by(id=child_id, user_id=user_id).first()
+        if not child:
+            return jsonify({'error': 'Child profile not found'}), 404
+        
+        db.session.delete(child)
+        db.session.commit()
+        
+        return jsonify({'message': 'Child profile deleted successfully'})
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting child profile: {e}")
+        return jsonify({'error': 'Failed to delete child profile'}), 500
 
 
 # ===== Conversation & Message Routes =====

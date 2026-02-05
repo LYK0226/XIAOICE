@@ -198,7 +198,7 @@ class ChatAgentManager:
         self._api_keys: Dict[str, str] = {}  # Cache API keys per user to avoid global env pollution
         self._created_sessions: set = set()  # Track created sessions
     
-    def _create_agent(self, api_key: str, model_name: str = "gemini-2.5-flash") -> Agent:
+    def _create_agent(self, api_key: str, model_name: str = "gemini-3-flash") -> Agent:
         """
         Create a new ADK Agent with the specified configuration.
         This creates a multi-agent system with:
@@ -271,7 +271,7 @@ class ChatAgentManager:
         
         return coordinator_agent
     
-    def get_or_create_agent(self, user_id: str, api_key: str, model_name: str = "gemini-2.5-flash") -> Agent:
+    def get_or_create_agent(self, user_id: str, api_key: str, model_name: str = "gemini-3-flash") -> Agent:
         """
         Get an existing agent for a user or create a new one.
         
@@ -294,7 +294,7 @@ class ChatAgentManager:
         
         return self._agents[agent_key]
     
-    def get_or_create_runner(self, user_id: str, api_key: str, model_name: str = "gemini-2.5-flash") -> Runner:
+    def get_or_create_runner(self, user_id: str, api_key: str, model_name: str = "gemini-3-flash") -> Runner:
         """
         Get or create a Runner for the user's agent.
         
@@ -630,7 +630,7 @@ async def generate_streaming_response_async(
         return
     
     if model_name is None:
-        model_name = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
+        model_name = os.environ.get('GEMINI_MODEL', 'gemini-3-flash')
     
     # Build content parts for the message
     content_parts = []
@@ -758,7 +758,7 @@ def generate_streaming_response(
         return
     
     if model_name is None:
-        model_name = os.environ.get('GEMINI_MODEL', 'gemini-2.5-flash')
+        model_name = os.environ.get('GEMINI_MODEL', 'gemini-3-flash')
     
     # Build content parts for the message
     content_parts = []

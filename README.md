@@ -243,6 +243,7 @@ XIAOICE/
 
 # Install opencode and the plugin
 ```bash
+npm install -g @google/gemini-cli
 npm i -g opencode-ai
 npx oh-my-opencode install --no-tui --claude=no --openai=no --gemini=yes --copilot=yes
 ```

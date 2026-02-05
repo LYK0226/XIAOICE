@@ -257,6 +257,10 @@ body.dark-theme .conversation-menu-toggle:hover {
     display: inline-flex;
 }
 
+.chat-list li.menu-open {
+    z-index: 100;
+}
+
 .conversation-dropdown {
     position: absolute;
     top: 50%;

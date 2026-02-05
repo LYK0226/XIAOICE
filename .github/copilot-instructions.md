@@ -74,7 +74,7 @@ gunicorn -w 4 -b 0.0.0.0:8080 'app:create_app()'  # Production
 - Use `gcp_bucket.py` utilities for upload/download/delete
 
 ### AI Model Selection
-- Users select model via `UserProfile.ai_model` (e.g., `gemini-2.5-flash`, `gemini-2.5-pro`)
+- Users select model via `UserProfile.ai_model` (e.g., `gemini-3-flash`, `gemini-3-pro`)
 - Passed to `vertex_ai.generate_streaming_response()` in `chat_agent.py`
 - Fallback to `config.GEMINI_MODEL` if not set
 
@@ -97,7 +97,7 @@ ENCRYPTION_KEY="your_32_byte_encryption_key"
 DATABASE_URL="sqlite:///app.db"
 GCS_BUCKET_NAME="your-bucket-name"
 GCS_CREDENTIALS_PATH="/path/to/credentials.json"
-GEMINI_MODEL="gemini-2.5-flash"
+GEMINI_MODEL="gemini-3-flash"
 CREATE_DB_ON_STARTUP=true  # Development convenience
 ```
 

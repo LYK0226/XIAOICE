@@ -134,7 +134,7 @@ for chunk in generate_streaming_response(
     message="总结这个文档",
     pdf_path="/path/to/document.pdf",
     api_key=api_key,
-    model_name='gemini-2.5-flash'
+    model_name='gemini-3-flash'
 ):
     print(chunk, end="", flush=True)
 ```

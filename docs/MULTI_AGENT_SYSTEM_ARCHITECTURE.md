@@ -47,7 +47,7 @@ XIAOICE uses Google's Agent Development Kit (ADK) to implement a sophisticated m
 │  │  │  - Manages chat history & context               │    │  │
 │  │  │  - Handles plain text conversations             │    │  │
 │  │  │                                                  │    │  │
-│  │  │  Model: gemini-2.5-flash / gemini-2.5-pro      │    │  │
+  │  │  │  Model: gemini-3-flash / gemini-3-pro      │    │  │
 │  │  └──────────────┬──────────────┬───────────────────┘    │  │
 │  │                 │              │                          │  │
 │  │      Delegates  │              │  Delegates               │  │
@@ -182,7 +182,7 @@ Streams friendly response to user
 
 ### 2. Coordinator Agent (xiaoice_coordinator)
 
-**Model**: `gemini-2.5-flash` or `gemini-2.5-pro` (user-configurable)
+**Model**: `gemini-3-flash` or `gemini-3-pro` (user-configurable)
 
 **Capabilities**:
 - **Direct User Interaction**: Primary interface for all conversations
@@ -293,7 +293,7 @@ Passed to appropriate specialist agent
 
 ### Model Selection
 - Users choose model via `UserProfile.ai_model`
-- Options: `gemini-2.5-flash`, `gemini-2.5-pro`, etc.
+- Options: `gemini-3-flash`, `gemini-3-pro`, etc.
 - Applied to all agents (coordinator and specialists)
 - Fallback to environment variable if not set
 
@@ -349,7 +349,7 @@ Passed to appropriate specialist agent
 ## Technology Stack
 
 - **Agent Framework**: Google Agent Development Kit (ADK)
-- **LLM Models**: Gemini 2.5 Flash / Pro
+- **LLM Models**: Gemini 3 Flash / Pro
 - **Backend**: Flask with SocketIO
 - **Database**: SQLAlchemy (SQLite/PostgreSQL)
 - **File Storage**: Google Cloud Storage
