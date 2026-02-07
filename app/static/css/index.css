@@ -4,7 +4,7 @@
     flex: 1;
     background: linear-gradient(135deg, #D4C5E8 0%, #C8B8DB 50%, #B8A8D8 100%);
     padding: 0;
-    overflow: hidden; /* No page scroll */
+    overflow-y: auto; /* allow page-level scroll */
     position: fixed;
     top: 0;
     left: 0;
@@ -20,11 +20,12 @@
 .assessment-content-area {
     flex: 1;
     padding: 0;
-    overflow: hidden; /* No page scroll */
+    overflow: visible; /* Let the parent scroll */
     position: relative;
     display: flex;
     flex-direction: row;
-    height: 100vh;
+    height: auto;
+    min-height: 100vh;
     width: calc(100vw - 140px);
 }
 
@@ -89,7 +90,8 @@
 /* Assessment Main Container */
 .assessment-main {
     width: 100%;
-    height: 100%;
+    min-height: 100%;
+    height: auto;
     margin: 0;
     padding: 0;
     position: relative;
@@ -98,6 +100,25 @@
     flex-direction: row;
     align-items: center;
     justify-content: center;
+}
+
+.child-backbar {
+    position: fixed;
+    top: 18px;
+    left: 18px;
+    z-index: 10001;
+    display: none;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px;
+}
+
+.child-backbar .btn-secondary {
+    padding: 10px 18px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.9);
+    border-color: rgba(139, 122, 168, 0.4);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.12);
 }
 
 /* Start Assessment Card - 優化設計 */
@@ -118,6 +139,7 @@
     min-height: 0;
     height: calc(100% - 60px);
     width: calc(100% - 60px);
+    overflow-y: auto; /* Add scrollbar if content overflows */
 }
 
 .start-card-title {
@@ -731,7 +753,8 @@
     top: 50%;
     left: 50%;
     transform: translate(-50%, -50%);
-    overflow: hidden;
+    max-height: 95vh;
+    overflow-y: auto; /* Changed from hidden to auto */
 }
 
 .new-start-card::before {
@@ -1129,12 +1152,13 @@
     width: 100%;
     max-width: 850px;
     margin: 0 auto;
-    padding: 0 30px;
+    padding: 60px 30px; /* Added more padding for top/bottom */
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    height: 100%;
+    justify-content: flex-start; /* Start from top to allow scrolling */
+    min-height: 100vh;
+    height: auto;
 }
 
 /* Optimized Fixed Question Card */
@@ -1144,14 +1168,15 @@
     padding: 40px 50px;
     box-shadow: 0 25px 70px rgba(107, 90, 142, 0.2);
     width: 850px;
-    height: 850px;
+    max-width: 95vw;
+    height: auto;
     position: relative;
     border: 6px solid rgba(255, 255, 255, 0.8);
-    margin: 0;
+    margin: 40px auto;
     backdrop-filter: blur(10px);
     display: flex;
     flex-direction: column;
-    overflow: hidden; /* Prevent scrollbar */
+    overflow: visible; /* Don't scroll inside the card */
 }
 
 .question-badge-row {
@@ -1651,10 +1676,9 @@
 
 /* Ensure Results View remains scrollable if needed */
 .question-card.results-view {
-    overflow-y: auto;
-    height: 850px;
-    scrollbar-width: thin;
-    scrollbar-color: #8B7AA8 transparent;
+    overflow: visible;
+    height: auto;
+    max-height: none;
 }
 
 .question-card.results-view::-webkit-scrollbar {

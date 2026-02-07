@@ -7,7 +7,7 @@
 
     <!-- Reuse existing styles -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/chatbox.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/video_management.css') }}">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/video_access.css') }}">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -34,7 +34,7 @@
         </div>
     </header>
 
-    <!-- Minimal stub button required by video_management.js -->
+    <!-- Minimal stub button required by video_access.js -->
     <button id="videoUploadBtn" style="display:none;"></button>
 
     <main class="vm-shell">
@@ -277,7 +277,7 @@
     </script>
 
     <script src="{{ url_for('static', filename='js/video_analysis_results.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/video_management.js') }}"></script>
+    <script src="{{ url_for('static', filename='js/video_access.js') }}"></script>
     <script src="{{ url_for('static', filename='js/uploads.js') }}"></script>
 
     <script>

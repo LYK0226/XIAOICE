@@ -1,0 +1,120 @@
+<!-- Templates for Child Assessment Module -->
+<template id="questionCardTemplate">
+    <div class="question-card">
+        <div class="question-badge-row">
+            <div class="question-domain-badge">
+                <span class="question-emoji"></span>
+                <span class="question-domain"></span>
+            </div>
+            <div class="question-count-badge">
+                <span class="current-count"></span> / <span class="total-count"></span>
+            </div>
+        </div>
+        
+        <div class="question-main-content">
+            <h3 class="question-text"></h3>
+            
+            <div class="video-frame-container">
+                <video 
+                    id="demoVideo"
+                    class="demo-video"
+                    controls 
+                    autoplay
+                    loop
+                    muted
+                >
+                    <source class="video-source" src="" type="video/mp4">
+                    您的瀏覽器不支持視頻播放。
+                </video>
+            </div>
+            
+            <div class="desc-info-box">
+                <h4>📋 評估說明</h4>
+                <p class="question-description"></p>
+            </div>
+            
+            <div class="action-options">
+                <p class="action-title">您的孩子能做到這個動作嗎？</p>
+                <div class="assessment-btns">
+                    <button 
+                        class="action-btn can"
+                        data-answer="yes">
+                        <i class="fas fa-check-circle"></i>
+                        <span>做到</span>
+                    </button>
+                    <button 
+                        class="action-btn cannot"
+                        data-answer="no">
+                        <i class="fas fa-times-circle"></i>
+                        <span>做不到</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="finishedCardTemplate">
+    <div class="question-card finished-card">
+        <div class="finished-icon">🎉</div>
+        <h3>評估已完成！</h3>
+        <p>您已經完成了所有 <span class="total-questions"></span> 個項目的評估。現在可以查看您的孩子的發育商 (DQ) 報告了。</p>
+        <div class="finished-info">
+            <span>已作答: <span class="answered-count"></span> / <span class="total-questions"></span> 題</span>
+        </div>
+    </div>
+</template>
+
+<template id="resultsViewTemplate">
+    <div class="question-card results-view">
+        <h2 class="results-main-title">📊 評估診斷報告</h2>
+        
+        <div class="score-display-card">
+            <div class="dq-score"></div>
+            <div class="dq-label">發育商 (DQ)</div>
+            <div class="level-badge"></div>
+        </div>
+        
+        <div class="results-grid">
+            <div class="result-info-item">
+                <span class="label">兒童姓名</span>
+                <span class="value child-name"></span>
+            </div>
+            <div class="result-info-item">
+                <span class="label">年齡</span>
+                <span class="value child-age"></span>
+            </div>
+            <div class="result-info-item">
+                <span class="label">評估類型</span>
+                <span class="value assessment-type"></span>
+            </div>
+            <div class="result-info-item">
+                <span class="label">完成率</span>
+                <span class="value completion-rate"></span>
+            </div>
+        </div>
+
+        <div class="results-summary-box">
+            <h4>💡 專業建議與說明</h4>
+            <div class="summary-content">
+                <p class="summary-text"></p>
+                <div class="dq-scale-info">
+                    <div class="scale-item"><span class="range">90-100</span> <span class="tag excellent">優異</span></div>
+                    <div class="scale-item"><span class="range">80-89</span> <span class="tag good">良好</span></div>
+                    <div class="scale-item"><span class="range">70-79</span> <span class="tag normal">中等</span></div>
+                    <div class="scale-item"><span class="range">60-69</span> <span class="tag fair">及格</span></div>
+                    <div class="scale-item"><span class="range">&lt; 60</span> <span class="tag concern">關注</span></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="result-actions">
+            <button class="result-btn primary" onclick="ChildAssessmentModule.exportResults()">
+                <i class="fas fa-file-export"></i> 導出報告
+            </button>
+            <button class="result-btn secondary" onclick="ChildAssessmentModule.reset()">
+                <i class="fas fa-undo"></i> 重新評估
+            </button>
+        </div>
+    </div>
+</template>

@@ -7,15 +7,20 @@
     <!-- Assessment styles -->
     <link rel="stylesheet" href="../static/css/index.css">
     <link rel="stylesheet" href="../static/css/settings.css">
+    <link rel="stylesheet" href="../static/css/child_assessment.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
 <body>
+    <header class="child-backbar" id="childBackBar" style="display: none;">
+        <button class="btn btn-secondary" onclick="backToAssessmentList()">
+            <i class="fas fa-arrow-left"></i>
+            返回
+        </button>
+    </header>
     <div id="messages" aria-live="polite"></div>
     
     <!-- Assessment Container (默認顯示) -->
     <div id="assessment-container" style="display: flex;">
-        <!-- 左側邊欄 (已移除) -->
-
         <!-- 主內容區域 -->
         <div class="assessment-content-area" style="width: 100%;">
             <!-- 貓頭鷹裝飾 -->
@@ -108,9 +113,6 @@
                         <div id="assessmentContent"></div>
                         
                         <div class="control-buttons">
-                            <button class="btn-secondary" onclick="backToAssessmentList()">
-                                ← 返回評估列表
-                            </button>
                             <button class="btn-primary-submit" id="submitBtn" style="display: none;" onclick="submitAssessment()">
                                 ✓ 提交評估
                             </button>
@@ -174,6 +176,9 @@
 
     <!-- Settings Modal (included from separate file) -->
     {% include 'setting.html' %}
+
+    <!-- Child Assessment Templates -->
+    {% include 'child_assessment_templates.html' %}
 
     <script src="../static/js/settings.js"></script>
     
@@ -288,6 +293,10 @@
             // 隱藏開始畫面，顯示評估畫面
             document.getElementById('startScreen').style.display = 'none';
             document.getElementById('assessmentScreen').style.display = 'block';
+            const backBar = document.getElementById('childBackBar');
+            if (backBar) {
+                backBar.style.display = 'flex';
+            }
 
             // 使用評估模塊開始評估
             if (typeof ChildAssessmentModule !== 'undefined') {
@@ -315,6 +324,10 @@
             // 隱藏評估畫面，顯示開始畫面
             document.getElementById('assessmentScreen').style.display = 'none';
             document.getElementById('startScreen').style.display = 'block';
+            const backBar = document.getElementById('childBackBar');
+            if (backBar) {
+                backBar.style.display = 'none';
+            }
             
             // 重置評估數據
             if (typeof ChildAssessmentModule !== 'undefined') {
