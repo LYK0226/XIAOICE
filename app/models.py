@@ -2,6 +2,9 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
+import uuid
+import json
+import os
 
 db = SQLAlchemy()
 
@@ -47,10 +50,14 @@ class UserProfile(db.Model):
     bot_avatar = db.Column(db.Text)
     selected_api_key_id = db.Column(db.Integer, db.ForeignKey('user_api_keys.id'), nullable=True)
     ai_model = db.Column(db.String(50), default='gemini-3-flash')  # Add AI model selection
+    ai_provider = db.Column(db.String(20), default='ai_studio')  # 'ai_studio' or 'vertex_ai'
+    selected_vertex_account_id = db.Column(db.Integer, db.ForeignKey('vertex_service_accounts.id'), nullable=True)
+    vertex_location = db.Column(db.String(50), default='us-central1')
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
     user = db.relationship('User', backref='profile')
     selected_api_key = db.relationship('UserApiKey', foreign_keys=[selected_api_key_id])
+    selected_vertex_account = db.relationship('VertexServiceAccount', foreign_keys=[selected_vertex_account_id])
     
     def __repr__(self):
         return f'<UserProfile {self.user_id}>'
@@ -63,7 +70,10 @@ class UserProfile(db.Model):
             'theme': self.theme,
             'bot_avatar': self.bot_avatar,
             'selected_api_key_id': self.selected_api_key_id,
-            'ai_model': self.ai_model
+            'ai_model': self.ai_model,
+            'ai_provider': self.ai_provider,
+            'selected_vertex_account_id': self.selected_vertex_account_id,
+            'vertex_location': self.vertex_location
         }
 
 class UserApiKey(db.Model):
@@ -72,6 +82,7 @@ class UserApiKey(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     name = db.Column(db.String(100), nullable=True)
     encrypted_key = db.Column(db.Text, nullable=False)
+    provider = db.Column(db.String(20), default='ai_studio')  # 'ai_studio' or 'vertex_ai'
     is_active = db.Column(db.Boolean, default=True)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -88,6 +99,7 @@ class UserApiKey(db.Model):
             'id': self.id,
             'user_id': self.user_id,
             'name': self.name,
+            'provider': self.provider,
             'is_active': self.is_active,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None
@@ -138,6 +150,154 @@ class UserApiKey(db.Model):
             return cipher.decrypt(self.encrypted_key.encode()).decode()
         except Exception:
             return None
+
+
+class VertexServiceAccount(db.Model):
+    """Stores Vertex AI service account configuration with encrypted credentials."""
+    __tablename__ = 'vertex_service_accounts'
+    
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    name = db.Column(db.String(100), nullable=False)  # User-friendly name
+    
+    # Extracted from service account JSON
+    project_id = db.Column(db.String(255), nullable=False, index=True)
+    client_email = db.Column(db.String(255), nullable=False)
+    
+    # Encrypted service account JSON (full credentials)
+    encrypted_credentials = db.Column(db.Text, nullable=False)
+    
+    # Vertex AI configuration
+    location = db.Column(db.String(50), default='us-central1')  # GCP region
+    
+    # Status
+    is_active = db.Column(db.Boolean, default=True, index=True)
+    
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_used_at = db.Column(db.DateTime, nullable=True)
+    
+    # Relationship
+    user = db.relationship('User', backref=db.backref('vertex_accounts', cascade='all, delete-orphan'))
+    
+    def __repr__(self):
+        return f'<VertexServiceAccount {self.name} ({self.project_id})>'
+    
+    def set_encrypted_credentials(self, service_account_json):
+        """
+        Encrypt and store the service account JSON.
+        Also extracts project_id and client_email from the JSON.
+        
+        Args:
+            service_account_json (str): JSON string of service account credentials
+            
+        Raises:
+            ValueError: If encryption key is missing or JSON is invalid
+        """
+        from cryptography.fernet import Fernet
+        
+        # Validate JSON structure
+        try:
+            creds_dict = json.loads(service_account_json)
+        except json.JSONDecodeError:
+            raise ValueError('Invalid JSON format for service account')
+        
+        # Extract required fields
+        if 'project_id' not in creds_dict:
+            raise ValueError('Service account JSON missing project_id field')
+        if 'client_email' not in creds_dict:
+            raise ValueError('Service account JSON missing client_email field')
+        if 'private_key' not in creds_dict:
+            raise ValueError('Service account JSON missing private_key field')
+        
+        self.project_id = creds_dict['project_id']
+        self.client_email = creds_dict['client_email']
+        
+        # Encrypt the full JSON
+        encryption_key = os.environ.get('ENCRYPTION_KEY')
+        if not encryption_key:
+            raise ValueError('ENCRYPTION_KEY environment variable is required')
+        
+        cipher = Fernet(encryption_key.encode())
+        self.encrypted_credentials = cipher.encrypt(service_account_json.encode()).decode()
+    
+    def get_decrypted_credentials(self):
+        """
+        Decrypt and return the service account JSON.
+        
+        Returns:
+            str: Decrypted service account JSON string, or None if decryption fails
+        """
+        if not self.encrypted_credentials:
+            return None
+        
+        from cryptography.fernet import Fernet
+        
+        encryption_key = os.environ.get('ENCRYPTION_KEY')
+        if not encryption_key:
+            return None
+        
+        try:
+            cipher = Fernet(encryption_key.encode())
+            return cipher.decrypt(self.encrypted_credentials.encode()).decode()
+        except Exception:
+            return None
+    
+    def get_credentials_dict(self):
+        """
+        Get decrypted credentials as a dictionary.
+        
+        Returns:
+            dict: Service account credentials dictionary, or None if decryption fails
+        """
+        decrypted = self.get_decrypted_credentials()
+        if not decrypted:
+            return None
+        try:
+            return json.loads(decrypted)
+        except json.JSONDecodeError:
+            return None
+    
+    def to_dict(self, include_credentials=False):
+        """
+        Return dict representation.
+        
+        Args:
+            include_credentials (bool): If True, includes decrypted credentials
+            
+        Returns:
+            dict: Model data as dictionary
+        """
+        result = {
+            'id': self.id,
+            'user_id': self.user_id,
+            'name': self.name,
+            'project_id': self.project_id,
+            'client_email': self.client_email,
+            'location': self.location,
+            'is_active': self.is_active,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'last_used_at': self.last_used_at.isoformat() if self.last_used_at else None
+        }
+        
+        if include_credentials:
+            result['credentials'] = self.get_credentials_dict()
+        else:
+            # Show masked client email for security
+            if self.client_email:
+                parts = self.client_email.split('@')
+                if len(parts) == 2:
+                    result['masked_client_email'] = parts[0][:3] + '***@' + parts[1]
+                else:
+                    result['masked_client_email'] = '***'
+        
+        return result
+    
+    def update_last_used(self):
+        """Update the last_used_at timestamp."""
+        self.last_used_at = datetime.utcnow()
 
 
 class Child(db.Model):

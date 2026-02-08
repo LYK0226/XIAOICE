@@ -1,5 +1,15 @@
 # XIAOICE — Copilot Quick Reference (for AI coding agents)
 
+1. In any process, task, or dialogue, user feedback must be requested using the askQuestions tool after each stage is completed.
+
+2. Adjust behavior based on the received user feedback.
+
+3. A process is considered complete only when the user explicitly indicates "end" or "no further interaction needed."
+
+4. All steps must be repeated unless an end instruction is received.
+
+5. Before completing a task, the askQuestions tool must be used to prompt the user for feedback.
+
 Brief: concise, repo-specific guidance so an AI agent can be productive quickly.
 
 Core architecture (where to look)

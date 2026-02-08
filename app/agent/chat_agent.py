@@ -1,13 +1,20 @@
 """
 ADK Agent module for XIAOICE chatbot.
-This module provides a multi-agent chat system using Google Agent Development Kit (ADK).
+This module provides a multi-agent chat system using Google Agent Development Kit (ADK)
+and Vertex AI support.
 
-Multi-Agent Architecture:
+Multi-Agent Architecture (AI Studio):
 - Coordinator Agent: Manages conversations, delegates tasks, receives analysis results, and interacts directly with users
 - PDF Agent: Analyzes PDF documents and returns structured results to coordinator (does not interact with users)
 - Media Agent: Analyzes images and videos and returns structured results to coordinator (does not interact with users)
 
+Vertex AI Support:
+- Direct Vertex AI text generation with service account authentication
+- Supports multimodal inputs (text, images, videos, PDFs)
+- Streaming responses with same interface as ADK
+
 Key Features:
+- Dual provider support: AI Studio (ADK) and Vertex AI
 - Full ADK integration for text, PDF, and multimodal content
 - Intelligent task distribution via coordinator agent
 - Specialized agents for PDF and media analysis
@@ -19,6 +26,8 @@ import os
 import traceback
 import asyncio
 import logging
+import json
+import tempfile
 from typing import AsyncIterator, Optional, List, Dict, Any, Generator
 
 from google.adk.agents import Agent
@@ -585,6 +594,121 @@ def build_message_content(
     return "\n".join(content_parts) if content_parts else ""
 
 
+def _generate_vertex_streaming_response(
+    message: str,
+    image_path: Optional[str] = None,
+    image_mime_type: Optional[str] = None,
+    history: Optional[List[Dict[str, Any]]] = None,
+    model_name: str = "gemini-1.5-flash",
+    vertex_config: Optional[Dict[str, Any]] = None,
+    username: Optional[str] = None
+) -> Generator[str, None, None]:
+    """
+    Generate streaming response using Vertex AI with service account authentication.
+    
+    Args:
+        message: The user's message
+        image_path: Optional GCS path to a file
+        image_mime_type: MIME type of the file
+        history: Optional conversation history
+        model_name: Vertex AI model name (e.g., 'gemini-1.5-flash', 'gemini-1.5-pro')
+        vertex_config: Dictionary containing 'service_account', 'project_id', 'location'
+        username: User's display name for personalization
+        
+    Yields:
+        Text chunks from Vertex AI
+    """
+    if not vertex_config:
+        yield "Error: Vertex AI configuration is required but not provided."
+        return
+    
+    service_account_json = vertex_config.get('service_account')
+    project_id = vertex_config.get('project_id')
+    location = vertex_config.get('location', 'us-central1')
+    
+    if not service_account_json or not project_id:
+        yield "Error: Vertex AI service account and project ID are required."
+        return
+    
+    try:
+        # Initialize Vertex AI with service account
+        import vertexai
+        from vertexai.generative_models import GenerativeModel, Part, Content
+        from google.oauth2 import service_account
+        
+        # Parse service account JSON and create credentials
+        service_account_info = json.loads(service_account_json)
+        credentials = service_account.Credentials.from_service_account_info(
+            service_account_info,
+            scopes=['https://www.googleapis.com/auth/cloud-platform']
+        )
+        
+        # Initialize Vertex AI
+        vertexai.init(project=project_id, location=location, credentials=credentials)
+        
+        # Build the content parts
+        content_parts = []
+        
+        # Build text content with history
+        text_content = build_message_content(message, image_path, image_mime_type, history, username)
+        if text_content:
+            content_parts.append(Part.from_text(text_content))
+        
+        # Handle file uploads
+        if image_path and image_mime_type:
+            logger.info(f"Processing file for Vertex AI: path={image_path}, mime_type={image_mime_type}")
+            
+            # Download and validate file
+            result = _download_file_from_gcs(image_path)
+            if result is None:
+                yield "Error: Failed to download file from storage."
+                return
+            
+            file_data, file_size = result
+            
+            # Validate file
+            validation_error = _validate_file(image_mime_type, file_size)
+            if validation_error:
+                yield validation_error
+                return
+            
+            # Add file part
+            content_parts.append(Part.from_data(data=file_data, mime_type=image_mime_type))
+            logger.info("File part added to Vertex AI request")
+        
+        if not content_parts:
+            yield "Please provide a message or a file."
+            return
+        
+        # Create the model
+        model = GenerativeModel(model_name)
+        
+        # Generate streaming response
+        response = model.generate_content(
+            content_parts,
+            stream=True,
+            generation_config={
+                'temperature': 1.0,
+                'top_p': 0.95,
+                'max_output_tokens': 8192,
+            }
+        )
+        
+        has_yielded = False
+        for chunk in response:
+            if chunk.text:
+                has_yielded = True
+                yield chunk.text
+        
+        if not has_yielded:
+            yield "I apologize, but I couldn't generate a response. Please try again."
+            
+    except Exception as e:
+        logger.error(f"Error in Vertex AI streaming: {e}")
+        traceback.print_exc()
+        yield _format_error_message(e)
+
+
 async def generate_streaming_response_async(
     message: str,
     image_path: Optional[str] = None,
@@ -724,31 +848,49 @@ def generate_streaming_response(
     model_name: Optional[str] = None,
     user_id: str = "default",
     conversation_id: Optional[int] = None,
-    username: Optional[str] = None
+    username: Optional[str] = None,
+    provider: str = "ai_studio",
+    vertex_config: Optional[Dict[str, Any]] = None
 ) -> Generator[str, None, None]:
     """
-    Synchronous wrapper for multi-agent streaming response generation.
+    Synchronous wrapper for multi-provider streaming response generation.
     
-    This function wraps the async multi-agent generator to provide a synchronous 
-    interface for Flask routes. The multi-agent system includes:
-    - Coordinator agent that manages conversations and interacts with users
-    - PDF agent for analyzing PDF documents (returns results to coordinator)
-    - Media agent for analyzing images/videos (returns results to coordinator)
+    This function wraps both ADK and Vertex AI streaming to provide a unified 
+    interface for Flask routes. Supports:
+    - AI Studio: Multi-agent system with coordinator and specialist agents
+    - Vertex AI: Direct Vertex AI text generation with service account
     
     Args:
         message: The user's message
         image_path: Optional GCS path to a PDF, image, or video
         image_mime_type: MIME type of the file (PDF, image, or video)
         history: Optional conversation history
-        api_key: Google AI API key
-        model_name: The Gemini model to use for all agents
+        api_key: Google AI API key (for AI Studio)
+        model_name: The model to use
         user_id: User identifier for session management
         conversation_id: Database conversation ID for persistent sessions
         username: User's display name for personalization
+        provider: 'ai_studio' or 'vertex_ai'
+        vertex_config: Vertex AI configuration (service_account, project_id, location)
         
     Yields:
-        Text chunks as they are generated by the coordinator agent
+        Text chunks as they are generated
     """
+    # Route to the appropriate provider
+    if provider == 'vertex_ai':
+        # Use Vertex AI streaming
+        yield from _generate_vertex_streaming_response(
+            message=message,
+            image_path=image_path,
+            image_mime_type=image_mime_type,
+            history=history,
+            model_name=model_name or 'gemini-1.5-flash',
+            vertex_config=vertex_config,
+            username=username
+        )
+        return
+    
+    # AI Studio / ADK path
     # Validate and set defaults
     if api_key is None:
         api_key = os.environ.get('GOOGLE_API_KEY')

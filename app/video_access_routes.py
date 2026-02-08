@@ -81,10 +81,22 @@ def upload_video():
         # Prepare auth/user settings for background work
         user_profile = UserProfile.query.filter_by(user_id=user_id).first()
         api_key = None
+        ai_provider = 'ai_studio'
+        vertex_config = None
+        provider_for_request = 'ai_studio'
         if user_profile and user_profile.selected_api_key:
             api_key = user_profile.selected_api_key.get_decrypted_key()
 
         ai_model = user_profile.ai_model if (user_profile and user_profile.ai_model) else 'gemini-3-flash'
+        if user_profile and user_profile.ai_provider:
+            ai_provider = user_profile.ai_provider
+        if user_profile and ai_provider == 'vertex_ai':
+            vertex_config = {
+                'service_account': user_profile.get_decrypted_vertex_service_account(),
+                'project_id': user_profile.vertex_project_id,
+                'location': user_profile.vertex_location or 'us-central1'
+            }
+            provider_for_request = 'vertex_ai'
         mime_type = video_file.content_type or gcp_bucket.get_content_type_from_url(gcs_url)
 
         app_obj = current_app._get_current_object()
@@ -117,7 +129,9 @@ def upload_video():
                         api_key=api_key,
                         model_name=ai_model,
                         user_id=str(user_id),
-                        conversation_id=None
+                        conversation_id=None,
+                        provider=provider_for_request,
+                        vertex_config=vertex_config
                     ):
                         if chunk:
                             chunks.append(chunk)
@@ -220,9 +234,21 @@ def analyze_video(video_id):
 
         user_profile = UserProfile.query.filter_by(user_id=user_id).first()
         api_key = None
+        ai_provider = 'ai_studio'
+        vertex_config = None
+        provider_for_request = 'ai_studio'
         if user_profile and user_profile.selected_api_key:
             api_key = user_profile.selected_api_key.get_decrypted_key()
         ai_model = user_profile.ai_model if (user_profile and user_profile.ai_model) else 'gemini-3-flash'
+        if user_profile and user_profile.ai_provider:
+            ai_provider = user_profile.ai_provider
+        if user_profile and ai_provider == 'vertex_ai':
+            vertex_config = {
+                'service_account': user_profile.get_decrypted_vertex_service_account(),
+                'project_id': user_profile.vertex_project_id,
+                'location': user_profile.vertex_location or 'us-central1'
+            }
+            provider_for_request = 'vertex_ai'
 
         app_obj = current_app._get_current_object()
 
@@ -251,7 +277,9 @@ def analyze_video(video_id):
                         api_key=api_key,
                         model_name=ai_model,
                         user_id=str(user_id),
-                        conversation_id=None
+                        conversation_id=None,
+                        provider=provider_for_request,
+                        vertex_config=vertex_config
                     ):
                         if chunk:
                             chunks.append(chunk)

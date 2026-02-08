@@ -48,6 +48,14 @@ function updateSettingsLanguage(lang) {
     // Delete Account Password Input
     const deleteAccountPasswordInput = document.getElementById('deleteAccountPasswordInput');
     if (deleteAccountPasswordInput && t['placeholder.confirmDeletionPassword']) deleteAccountPasswordInput.placeholder = t['placeholder.confirmDeletionPassword'];
+
+    if (typeof updateAdvancedSummary === 'function') {
+        updateAdvancedSummary();
+    }
+
+    if (typeof updateSummaryApiKeyOptions === 'function') {
+        updateSummaryApiKeyOptions(advancedConfigState.apiKeys, advancedConfigState.selectedApiKeyId);
+    }
 }
 
 // ===== Custom Modal Functions =====
@@ -1154,44 +1162,478 @@ const cancelApiKeyBtn = document.getElementById('cancelApiKeyBtn');
 const apiKeyNameInput = document.getElementById('apiKeyName');
 const apiKeyValueInput = document.getElementById('apiKeyValue');
 const apiKeyList = document.getElementById('apiKeyList');
+const showAdvancedConfigBtn = document.getElementById('showAdvancedConfigBtn');
+const advancedConfigDetails = document.getElementById('advancedConfigDetails');
+const addConfigModal = document.getElementById('addConfigModal');
+const openAddConfigModalBtn = document.getElementById('openAddConfigModalBtn');
+const saveConfigBtn = document.getElementById('saveConfigBtn');
+const cancelConfigBtn = document.getElementById('cancelConfigBtn');
+const configListContainer = document.getElementById('configListContainer');
+const summaryProviderToggle = document.getElementById('summaryProviderToggle');
+const summaryModelSelect = document.getElementById('summaryModelSelect');
+const summaryApiKeySelect = document.getElementById('summaryApiKeySelect');
+const apiKeySection = document.getElementById('apiKeySection');
+const providerCardsContainer = document.getElementById('providerCardsContainer');
+const providerInput = document.getElementById('aiProviderSelect');
+
+const advancedConfigState = {
+    provider: null,
+    model: null,
+    apiKeys: [],
+    selectedApiKeyId: null,
+    vertexAccounts: [],
+    selectedVertexAccountId: null,
+    vertexProjectId: null,
+    vertexLocation: null
+};
+
+// Model options by provider
+const modelOptions = {
+    'ai_studio': [
+        { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
+        { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro' }
+    ],
+    'vertex_ai': [
+        { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
+        { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
+        { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
+        { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro' }
+    ]
+};
+
+function getSettingsLang() {
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    return supportedLangs.includes(currentLang) ? currentLang : 'en';
+}
+
+function getSettingsTranslations() {
+    const lang = getSettingsLang();
+    return window.translations && window.translations[lang] ? window.translations[lang] : {};
+}
+
+function getActiveProvider() {
+    if (providerInput && providerInput.value) {
+        return providerInput.value;
+    }
+    return advancedConfigState.provider || 'ai_studio';
+}
+
+function filterApiKeysForProvider(apiKeys, provider) {
+    return apiKeys.filter(key => key.provider === provider);
+}
+
+function getModelLabel(modelValue, provider) {
+    const options = modelOptions[provider] || modelOptions['ai_studio'];
+    const match = options.find(option => option.value === modelValue);
+    return match ? match.label : modelValue;
+}
+
+function updateSummaryModelOptions(provider) {
+    if (!summaryModelSelect) {
+        return;
+    }
+
+    const models = modelOptions[provider] || modelOptions['ai_studio'];
+    summaryModelSelect.innerHTML = '';
+    models.forEach(model => {
+        const option = document.createElement('option');
+        option.value = model.value;
+        option.textContent = model.label;
+        summaryModelSelect.appendChild(option);
+    });
+}
+
+function updateSummaryProviderButtons(provider) {
+    if (!summaryProviderToggle) {
+        return;
+    }
+
+    const buttons = summaryProviderToggle.querySelectorAll('.summary-provider-btn');
+    buttons.forEach(btn => {
+        if (btn.dataset.provider === provider) {
+            btn.classList.add('active');
+        } else {
+            btn.classList.remove('active');
+        }
+    });
+}
+
+function updateAuthModeVisibility() {
+    const provider = getActiveProvider();
+    const vertexConfigSection = document.getElementById('vertexConfigSection');
+
+    if (provider === 'vertex_ai') {
+        if (vertexConfigSection) {
+            vertexConfigSection.style.display = 'block';
+        }
+        if (apiKeySection) {
+            apiKeySection.style.display = 'none';
+        }
+        if (summaryApiKeySelect) {
+            summaryApiKeySelect.disabled = false;
+        }
+    } else {
+        if (vertexConfigSection) {
+            vertexConfigSection.style.display = 'none';
+        }
+        if (apiKeySection) {
+            apiKeySection.style.display = 'block';
+        }
+        if (summaryApiKeySelect) {
+            summaryApiKeySelect.disabled = false;
+        }
+    }
+}
+
+function updateSummaryApiKeyOptions(apiKeys, selectedId) {
+    if (!summaryApiKeySelect) {
+        return;
+    }
+
+    const t = getSettingsTranslations();
+    const provider = getActiveProvider();
+    summaryApiKeySelect.innerHTML = '';
+
+    const placeholder = document.createElement('option');
+    placeholder.value = '';
+    if (provider === 'vertex_ai') {
+        placeholder.textContent = t['settings.advanced.summary.vertex_account_placeholder'] || 'Select a service account';
+    } else {
+        placeholder.textContent = t['settings.advanced.summary.api_key_placeholder'] || 'Select an API key';
+    }
+    summaryApiKeySelect.appendChild(placeholder);
+
+    if (provider === 'vertex_ai') {
+        const accounts = advancedConfigState.vertexAccounts || [];
+        accounts.forEach(account => {
+            const option = document.createElement('option');
+            const projectId = account.project_id ? account.project_id : 'project';
+            option.value = String(account.id);
+            option.textContent = `${account.name} (${projectId})`;
+            summaryApiKeySelect.appendChild(option);
+        });
+        if (advancedConfigState.selectedVertexAccountId && accounts.some(account => account.id === advancedConfigState.selectedVertexAccountId)) {
+            summaryApiKeySelect.value = String(advancedConfigState.selectedVertexAccountId);
+        } else {
+            summaryApiKeySelect.value = '';
+        }
+        return;
+    }
+
+    const filteredKeys = filterApiKeysForProvider(apiKeys, provider);
+    filteredKeys.forEach(key => {
+        const option = document.createElement('option');
+        const providerLabel = key.provider === 'vertex_ai' ? 'Vertex AI' : 'AI Studio';
+        option.value = String(key.id);
+        option.textContent = `${key.name} (${providerLabel})`;
+        summaryApiKeySelect.appendChild(option);
+    });
+
+    if (selectedId && filteredKeys.some(key => key.id === selectedId)) {
+        summaryApiKeySelect.value = String(selectedId);
+    } else {
+        summaryApiKeySelect.value = '';
+    }
+}
+
+async function persistProviderSelection(selectedProvider) {
+    try {
+        const response = await fetch('/api/user/model', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({ ai_provider: selectedProvider })
+        });
+
+        if (!response.ok) {
+            console.error('Failed to update provider');
+        }
+    } catch (error) {
+        console.error('Error updating provider:', error);
+    }
+}
+
+async function persistModelSelection(selectedModel) {
+    try {
+        const response = await fetch('/api/user/model', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({ ai_model: selectedModel })
+        });
+
+        if (response.ok) {
+            return true;
+        }
+        return false;
+    } catch (error) {
+        console.error('Error saving AI model:', error);
+        return false;
+    }
+}
+
+async function applyProviderSelection(selectedProvider, options = {}) {
+    const { persist = true } = options;
+
+    if (providerInput) {
+        providerInput.value = selectedProvider;
+    }
+
+    updateModelOptions(selectedProvider);
+    updateSummaryModelOptions(selectedProvider);
+    updateSummaryProviderButtons(selectedProvider);
+    updateAuthModeVisibility();
+
+    const cards = document.querySelectorAll('.provider-card');
+    cards.forEach(card => {
+        if (card.dataset.value === selectedProvider) {
+            card.classList.add('active');
+        } else {
+            card.classList.remove('active');
+        }
+    });
+
+    advancedConfigState.provider = selectedProvider;
+    syncAdvancedConfigStateFromInputs();
+    updateSummaryApiKeyOptions(advancedConfigState.apiKeys, advancedConfigState.selectedApiKeyId);
+    if (typeof renderApiKeys === 'function') {
+        renderApiKeys(advancedConfigState.apiKeys, advancedConfigState.selectedApiKeyId);
+    }
+    updateAdvancedSummary();
+
+    if (summaryModelSelect) {
+        const fallbackModel = summaryModelSelect.value || (modelOptions[selectedProvider] || [])[0]?.value;
+        if (fallbackModel) {
+            summaryModelSelect.value = fallbackModel;
+            advancedConfigState.model = fallbackModel;
+            updateAdvancedSummary();
+        }
+    }
+
+    if (persist) {
+        await persistProviderSelection(selectedProvider);
+    }
+}
+
+function syncAdvancedConfigStateFromInputs() {
+    const providerSelect = document.getElementById('aiProviderSelect');
+    const locationSelect = document.getElementById('vertexLocation');
+
+    advancedConfigState.provider = providerSelect ? providerSelect.value : advancedConfigState.provider;
+    advancedConfigState.model = summaryModelSelect ? summaryModelSelect.value : advancedConfigState.model;
+    advancedConfigState.vertexLocation = locationSelect ? locationSelect.value : advancedConfigState.vertexLocation;
+}
+
+function updateAdvancedSummary() {
+    const modelEl = document.getElementById('advancedSelectedModel');
+    const providerEl = document.getElementById('advancedSelectedProvider');
+    const listEl = document.getElementById('advancedConfigList');
+
+    if (!modelEl || !providerEl) {
+        return;
+    }
+
+    const t = getSettingsTranslations();
+    const providerLabel = advancedConfigState.provider === 'vertex_ai'
+        ? (t['settings.advanced.provider.vertex_ai'] || 'Vertex AI')
+        : (t['settings.advanced.provider.ai_studio'] || 'AI Studio (Gemini API)');
+    const modelLabel = advancedConfigState.model
+        ? getModelLabel(advancedConfigState.model, advancedConfigState.provider || 'ai_studio')
+        : '-';
+
+    modelEl.textContent = modelLabel || '-';
+    providerEl.textContent = providerLabel || '-';
+
+    if (!listEl) {
+        return;
+    }
+
+    listEl.innerHTML = '';
+    const items = [];
+
+    if (advancedConfigState.apiKeys.length > 0) {
+        const selectedLabel = t['api_key.in_use'] || 'In Use';
+        const keyNames = advancedConfigState.apiKeys.map(key => {
+            const isSelected = key.id === advancedConfigState.selectedApiKeyId;
+            return `${key.name}${isSelected ? ` (${selectedLabel})` : ''}`;
+        });
+        items.push({
+            label: t['settings.advanced.summary.api_keys'] || 'API Keys',
+            value: keyNames.join(', ')
+        });
+    }
+
+    if (advancedConfigState.provider === 'vertex_ai') {
+        const selectedAccount = (advancedConfigState.vertexAccounts || []).find(account => account.id === advancedConfigState.selectedVertexAccountId);
+        if (selectedAccount) {
+            const locationText = selectedAccount.location ? ` (${selectedAccount.location})` : '';
+            items.push({
+                label: t['settings.advanced.summary.vertex'] || 'Vertex AI',
+                value: `${selectedAccount.name} - ${selectedAccount.project_id}${locationText}`
+            });
+        } else if (advancedConfigState.vertexProjectId) {
+            const locationText = advancedConfigState.vertexLocation ? ` (${advancedConfigState.vertexLocation})` : '';
+            items.push({
+                label: t['settings.advanced.summary.vertex'] || 'Vertex AI',
+                value: `${advancedConfigState.vertexProjectId}${locationText}`
+            });
+        }
+    }
+
+    if (items.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'summary-item empty';
+        empty.textContent = t['settings.advanced.summary.no_configs'] || 'No configurations yet';
+        listEl.appendChild(empty);
+        return;
+    }
+
+    items.forEach(item => {
+        const row = document.createElement('div');
+        row.className = 'summary-item';
+        row.innerHTML = `<span class="summary-label">${item.label}</span><span class="summary-value-text">${item.value}</span>`;
+        listEl.appendChild(row);
+    });
+}
+
+if (showAdvancedConfigBtn && advancedConfigDetails) {
+    showAdvancedConfigBtn.addEventListener('click', () => {
+        // Toggle visibility
+        const isVisible = advancedConfigDetails.style.display !== 'none';
+        
+        if (isVisible) {
+            // Hide config details
+            advancedConfigDetails.style.display = 'none';
+            const icon = showAdvancedConfigBtn.querySelector('i');
+            if (icon) {
+                icon.className = 'fas fa-cog';
+            }
+        } else {
+            // Show config details
+            advancedConfigDetails.style.display = 'block';
+            const icon = showAdvancedConfigBtn.querySelector('i');
+            if (icon) {
+                icon.className = 'fas fa-times';
+            }
+            // Load configuration list
+            renderConfigurationList();
+        }
+    });
+}
+
+if (summaryProviderToggle) {
+    summaryProviderToggle.addEventListener('click', async (event) => {
+        const button = event.target.closest('.summary-provider-btn');
+        if (!button) {
+            return;
+        }
+
+        const selectedProvider = button.dataset.provider || 'ai_studio';
+        await applyProviderSelection(selectedProvider, { persist: true });
+    });
+}
+
+
+if (summaryModelSelect) {
+    summaryModelSelect.addEventListener('change', async (event) => {
+        const selectedModel = event.target.value;
+        advancedConfigState.model = selectedModel;
+        updateAdvancedSummary();
+
+        const success = await persistModelSelection(selectedModel);
+        if (!success) {
+            const errorMessages = {
+                'zh-TW': '保存失敗',
+                'en': 'Save failed',
+                'ja': '保存に失敗しました'
+            };
+            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+            showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        }
+    });
+}
+
+if (summaryApiKeySelect) {
+    summaryApiKeySelect.addEventListener('change', async (event) => {
+        const selectedId = Number(event.target.value);
+        if (!Number.isFinite(selectedId)) {
+            return;
+        }
+        if (!selectedId) {
+            return;
+        }
+
+        if (getActiveProvider() === 'vertex_ai') {
+            await activateVertexAccount(selectedId);
+            return;
+        }
+
+        await toggleApiKey(selectedId);
+    });
+}
 
 // Load API keys when settings modal opens
 document.getElementById('settings').addEventListener('click', () => {
     // Load API keys when opening settings
     setTimeout(() => {
+        if (advancedConfigDetails) {
+            advancedConfigDetails.style.display = 'none';
+        }
+        if (showAdvancedConfigBtn) {
+            // Reset button icon
+            const icon = showAdvancedConfigBtn.querySelector('i');
+            if (icon) {
+                icon.className = 'fas fa-cog';
+            }
+        }
         loadApiKeys();
+        loadVertexAccounts();
         loadUserModel();
     }, 100);
 });
 
-// Modal event listeners
-cancelApiKeyBtn.addEventListener('click', () => {
-    apiKeyModal.style.display = 'none';
-    resetApiKeyForm();
-});
+// Modal event listeners (Legacy API Key Modal - only attach if elements exist)
+if (cancelApiKeyBtn) {
+    cancelApiKeyBtn.addEventListener('click', () => {
+        apiKeyModal.style.display = 'none';
+        resetApiKeyForm();
+    });
+}
 
 window.onclick = function(event) {
-    if (event.target == apiKeyModal) {
+    if (apiKeyModal && event.target == apiKeyModal) {
         apiKeyModal.style.display = 'none';
         resetApiKeyForm();
     }
 };
 
-// Add API key button
-addApiKeyBtn.addEventListener('click', () => {
-    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-    // If current language is not supported, default to English
-    const supportedLangs = ['zh-TW', 'en', 'ja'];
-    const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
-    updateSettingsLanguage(langToUse); // Update language for the modal
-    apiKeyModal.style.display = 'block';
-    apiKeyNameInput.focus();
-});
+// Add API key button (Legacy - only attach if element exists)
+if (addApiKeyBtn) {
+    addApiKeyBtn.addEventListener('click', () => {
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        // If current language is not supported, default to English
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        updateSettingsLanguage(langToUse); // Update language for the modal
+        apiKeyModal.style.display = 'block';
+        apiKeyNameInput.focus();
+    });
+}
 
-// Save API key
-saveApiKeyBtn.addEventListener('click', async () => {
+// Save API key (Legacy - only attach if element exists)
+if (saveApiKeyBtn) {
+    saveApiKeyBtn.addEventListener('click', async () => {
     const name = apiKeyNameInput.value.trim();
     const apiKey = apiKeyValueInput.value.trim();
+    const provider = getActiveProvider();
+    const normalizedProvider = provider === 'vertex_ai' ? 'ai_studio' : provider;
     
     if (!name || !apiKey) {
         // Get current language for error message
@@ -1216,7 +1658,7 @@ saveApiKeyBtn.addEventListener('click', async () => {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('access_token')}`
             },
-            body: JSON.stringify({ name, api_key: apiKey })
+            body: JSON.stringify({ name, api_key: apiKey, provider: normalizedProvider })
         });
         
         if (response.ok) {
@@ -1249,7 +1691,8 @@ saveApiKeyBtn.addEventListener('click', async () => {
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
     }
-});
+    });
+}
 
 // Load API keys
 async function loadApiKeys() {
@@ -1262,7 +1705,11 @@ async function loadApiKeys() {
         
         if (response.ok) {
             const data = await response.json();
+            advancedConfigState.apiKeys = data.api_keys || [];
+            advancedConfigState.selectedApiKeyId = data.selected_api_key_id || null;
             renderApiKeys(data.api_keys || [], data.selected_api_key_id);
+            updateSummaryApiKeyOptions(advancedConfigState.apiKeys, advancedConfigState.selectedApiKeyId);
+            updateAdvancedSummary();
         } else {
             console.error('Failed to load API keys');
         }
@@ -1271,8 +1718,59 @@ async function loadApiKeys() {
     }
 }
 
+// Load Vertex service accounts
+async function loadVertexAccounts() {
+    try {
+        const response = await fetch('/api/vertex/accounts', {
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+
+        if (response.ok) {
+            const data = await response.json();
+            advancedConfigState.vertexAccounts = data.accounts || [];
+            updateSummaryApiKeyOptions(advancedConfigState.apiKeys, advancedConfigState.selectedApiKeyId);
+            updateAdvancedSummary();
+        } else {
+            console.error('Failed to load Vertex accounts');
+        }
+    } catch (error) {
+        console.error('Error loading Vertex accounts:', error);
+    }
+}
+
+// Activate Vertex service account
+async function activateVertexAccount(accountId) {
+    try {
+        const response = await fetch(`/api/vertex/accounts/${accountId}/activate`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+
+        if (response.ok) {
+            const result = await response.json();
+            const account = result.account || {};
+            advancedConfigState.selectedVertexAccountId = accountId;
+            advancedConfigState.vertexProjectId = account.project_id || null;
+            advancedConfigState.vertexLocation = account.location || null;
+            updateSummaryApiKeyOptions(advancedConfigState.apiKeys, advancedConfigState.selectedApiKeyId);
+            updateAdvancedSummary();
+        } else {
+            console.error('Failed to activate Vertex account');
+        }
+    } catch (error) {
+        console.error('Error activating Vertex account:', error);
+    }
+}
+
 // Render API keys
 function renderApiKeys(apiKeys, selectedId) {
+    if (!apiKeyList) {
+        return;
+    }
     apiKeyList.innerHTML = '';
     
     // Get current language
@@ -1280,8 +1778,22 @@ function renderApiKeys(apiKeys, selectedId) {
     const supportedLangs = ['zh-TW', 'en', 'ja'];
     const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
     const t = window.translations && window.translations[langToUse] ? window.translations[langToUse] : {};
+
+    const provider = getActiveProvider();
+
+    if (provider === 'vertex_ai') {
+        apiKeyList.innerHTML = `
+            <div style="text-align: center; color: #666; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
+                <i class="fas fa-shield-alt" style="font-size: 24px; color: #ccc; margin-bottom: 10px;"></i>
+                <p style="margin: 0; font-size: 14px;">${t['settings.advanced.vertex.using_service_account'] || 'Using service account for Vertex AI'}</p>
+            </div>
+        `;
+        return;
+    }
+
+    const filteredKeys = filterApiKeysForProvider(apiKeys, 'ai_studio');
     
-    if (apiKeys.length === 0) {
+    if (filteredKeys.length === 0) {
         apiKeyList.innerHTML = `
             <div style="text-align: center; color: #666; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
                 <i class="fas fa-key" style="font-size: 24px; color: #ccc; margin-bottom: 10px;"></i>
@@ -1292,16 +1804,23 @@ function renderApiKeys(apiKeys, selectedId) {
         return;
     }
     
-    apiKeys.forEach(key => {
+    filteredKeys.forEach(key => {
         const isSelected = key.id === selectedId;
         const keyItem = document.createElement('div');
         keyItem.className = `api-key-item ${isSelected ? 'selected' : ''}`;
         
         const buttonText = isSelected ? (t['api_key.in_use'] || 'In Use') : (t['api_key.use'] || 'Use');
         
+        // Provider badge
+        const providerLabel = key.provider === 'vertex_ai' ? 'Vertex AI' : 'AI Studio';
+        const providerColor = key.provider === 'vertex_ai' ? '#4285f4' : '#ea4335';
+        
         keyItem.innerHTML = `
             <div class="api-key-info">
-                <div class="api-key-name">${key.name}</div>
+                <div class="api-key-name">
+                    ${key.name}
+                    <span style="display: inline-block; margin-left: 8px; padding: 2px 8px; background: ${providerColor}; color: white; border-radius: 4px; font-size: 11px; font-weight: 500;">${providerLabel}</span>
+                </div>
                 <div class="api-key-value">${key.masked_key}</div>
             </div>
             <div class="api-key-actions">
@@ -1433,9 +1952,430 @@ function resetApiKeyForm() {
 window.toggleApiKey = toggleApiKey;
 window.deleteApiKey = deleteApiKey;
 
+// ===== Configuration Management =====
+
+// Render configuration list (AI Studio + Vertex AI)
+function renderConfigurationList() {
+    if (!configListContainer) return;
+    
+    const t = getSettingsTranslations();
+    const allConfigs = [];
+    
+    // Add AI Studio configurations
+    advancedConfigState.apiKeys.forEach(key => {
+        if (key.provider !== 'vertex_ai') {
+            allConfigs.push({
+                type: 'ai_studio',
+                id: key.id,
+                name: key.name,
+                maskedKey: key.masked_key,
+                isActive: key.id === advancedConfigState.selectedApiKeyId && getActiveProvider() === 'ai_studio'
+            });
+        }
+    });
+    
+    // Add Vertex AI configurations
+    advancedConfigState.vertexAccounts.forEach(account => {
+        allConfigs.push({
+            type: 'vertex_ai',
+            id: account.id,
+            name: account.name,
+            projectId: account.project_id,
+            location: account.location,
+            isActive: account.id === advancedConfigState.selectedVertexAccountId && getActiveProvider() === 'vertex_ai'
+        });
+    });
+    
+    if (allConfigs.length === 0) {
+        configListContainer.innerHTML = `
+            <div style="text-align: center; color: #666; padding: 32px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
+                <i class="fas fa-inbox" style="font-size: 48px; color: #ccc; margin-bottom: 16px; display: block;"></i>
+                <p style="margin: 0 0 8px 0; font-weight: 500; font-size: 16px;">${t['settings.advanced.no_configs'] || '尚未添加任何配置'}</p>
+                <p style="margin: 0; font-size: 14px; opacity: 0.8;">${t['settings.advanced.no_configs_desc'] || '點擊下方按鈕添加您的第一個配置'}</p>
+            </div>
+        `;
+        return;
+    }
+    
+    configListContainer.innerHTML = allConfigs.map(config => {
+        const providerLabel = config.type === 'ai_studio' ? 
+            (t['settings.advanced.provider.ai_studio'] || 'AI Studio') : 
+            'Service Account';
+        const providerColor = config.type === 'ai_studio' ? '#ea4335' : '#4285f4';
+        
+        const statusBadge = config.isActive ? 
+            `<span style="display: inline-block; padding: 4px 12px; background: #4caf50; color: white; border-radius: 12px; font-size: 11px; font-weight: 600; margin-left: 8px;">${t['api_key.in_use'] || '使用中'}</span>` : 
+            '';
+        
+        let detailInfo = '';
+        if (config.type === 'ai_studio') {
+            detailInfo = `<div style="color: #666; font-size: 13px; margin-top: 4px;">${config.maskedKey}</div>`;
+        } else {
+            detailInfo = `<div style="color: #666; font-size: 13px; margin-top: 4px;">Project: ${config.projectId} | Location: ${config.location}</div>`;
+        }
+        
+        return `
+            <div class="config-item" style="background: white; border: 1px solid #e0e0e0; border-radius: 8px; padding: 16px; margin-bottom: 12px;">
+                <div style="display: flex; justify-content: space-between; align-items: start;">
+                    <div style="flex: 1;">
+                        <div style="display: flex; align-items: center; margin-bottom: 8px;">
+                            <span style="display: inline-block; padding: 4px 10px; background: ${providerColor}; color: white; border-radius: 4px; font-size: 11px; font-weight: 600;">${providerLabel}</span>
+                        </div>
+                        <div style="font-weight: 600; font-size: 15px; margin-bottom: 4px;">
+                            ${config.name}
+                            ${statusBadge}
+                        </div>
+                        ${detailInfo}
+                    </div>
+                    <div style="display: flex; gap: 8px; margin-left: 16px;">
+                        <button class="api-key-btn delete" onclick="deleteConfig('${config.type}', ${config.id}, '${config.name.replace(/'/g, "\\'")}')">
+
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+// Activate a configuration
+async function activateConfig(type, id) {
+    if (type === 'ai_studio') {
+        await applyProviderSelection('ai_studio', { persist: true });
+        await toggleApiKey(id);
+    } else {
+        await applyProviderSelection('vertex_ai', { persist: true });
+        await activateVertexAccount(id);
+    }
+    renderConfigurationList();
+}
+
+// Delete a configuration
+async function deleteConfig(type, id, name) {
+    const t = getSettingsTranslations();
+    const confirmMessage = t['settings.advanced.delete_config_confirm'] || `確定要刪除配置 "${name}" 嗎？`;
+    
+    showCustomConfirm(confirmMessage, async (confirmed) => {
+        if (!confirmed) return;
+        
+        try {
+            let response;
+            if (type === 'ai_studio') {
+                response = await fetch(`/api/keys/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+            } else {
+                response = await fetch(`/api/vertex/accounts/${id}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    }
+                });
+            }
+            
+            if (response.ok) {
+                // Reload data
+                await loadApiKeys();
+                await loadVertexAccounts();
+                renderConfigurationList();
+                
+                const successMessage = t['settings.advanced.delete_config_success'] || '配置已刪除';
+                showCustomAlert(successMessage);
+            } else {
+                const error = await response.json();
+                showCustomAlert(error.error || (t['settings.advanced.delete_config_failed'] || '刪除失敗'));
+            }
+        } catch (error) {
+            console.error('Error deleting configuration:', error);
+            showCustomAlert(t['settings.advanced.delete_config_failed'] || '刪除失敗');
+        }
+    });
+}
+
+// Make functions global
+window.activateConfig = activateConfig;
+window.deleteConfig = deleteConfig;
+
+// Open add configuration modal
+if (openAddConfigModalBtn) {
+    openAddConfigModalBtn.addEventListener('click', () => {
+        if (addConfigModal) {
+            addConfigModal.style.display = 'block';
+            // Reset to AI Studio tab
+            switchConfigTab('ai_studio');
+            resetAddConfigForm();
+            // Update language
+            const lang = getSettingsLang();
+            updateSettingsLanguage(lang);
+        }
+    });
+}
+
+// Cancel add configuration
+if (cancelConfigBtn) {
+    cancelConfigBtn.addEventListener('click', () => {
+        if (addConfigModal) {
+            addConfigModal.style.display = 'none';
+            resetAddConfigForm();
+        }
+    });
+}
+
+// Close modal on outside click
+window.addEventListener('click', (event) => {
+    if (event.target === addConfigModal) {
+        addConfigModal.style.display = 'none';
+        resetAddConfigForm();
+    }
+});
+
+// Switch between AI Studio and Vertex AI tabs
+function switchConfigTab(provider) {
+    const tabs = document.querySelectorAll('.config-tab-btn');
+    const aiStudioForm = document.getElementById('aiStudioConfigForm');
+    const vertexAiForm = document.getElementById('vertexAiConfigForm');
+    
+    tabs.forEach(tab => {
+        const tabProvider = tab.dataset.configProvider;
+        if (tabProvider === provider) {
+            tab.classList.add('active');
+            tab.style.borderBottom = '3px solid #8B7AA8';
+            tab.style.color = '#8B7AA8';
+            tab.style.fontWeight = '600';
+        } else {
+            tab.classList.remove('active');
+            tab.style.borderBottom = '3px solid transparent';
+            tab.style.color = '#666';
+            tab.style.fontWeight = '500';
+        }
+    });
+    
+    if (aiStudioForm && vertexAiForm) {
+        if (provider === 'ai_studio') {
+            aiStudioForm.style.display = 'block';
+            vertexAiForm.style.display = 'none';
+        } else {
+            aiStudioForm.style.display = 'none';
+            vertexAiForm.style.display = 'block';
+        }
+    }
+}
+
+// Tab click handlers
+document.querySelectorAll('.config-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const provider = btn.dataset.configProvider;
+        switchConfigTab(provider);
+    });
+});
+
+// Vertex AI file upload for config modal
+const configVertexUploadBtn = document.getElementById('configVertexUploadBtn');
+const configVertexClearBtn = document.getElementById('configVertexClearBtn');
+const configVertexServiceAccountFile = document.getElementById('configVertexServiceAccountFile');
+const configVertexServiceAccount = document.getElementById('configVertexServiceAccount');
+const configVertexProjectIdDisplay = document.getElementById('configVertexProjectIdDisplay');
+const configDetectedProjectId = document.getElementById('configDetectedProjectId');
+
+if (configVertexUploadBtn && configVertexServiceAccountFile) {
+    configVertexUploadBtn.addEventListener('click', () => {
+        configVertexServiceAccountFile.click();
+    });
+    
+    configVertexServiceAccountFile.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = (event) => {
+                try {
+                    const json = JSON.parse(event.target.result);
+                    configVertexServiceAccount.value = event.target.result;
+                    
+                    if (json.project_id && configDetectedProjectId && configVertexProjectIdDisplay) {
+                        configDetectedProjectId.textContent = json.project_id;
+                        configVertexProjectIdDisplay.style.display = 'block';
+                    }
+                    
+                    if (configVertexClearBtn) {
+                        configVertexClearBtn.style.display = 'block';
+                    }
+                } catch (error) {
+                    const t = getSettingsTranslations();
+                    showCustomAlert(t['settings.advanced.vertex.invalid_json'] || '無效的 JSON 檔案');
+                    configVertexServiceAccount.value = '';
+                }
+            };
+            reader.readAsText(file);
+        }
+    });
+}
+
+if (configVertexClearBtn) {
+    configVertexClearBtn.addEventListener('click', () => {
+        configVertexServiceAccount.value = '';
+        configVertexServiceAccountFile.value = '';
+        if (configVertexProjectIdDisplay) {
+            configVertexProjectIdDisplay.style.display = 'none';
+        }
+        configVertexClearBtn.style.display = 'none';
+    });
+}
+
+// Save configuration
+if (saveConfigBtn) {
+    saveConfigBtn.addEventListener('click', async () => {
+        const activeTab = document.querySelector('.config-tab-btn.active');
+        const provider = activeTab ? activeTab.dataset.configProvider : 'ai_studio';
+        
+        if (provider === 'ai_studio') {
+            await saveAiStudioConfig();
+        } else {
+            await saveVertexAiConfig();
+        }
+    });
+}
+
+// Save AI Studio configuration
+async function saveAiStudioConfig() {
+    const nameInput = document.getElementById('configAiStudioName');
+    const keyInput = document.getElementById('configAiStudioKey');
+    const t = getSettingsTranslations();
+    
+    const name = nameInput.value.trim();
+    const apiKey = keyInput.value.trim();
+    
+    if (!name || !apiKey) {
+        showCustomAlert(t['settings.advanced.fill_all_fields'] || '請填寫所有必填欄位');
+        return;
+    }
+    
+    try {
+        const response = await fetch('/api/keys', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+                name: name,
+                api_key: apiKey,
+                provider: 'ai_studio'
+            })
+        });
+        
+        if (response.ok) {
+            addConfigModal.style.display = 'none';
+            resetAddConfigForm();
+            await loadApiKeys();
+            renderConfigurationList();
+            showCustomAlert(t['settings.advanced.config_added'] || '配置已添加');
+        } else {
+            const error = await response.json();
+            showCustomAlert(error.error || (t['settings.advanced.config_add_failed'] || '添加配置失敗'));
+        }
+    } catch (error) {
+        console.error('Error adding AI Studio config:', error);
+        showCustomAlert(t['settings.advanced.config_add_failed'] || '添加配置失敗');
+    }
+}
+
+// Save Vertex AI configuration
+async function saveVertexAiConfig() {
+    const nameInput = document.getElementById('configVertexName');
+    const locationInput = document.getElementById('configVertexLocation');
+    const serviceAccountInput = document.getElementById('configVertexServiceAccount');
+    const t = getSettingsTranslations();
+    
+    const name = nameInput.value.trim();
+    const location = locationInput.value;
+    const serviceAccount = serviceAccountInput.value.trim();
+    
+    if (!name || !serviceAccount) {
+        showCustomAlert(t['settings.advanced.fill_all_fields'] || '請填寫所有必填欄位');
+        return;
+    }
+    
+    try {
+        // Validate JSON
+        JSON.parse(serviceAccount);
+        
+        const response = await fetch('/api/vertex/accounts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            },
+            body: JSON.stringify({
+                name: name,
+                location: location,
+                service_account_json: serviceAccount
+            })
+        });
+        
+        if (response.ok) {
+            addConfigModal.style.display = 'none';
+            resetAddConfigForm();
+            await loadVertexAccounts();
+            renderConfigurationList();
+            showCustomAlert(t['settings.advanced.config_added'] || '配置已添加');
+        } else {
+            const error = await response.json();
+            showCustomAlert(error.error || (t['settings.advanced.config_add_failed'] || '添加配置失敗'));
+        }
+    } catch (error) {
+        if (error instanceof SyntaxError) {
+            showCustomAlert(t['settings.advanced.vertex.invalid_json'] || '無效的 JSON 檔案');
+        } else {
+            console.error('Error adding Vertex AI config:', error);
+            showCustomAlert(t['settings.advanced.config_add_failed'] || '添加配置失敗');
+        }
+    }
+}
+
+// Reset add configuration form
+function resetAddConfigForm() {
+    // AI Studio fields
+    const aiStudioName = document.getElementById('configAiStudioName');
+    const aiStudioKey = document.getElementById('configAiStudioKey');
+    if (aiStudioName) aiStudioName.value = '';
+    if (aiStudioKey) aiStudioKey.value = '';
+    
+    // Vertex AI fields
+    const vertexName = document.getElementById('configVertexName');
+    const vertexLocation = document.getElementById('configVertexLocation');
+    if (vertexName) vertexName.value = '';
+    if (vertexLocation) vertexLocation.selectedIndex = 0;
+    
+    if (configVertexServiceAccount) configVertexServiceAccount.value = '';
+    if (configVertexServiceAccountFile) configVertexServiceAccountFile.value = '';
+    if (configVertexProjectIdDisplay) configVertexProjectIdDisplay.style.display = 'none';
+    if (configVertexClearBtn) configVertexClearBtn.style.display = 'none';
+}
+
 // ===== AI Model Management =====
 
-// Load user's selected AI model
+// Update model dropdown based on provider
+function updateModelOptions(provider) {
+    updateSummaryModelOptions(provider);
+    updateAuthModeVisibility();
+}
+
+if (providerCardsContainer && providerInput) {
+    const cards = providerCardsContainer.querySelectorAll('.provider-card');
+    
+    cards.forEach(card => {
+        card.addEventListener('click', async () => {
+            const selectedProvider = card.dataset.value;
+            await applyProviderSelection(selectedProvider, { persist: true });
+        });
+    });
+}
+
+// Load user's selected AI model and provider
 async function loadUserModel() {
     try {
         const response = await fetch('/api/user/model', {
@@ -1446,9 +2386,52 @@ async function loadUserModel() {
         
         if (response.ok) {
             const data = await response.json();
-            const modelSelect = document.getElementById('aiModelSelect');
-            if (modelSelect && data.ai_model) {
-                modelSelect.value = data.ai_model;
+            const providerSelect = document.getElementById('aiProviderSelect');
+            
+            // Set provider
+            const activeProvider = (data.ai_provider && ['ai_studio', 'vertex_ai'].includes(data.ai_provider)) ? data.ai_provider : 'ai_studio';
+            
+            if (providerSelect) {
+                providerSelect.value = activeProvider;
+            }
+            
+            updateModelOptions(activeProvider);
+            updateSummaryModelOptions(activeProvider);
+            updateSummaryProviderButtons(activeProvider);
+            
+            // Update cards visual state
+            const cards = document.querySelectorAll('.provider-card');
+            cards.forEach(c => {
+                if (c.dataset.value === activeProvider) {
+                    c.classList.add('active');
+                } else {
+                    c.classList.remove('active');
+                }
+            });
+            
+            if (summaryModelSelect) {
+                summaryModelSelect.value = data.ai_model || summaryModelSelect.value;
+            }
+
+            advancedConfigState.provider = activeProvider;
+            advancedConfigState.model = data.ai_model || (summaryModelSelect ? summaryModelSelect.value : null);
+            advancedConfigState.selectedVertexAccountId = data.selected_vertex_account_id || null;
+            advancedConfigState.vertexProjectId = data.vertex_account ? data.vertex_account.project_id : null;
+            advancedConfigState.vertexLocation = data.vertex_account ? data.vertex_account.location : null;
+            updateAuthModeVisibility();
+            updateAdvancedSummary();
+            
+            // Load Vertex configuration if applicable
+            if (data.ai_provider === 'vertex_ai') {
+                const locationSelect = document.getElementById('vertexLocation');
+                if (locationSelect && data.vertex_account && data.vertex_account.location) {
+                    locationSelect.value = data.vertex_account.location;
+                }
+            }
+
+            updateSummaryApiKeyOptions(advancedConfigState.apiKeys, advancedConfigState.selectedApiKeyId);
+            if (typeof renderApiKeys === 'function') {
+                renderApiKeys(advancedConfigState.apiKeys, advancedConfigState.selectedApiKeyId);
             }
         } else {
             console.error('Failed to load user model');
@@ -1458,58 +2441,248 @@ async function loadUserModel() {
     }
 }
 
-// Save user's selected AI model
-document.getElementById('aiModelSelect').addEventListener('change', async (event) => {
-    const selectedModel = event.target.value;
+// Save user's selected AI model handled by summaryModelSelect
+
+// Handle Vertex service account file upload
+const vertexUploadFileBtn = document.getElementById('vertexUploadFileBtn');
+const vertexServiceAccountFile = document.getElementById('vertexServiceAccountFile');
+const vertexServiceAccount = document.getElementById('vertexServiceAccount');
+const vertexClearFileBtn = document.getElementById('vertexClearFileBtn');
+
+if (vertexUploadFileBtn && vertexServiceAccountFile) {
+    vertexUploadFileBtn.addEventListener('click', () => {
+        vertexServiceAccountFile.click();
+    });
     
-    try {
-        const response = await fetch('/api/user/model', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            },
-            body: JSON.stringify({ ai_model: selectedModel })
-        });
+    vertexServiceAccountFile.addEventListener('change', async (event) => {
+        const file = event.target.files[0];
+        if (file) {
+            if (!file.name.endsWith('.json')) {
+                const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+                const supportedLangs = ['zh-TW', 'en', 'ja'];
+                const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+                const messages = {
+                    'zh-TW': '請選擇 JSON 檔案',
+                    'en': 'Please select a JSON file',
+                    'ja': 'JSONファイルを選択してください'
+                };
+                showCustomAlert(messages[langToUse] || messages['en']);
+                return;
+            }
+            
+            try {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const content = e.target.result;
+                    // Validate JSON and extract project_id
+                    try {
+                        const serviceAccountData = JSON.parse(content);
+                        
+                        // Extract project_id
+                        const projectId = serviceAccountData.project_id;
+                        if (!projectId) {
+                            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+                            const supportedLangs = ['zh-TW', 'en', 'ja'];
+                            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+                            const messages = {
+                                'zh-TW': '服務帳戶 JSON 檔案缺少 project_id 欄位',
+                                'en': 'Service account JSON missing project_id field',
+                                'ja': 'サービスアカウントJSONにproject_idフィールドがありません'
+                            };
+                            showCustomAlert(messages[langToUse] || messages['en']);
+                            return;
+                        }
+                        
+                        // Validate required fields
+                        if (!serviceAccountData.private_key || !serviceAccountData.client_email) {
+                            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+                            const supportedLangs = ['zh-TW', 'en', 'ja'];
+                            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+                            const messages = {
+                                'zh-TW': '服務帳戶 JSON 檔案缺少必要欄位',
+                                'en': 'Service account JSON missing required fields',
+                                'ja': 'サービスアカウントJSONに必要なフィールドがありません'
+                            };
+                            showCustomAlert(messages[langToUse] || messages['en']);
+                            return;
+                        }
+                        
+                        vertexServiceAccount.value = content;
+                        
+                        // Display the detected project ID
+                        const projectIdDisplay = document.getElementById('vertexProjectIdDisplay');
+                        const detectedProjectIdSpan = document.getElementById('detectedProjectId');
+                        if (projectIdDisplay && detectedProjectIdSpan) {
+                            detectedProjectIdSpan.textContent = projectId;
+                            projectIdDisplay.style.display = 'block';
+                        }
+                        
+                        if (vertexClearFileBtn) {
+                            vertexClearFileBtn.style.display = 'block';
+                        }
+                        // Update button text to show file loaded
+                        vertexUploadFileBtn.innerHTML = '<i class="fas fa-check-circle"></i> <span>' + file.name + '</span>';
+                        vertexUploadFileBtn.style.backgroundColor = '#4caf50';
+                    } catch (err) {
+                        console.error('JSON parse error:', err);
+                        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+                        const supportedLangs = ['zh-TW', 'en', 'ja'];
+                        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+                        const messages = {
+                            'zh-TW': 'JSON 檔案格式無效',
+                            'en': 'Invalid JSON file format',
+                            'ja': 'JSONファイルの形式が無効です'
+                        };
+                        showCustomAlert(messages[langToUse] || messages['en']);
+                    }
+                };
+                reader.readAsText(file);
+            } catch (error) {
+                console.error('Error reading file:', error);
+            }
+        }
+    });
+}
+
+if (vertexClearFileBtn && vertexServiceAccount && vertexUploadFileBtn) {
+    vertexClearFileBtn.addEventListener('click', () => {
+        vertexServiceAccount.value = '';
+        vertexServiceAccountFile.value = '';
+        vertexClearFileBtn.style.display = 'none';
         
-        if (response.ok) {
-            // Show brief success feedback
-            const selectElement = event.target;
-            const originalBackground = selectElement.style.backgroundColor;
-            selectElement.style.backgroundColor = '#d4edda';
-            selectElement.style.borderColor = '#c3e6cb';
+        // Hide project ID display
+        const projectIdDisplay = document.getElementById('vertexProjectIdDisplay');
+        if (projectIdDisplay) {
+            projectIdDisplay.style.display = 'none';
+        }
+        
+        vertexUploadFileBtn.innerHTML = '<i class="fas fa-upload"></i> <span data-i18n="settings.advanced.vertex.upload">上傳檔案</span>';
+        vertexUploadFileBtn.style.backgroundColor = '';
+    });
+}
+
+// Save Vertex AI configuration
+const saveVertexConfigBtn = document.getElementById('saveVertexConfigBtn');
+if (saveVertexConfigBtn) {
+    saveVertexConfigBtn.addEventListener('click', async () => {
+        const name = document.getElementById('vertexAccountName')?.value.trim();
+        const location = document.getElementById('vertexLocation').value;
+        const serviceAccount = document.getElementById('vertexServiceAccount').value.trim();
+        
+        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
+        
+        // Validation
+        if (!name) {
+            const messages = {
+                'zh-TW': '請輸入配置名稱',
+                'en': 'Please enter configuration name',
+                'ja': '設定名を入力してください'
+            };
+            showCustomAlert(messages[langToUse] || messages['en']);
+            return;
+        }
+        
+        if (!serviceAccount) {
+            const messages = {
+                'zh-TW': '請上傳服務帳戶 JSON 檔案',
+                'en': 'Please upload service account JSON file',
+                'ja': 'サービスアカウントJSONファイルをアップロードしてください'
+            };
+            showCustomAlert(messages[langToUse] || messages['en']);
+            return;
+        }
+        
+        // Validate JSON format and extract project_id
+        let projectId;
+        try {
+            const serviceAccountData = JSON.parse(serviceAccount);
+            projectId = serviceAccountData.project_id;
             
-            setTimeout(() => {
-                selectElement.style.backgroundColor = originalBackground;
-                selectElement.style.borderColor = '';
-            }, 1000);
+            if (!projectId) {
+                const messages = {
+                    'zh-TW': '服務帳戶 JSON 缺少 project_id',
+                    'en': 'Service account JSON missing project_id',
+                    'ja': 'サービスアカウントJSONにproject_idがありません'
+                };
+                showCustomAlert(messages[langToUse] || messages['en']);
+                return;
+            }
+        } catch (e) {
+            const messages = {
+                'zh-TW': '服務帳戶 JSON 格式無效',
+                'en': 'Invalid service account JSON format',
+                'ja': 'サービスアカウントJSONの形式が無効です'
+            };
+            showCustomAlert(messages[langToUse] || messages['en']);
+            return;
+        }
+        
+        try {
+            const response = await fetch('/api/vertex/accounts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                },
+                body: JSON.stringify({
+                    name: name,
+                    location: location,
+                    service_account_json: serviceAccount
+                })
+            });
             
-            console.log('AI model updated successfully');
-        } else {
-            const error = await response.json();
+            if (response.ok) {
+                const successMessages = {
+                    'zh-TW': 'Vertex AI 配置已保存',
+                    'en': 'Vertex AI configuration saved',
+                    'ja': 'Vertex AI設定を保存しました'
+                };
+                showCustomAlert(successMessages[langToUse] || successMessages['en']);
+
+                advancedConfigState.vertexProjectId = projectId;
+                advancedConfigState.vertexLocation = location;
+                updateAdvancedSummary();
+                loadVertexAccounts();
+                
+                // Clear the form for security
+                document.getElementById('vertexAccountName').value = '';
+                document.getElementById('vertexServiceAccount').value = '';
+                const projectIdDisplay = document.getElementById('vertexProjectIdDisplay');
+                if (projectIdDisplay) {
+                    projectIdDisplay.style.display = 'none';
+                }
+                if (vertexServiceAccountFile) {
+                    vertexServiceAccountFile.value = '';
+                }
+                if (vertexClearFileBtn) {
+                    vertexClearFileBtn.style.display = 'none';
+                }
+                if (vertexUploadFileBtn) {
+                    vertexUploadFileBtn.innerHTML = '<i class="fas fa-upload"></i> <span data-i18n="settings.advanced.vertex.upload">上傳檔案</span>';
+                    vertexUploadFileBtn.style.backgroundColor = '';
+                }
+            } else {
+                const error = await response.json();
+                const errorMessages = {
+                    'zh-TW': '保存失敗',
+                    'en': 'Save failed',
+                    'ja': '保存に失敗しました'
+                };
+                showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
+            }
+        } catch (error) {
+            console.error('Error saving Vertex configuration:', error);
             const errorMessages = {
                 'zh-TW': '保存失敗',
                 'en': 'Save failed',
                 'ja': '保存に失敗しました'
             };
-            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-            const supportedLangs = ['zh-TW', 'en', 'ja'];
-            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
-            showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
+            showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
         }
-    } catch (error) {
-        console.error('Error saving AI model:', error);
-        const errorMessages = {
-            'zh-TW': '保存失敗',
-            'en': 'Save failed',
-            'ja': '保存に失敗しました'
-        };
-        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
-        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
-        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
-    }
-});
+    });
+}
 
 // Save avatar to server
 async function saveAvatarToServer(file) {
@@ -1696,15 +2869,13 @@ async function loadChildren() {
 function renderChildren(children) {
     const childrenList = document.getElementById('childrenList');
     const childrenEmpty = document.getElementById('childrenEmpty');
-    const childForm = document.getElementById('childForm');
     
-    // Clear previous content except empty state and form
+    // Clear previous content except empty state
     const existingCards = childrenList.querySelectorAll('.child-card');
     existingCards.forEach(card => card.remove());
     
     if (children.length === 0) {
         childrenEmpty.style.display = 'block';
-        childForm.style.display = 'none';
         return;
     }
     
@@ -1773,119 +2944,148 @@ if (childrenList) {
     });
 }
 
-// Show add child form
+// Child Modal Elements
+const childModal = document.getElementById('childModal');
+const childModalTitle = document.getElementById('childModalTitle');
+const childModalName = document.getElementById('childModalName');
+const childModalBirthdate = document.getElementById('childModalBirthdate');
+const childModalGender = document.getElementById('childModalGender');
+const childModalNotes = document.getElementById('childModalNotes');
+const saveChildModalBtn = document.getElementById('saveChildModalBtn');
+const cancelChildModalBtn = document.getElementById('cancelChildModalBtn');
+
+// Show add child modal
 document.getElementById('addChildBtn').addEventListener('click', () => {
-    showChildForm();
+    showChildModal();
 });
 
-// Show child form (add or edit mode)
-function showChildForm(child = null) {
-    const childForm = document.getElementById('childForm');
-    const formTitle = document.getElementById('childFormTitle');
+// Show child modal (add or edit mode)
+function showChildModal(child = null) {
     const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
     const t = window.translations && window.translations[currentLang] ? window.translations[currentLang] : {};
     
     if (child) {
         // Edit mode
         editingChildId = child.id;
-        formTitle.textContent = t['settings.children.form.edit'] || '編輯小朋友';
-        document.getElementById('childProfileName').value = child.name;
-        document.getElementById('childProfileBirthdate').value = child.birthdate;
-        document.getElementById('childProfileGender').value = child.gender || '';
-        document.getElementById('childProfileNotes').value = child.notes || '';
+        childModalTitle.textContent = t['settings.children.form.edit'] || '編輯小朋友';
+        childModalName.value = child.name;
+        childModalBirthdate.value = child.birthdate;
+        childModalGender.value = child.gender || '';
+        childModalNotes.value = child.notes || '';
     } else {
         // Add mode
         editingChildId = null;
-        formTitle.textContent = t['settings.children.form.add'] || '添加小朋友';
-        document.getElementById('childProfileName').value = '';
-        document.getElementById('childProfileBirthdate').value = '';
-        document.getElementById('childProfileGender').value = '';
-        document.getElementById('childProfileNotes').value = '';
+        childModalTitle.textContent = t['settings.children.form.add'] || '添加小朋友';
+        childModalName.value = '';
+        childModalBirthdate.value = '';
+        childModalGender.value = '';
+        childModalNotes.value = '';
     }
     
-    childForm.style.display = 'block';
-    childForm.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    childModal.style.display = 'block';
+    childModalName.focus();
 }
 
-// Close child form
-document.getElementById('closeChildForm').addEventListener('click', () => {
-    hideChildForm();
-});
-
-document.getElementById('cancelChildForm').addEventListener('click', () => {
-    hideChildForm();
-});
-
-function hideChildForm() {
-    document.getElementById('childForm').style.display = 'none';
+// Close child modal
+function hideChildModal() {
+    childModal.style.display = 'none';
     editingChildId = null;
 }
 
+if (cancelChildModalBtn) {
+    cancelChildModalBtn.addEventListener('click', () => {
+        hideChildModal();
+    });
+}
+
+// Close modal when clicking outside
+if (childModal) {
+    window.addEventListener('click', (event) => {
+        if (event.target === childModal) {
+            hideChildModal();
+        }
+    });
+}
+
+// Click on date input to open date picker
+if (childModalBirthdate) {
+    childModalBirthdate.addEventListener('click', () => {
+        childModalBirthdate.showPicker();
+    });
+    
+    // Also open on focus for better accessibility
+    childModalBirthdate.addEventListener('focus', () => {
+        childModalBirthdate.showPicker();
+    });
+}
+
 // Save child (create or update)
-document.getElementById('saveChildForm').addEventListener('click', async () => {
-    const name = document.getElementById('childProfileName').value.trim();
-    const birthdate = document.getElementById('childProfileBirthdate').value;
-    const genderValue = document.getElementById('childProfileGender').value;
-    const notesValue = document.getElementById('childProfileNotes').value.trim();
-    
-    // Convert empty strings to null
-    const gender = genderValue || null;
-    const notes = notesValue || null;
-    
-    if (!name || !birthdate) {
-        showCustomAlert(window.translations && window.translations[currentLanguage] ? 
-            window.translations[currentLanguage]['settings.children.form.required'] || '請填寫姓名和生日' : 
-            '請填寫姓名和生日');
-        return;
-    }
-    
-    const payload = { name, birthdate, gender, notes };
-    
-    try {
-        let response;
-        if (editingChildId) {
-            // Update existing child
-            response = await fetch(`/api/children/${editingChildId}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                },
-                body: JSON.stringify(payload)
-            });
-        } else {
-            // Create new child
-            response = await fetch('/api/children', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                },
-                body: JSON.stringify(payload)
-            });
+if (saveChildModalBtn) {
+    saveChildModalBtn.addEventListener('click', async () => {
+        const name = childModalName.value.trim();
+        const birthdate = childModalBirthdate.value;
+        const genderValue = childModalGender.value;
+        const notesValue = childModalNotes.value.trim();
+        
+        // Convert empty strings to null
+        const gender = genderValue || null;
+        const notes = notesValue || null;
+        
+        if (!name || !birthdate) {
+            showCustomAlert(window.translations && window.translations[currentLanguage] ? 
+                window.translations[currentLanguage]['settings.children.form.required'] || '請填寫姓名和出生日期' : 
+                '請填寫姓名和出生日期');
+            return;
         }
         
-        if (response.ok) {
-            hideChildForm();
-            loadChildren(); // Reload list
-            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-            const t = window.translations && window.translations[currentLang] ? window.translations[currentLang] : {};
+        const payload = { name, birthdate, gender, notes };
+        
+        try {
+            let response;
             if (editingChildId) {
-                showCustomAlert(t['settings.children.updated'] || '小朋友資料已更新');
+                // Update existing child
+                response = await fetch(`/api/children/${editingChildId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify(payload)
+                });
             } else {
-                showBannerMessage(t['settings.children.created'] || '小朋友資料已添加');
+                // Create new child
+                response = await fetch('/api/children', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                    },
+                    body: JSON.stringify(payload)
+                });
             }
-        } else {
-            const error = await response.json();
-            showCustomAlert(error.error || 'Failed to save child profile');
+            
+            if (response.ok) {
+                hideChildModal();
+                loadChildren(); // Reload list
+                const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+                const t = window.translations && window.translations[currentLang] ? window.translations[currentLang] : {};
+                if (editingChildId) {
+                    showCustomAlert(t['settings.children.updated'] || '小朋友資料已更新');
+                } else {
+                    showBannerMessage(t['settings.children.created'] || '小朋友資料已添加');
+                }
+            } else {
+                const error = await response.json();
+                showCustomAlert(error.error || 'Failed to save child profile');
+            }
+        } catch (error) {
+            console.error('Error saving child:', error);
+            showCustomAlert('An error occurred. Please try again.');
         }
-    } catch (error) {
-        console.error('Error saving child:', error);
-        showCustomAlert('An error occurred. Please try again.');
-    }
-});
+    });
+}
 
-// Edit child - fetch and show form
+// Edit child - fetch and show modal
 async function editChild(childId) {
     try {
         const response = await fetch(`/api/children/${childId}`, {
@@ -1896,7 +3096,7 @@ async function editChild(childId) {
         
         if (response.ok) {
             const child = await response.json();
-            showChildForm(child);
+            showChildModal(child);
         } else {
             showCustomAlert('Failed to load child profile');
         }
@@ -1954,3 +3154,5 @@ async function deleteChildProfile(childId) {
 // Make functions globally accessible
 window.editChild = editChild;
 window.confirmDeleteChild = confirmDeleteChild;
+window.showChildModal = showChildModal;
+window.hideChildModal = hideChildModal;
