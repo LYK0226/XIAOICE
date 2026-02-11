@@ -1,4 +1,4 @@
-# APP/AGENT — ADK Multi-Agent System
+# app/agent/ — ADK Multi-Agent System
 
 ## OVERVIEW
 Google ADK multi-agent orchestration for XIAOICE chat. Three-agent architecture:
@@ -8,16 +8,48 @@ Google ADK multi-agent orchestration for XIAOICE chat. Three-agent architecture:
 
 All agents use same Gemini model (per-user choice). Streaming responses via generator.
 
+## FILE STRUCTURE
+
+```
+app/agent/
+├── __init__.py              # Backward compatibility wrapper
+├── chat_agent.py            # Core agent logic, session management
+├── prompts.py               # All agent system instructions (COORDINATOR, PDF, MEDIA)
+├── knowledge_base.py        # RAG developmental milestone data and retrieval functions
+└── video_analysis_agent.py  # Video analysis agents (uses knowledge_base.py)
+```
+
 ## WHERE TO LOOK
 | Task | File | Key Element |
 |------|------|-------------|
 | Agent creation | chat_agent.py | `_create_agent()`, `ChatAgentManager` |
 | Multi-agent wiring | chat_agent.py | `sub_agents=[pdf_agent, media_agent]` |
 | Streaming interface | chat_agent.py | `generate_streaming_response()`, `generate_streaming_response_async()` |
-| System instructions | chat_agent.py | `COORDINATOR_AGENT_INSTRUCTION`, `PDF_AGENT_INSTRUCTION`, `MEDIA_AGENT_INSTRUCTION` |
+| System instructions | **prompts.py** | `COORDINATOR_AGENT_INSTRUCTION`, `PDF_AGENT_INSTRUCTION`, `MEDIA_AGENT_INSTRUCTION` |
+| RAG knowledge data | **knowledge_base.py** | `DEVELOPMENTAL_STANDARDS`, `get_age_standards_tool()` |
 | Session management | chat_agent.py | `get_session_id()`, `InMemorySessionService` |
 | File validation | chat_agent.py | `_validate_file()`, `SUPPORTED_MIME_TYPES`, `MAX_FILE_SIZE` |
-| Backward compat shim | \_\_init\_\_.py | `init_gemini()`, re-exported functions |
+| Backward compat shim | __init__.py | `init_gemini()`, re-exported functions |
+
+## HOW TO MODIFY
+
+### Updating Agent Instructions
+Edit `app/agent/prompts.py`:
+```python
+# Modify COORDINATOR_AGENT_INSTRUCTION, PDF_AGENT_INSTRUCTION, or MEDIA_AGENT_INSTRUCTION
+```
+
+### Updating RAG Knowledge Base
+Edit `app/agent/knowledge_base.py`:
+```python
+# Add or modify milestones in DEVELOPMENTAL_STANDARDS dictionary
+# Update retrieval functions if needed
+```
+
+### Creating New Agents
+1. Add instruction to `prompts.py`
+2. Import in `chat_agent.py`
+3. Create agent in `_create_agent()` method
 
 ## CONVENTIONS
 - **Session IDs**: `conv_{user_id}_{conversation_id}` for persistent sessions, `temp_{user_id}` for quick queries.
