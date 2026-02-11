@@ -54,18 +54,18 @@ body {
     box-shadow: 0 18px 50px rgba(61, 46, 82, 0.1);
     overflow: hidden;
     position: relative;
-    max-width: 1180px;
+    max-width: 1200px;
 }
 
 /* Use flex flow instead of fixed positioning to allow page-level scrolling */
 body.vm-video-page .vm-shell {
     width: 100%;
-    max-width: 1180px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 40px 18px;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     justify-content: flex-start;
     min-height: calc(100vh - 80px);
     background: transparent;
@@ -77,12 +77,13 @@ body.vm-video-page .vm-shell {
     z-index: 40 !important;
 }
 
-/* Ensure the container still centers its children */
+/* Ensure the container still centers its children while allowing them to fill width */
 body.vm-video-page .vm-container {
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
+    width: 100%;
 }
 
 .vm-hero::before {
@@ -221,7 +222,7 @@ body.vm-video-page .vm-container {
 }
 
 .vm-topbar__inner {
-    max-width: 1180px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 14px 16px;
     display: grid;
@@ -259,18 +260,18 @@ body.vm-video-page .vm-container {
     padding: 18px 0 48px;
     min-height: calc(100vh - 80px);
     display: flex;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
 }
 
 .vm-container {
-    max-width: 1180px;
+    max-width: 1200px;
     margin: 0 auto;
     padding: 0 16px;
     width: 100%;
     display: flex;
     flex-direction: column;
-    align-items: center;
+    align-items: stretch;
     justify-content: center;
 }
 
@@ -324,7 +325,7 @@ body.vm-video-page .vm-container {
     backdrop-filter: blur(10px);
     border-radius: 32px;
     width: 95%;
-    max-width: 1100px;
+    max-width: 1200px;
     height: auto;
     border: 6px solid rgba(255, 255, 255, 0.6);
     box-shadow: 0 24px 70px rgba(61, 46, 82, 0.2);
@@ -379,6 +380,8 @@ body.vm-video-page .vm-container {
 
 /* Card system */
 .vm-card {
+    width: 100%;
+    box-sizing: border-box;
     background: rgba(255, 255, 255, 0.92);
     backdrop-filter: blur(5px);
     border: 1px solid rgba(255, 255, 255, 0.4);
@@ -761,11 +764,12 @@ body.vm-video-page .vm-container {
 
 .analysis-result-modal__footer {
     display: flex;
-    justify-content: flex-end;
-    gap: 10px;
+    justify-content: center;
+    gap: 12px;
     padding: 12px 16px;
     border-top: 1px solid rgba(155, 138, 184, 0.15);
     background: rgba(255, 255, 255, 0.85);
+    flex-wrap: wrap;
 }
 
 @keyframes analysis-spin {
@@ -1163,4 +1167,302 @@ body.vm-video-page .vm-container {
 @keyframes cloudFloat {
     0% { transform: translateX(0); }
     100% { transform: translateX(50px); }
+}
+
+/* --- Child selector --- */
+.vm-child-select { margin-top: 16px; }
+
+.vm-select {
+    padding: 8px 14px;
+    border: 1px solid var(--vm-border, #ccc);
+    border-radius: 8px;
+    background: var(--vm-surface-solid, #fff);
+    color: var(--vm-text, #333);
+    font-size: 0.95em;
+    outline: none;
+    transition: border-color 0.2s;
+}
+.vm-select:focus {
+    border-color: var(--vm-primary, #9B8AB8);
+    box-shadow: 0 0 0 3px var(--vm-ring, rgba(155,138,184,0.25));
+}
+
+.vm-warning {
+    font-size: 0.92em;
+    line-height: 1.5;
+}
+
+.btn-sm {
+    padding: 4px 12px;
+    font-size: 0.85em;
+}
+
+/* ── Upload history: grouping ── */
+.upload-group {
+    margin-bottom: 16px;
+}
+
+.upload-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 14px;
+    background: var(--vm-surface, rgba(255,255,255,0.92));
+    border: 1px solid var(--vm-border);
+    border-radius: 10px;
+    cursor: pointer;
+    user-select: none;
+    font-weight: 600;
+    color: var(--vm-text);
+    transition: background 0.2s;
+}
+
+.upload-group-header:hover {
+    background: var(--vm-kid-d, #F8F0FF);
+}
+
+.group-toggle-icon {
+    font-size: 12px;
+    color: var(--vm-muted);
+    transition: transform 0.2s;
+    width: 14px;
+    text-align: center;
+}
+
+.group-name {
+    font-size: 15px;
+}
+
+.group-count {
+    font-size: 13px;
+    color: var(--vm-muted);
+    font-weight: 400;
+}
+
+.upload-group-body {
+    padding-left: 8px;
+    margin-top: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+/* ── Batch toolbar ── */
+.batch-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-wrap: wrap;
+}
+
+.batch-toggle-btn {
+    padding: 7px 16px;
+    border: 2px solid var(--vm-primary);
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vm-primary);
+    transition: all 0.2s;
+}
+
+.batch-toggle-btn:hover {
+    background: var(--vm-primary);
+    color: #fff;
+}
+
+.batch-actions {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.batch-select-all {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--vm-text);
+    cursor: pointer;
+}
+
+.batch-select-all input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--vm-primary);
+}
+
+.batch-count {
+    font-size: 13px;
+    color: var(--vm-muted);
+}
+
+.batch-delete-btn {
+    padding: 6px 14px;
+    border: none;
+    background: #e53e3e;
+    color: #fff;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 600;
+    transition: all 0.2s;
+}
+
+.batch-delete-btn:disabled {
+    background: #cbd5e0;
+    cursor: not-allowed;
+}
+
+.batch-delete-btn:not(:disabled):hover {
+    background: #c53030;
+}
+
+.batch-cancel-btn {
+    padding: 6px 14px;
+    border: 1px solid var(--vm-border);
+    background: transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--vm-muted);
+    transition: all 0.2s;
+}
+
+.batch-cancel-btn:hover {
+    background: var(--vm-surface);
+}
+
+/* Batch checkbox in card */
+.batch-checkbox {
+    width: 18px;
+    height: 18px;
+    accent-color: var(--vm-primary);
+    flex-shrink: 0;
+}
+
+/* ── Report action buttons ── */
+.report-actions {
+    margin-top: 6px;
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.view-report-btn {
+    background: var(--vm-primary);
+    color: #fff;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85em;
+    transition: background 0.2s;
+}
+
+.view-report-btn:hover {
+    background: var(--vm-kid-a);
+}
+
+.report-download-btn {
+    background: #2c5282;
+    color: #fff;
+    border: none;
+    padding: 4px 12px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85em;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.2s;
+}
+
+.report-download-btn:hover {
+    background: #2a4365;
+}
+
+.report-processing {
+    font-size: 0.85em;
+    color: var(--vm-primary);
+}
+
+.report-failed {
+    font-size: 0.85em;
+    color: #e53e3e;
+}
+
+/* --- New Layout System (Side-by-Side) --- */
+
+.vm-layout-grid {
+    display: grid;
+    grid-template-columns: 320px 1fr;
+    gap: 20px;
+    align-items: start;
+    width: 100%;
+}
+
+.vm-layout-sidebar {
+    /* Sticky sidebar behavior */
+    position: sticky;
+    top: 20px;
+}
+
+.vm-layout-main {
+    min-width: 0;
+}
+
+/* Adjust Sidebar Card for narrower width */
+.vm-layout-sidebar .vm-card {
+    padding: 20px;
+}
+
+.vm-layout-sidebar .video-upload-zone {
+    flex-direction: column;
+    padding: 20px 12px;
+    gap: 12px;
+    text-align: center;
+}
+
+.vm-layout-sidebar .vm-uploadZone__icon {
+    width: 50px;
+    height: 50px;
+    font-size: 24px; /* Adjust icon size */
+}
+
+.vm-layout-sidebar .vm-uploadZone__text p {
+    font-size: 15px;
+}
+
+.vm-layout-sidebar .vm-uploadZone__text small {
+    margin-top: 4px;
+}
+
+/* Main Content Area adjustments */
+.video-history-section,
+.video-details-section {
+    margin-top: 0 !important; /* Reset legacy margin */
+    min-height: 400px;
+}
+
+/* Responsive: Stack on smaller screens */
+@media (max-width: 960px) {
+    .vm-layout-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .vm-layout-sidebar {
+        position: static;
+    }
+
+    .vm-layout-sidebar .video-upload-zone {
+        flex-direction: row; /* Back to row on mobile if plenty width */
+        text-align: left;
+    }
 }

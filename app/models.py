@@ -593,6 +593,80 @@ class VideoRecord(db.Model):
         return data
 
 
+class VideoAnalysisReport(db.Model):
+    """
+    Stores AI-generated child development analysis reports from uploaded videos.
+    Each report links to a VideoRecord and a Child, containing structured assessment
+    results, improvement suggestions, and a downloadable PDF stored in GCS.
+    """
+    __tablename__ = 'video_analysis_reports'
+
+    id = db.Column(db.Integer, primary_key=True)
+    report_id = db.Column(db.String(36), unique=True, nullable=False, index=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
+    video_id = db.Column(db.Integer, db.ForeignKey('video_records.id', ondelete='CASCADE'), nullable=False, index=True)
+    child_id = db.Column(db.Integer, db.ForeignKey('children.id', ondelete='SET NULL'), nullable=True, index=True)
+
+    # Child snapshot at analysis time
+    child_name = db.Column(db.String(100), nullable=False)
+    child_age_months = db.Column(db.Float, nullable=False)
+
+    # Analysis results (structured JSON)
+    motor_analysis = db.Column(db.JSON, nullable=True)       # gross/fine motor results
+    language_analysis = db.Column(db.JSON, nullable=True)     # speech/language results
+    overall_assessment = db.Column(db.JSON, nullable=True)    # combined summary
+    recommendations = db.Column(db.JSON, nullable=True)       # improvement suggestions
+    raw_transcription = db.Column(db.Text, nullable=True)     # video transcription used
+    agent_log = db.Column(db.JSON, nullable=True)             # full agent output log
+
+    # PDF report
+    pdf_gcs_url = db.Column(db.Text, nullable=True)           # GCS URL for generated PDF
+    pdf_storage_key = db.Column(db.String(512), nullable=True) # GCS object key
+
+    # Status
+    status = db.Column(db.String(30), nullable=False, default='pending', index=True)
+    # pending -> processing -> completed / failed
+    error_message = db.Column(db.Text, nullable=True)
+
+    # Timestamps
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
+    updated_at = db.Column(db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    completed_at = db.Column(db.DateTime, nullable=True)
+
+    # Relationships
+    user = db.relationship('User', backref=db.backref('video_analysis_reports', cascade='all, delete-orphan'))
+    video = db.relationship('VideoRecord', backref=db.backref('analysis_reports', cascade='all, delete-orphan'))
+    child = db.relationship('Child', backref=db.backref('video_analysis_reports', lazy='dynamic'))
+
+    def __repr__(self):
+        return f'<VideoAnalysisReport {self.report_id}>'
+
+    def to_dict(self, include_full=False):
+        data = {
+            'id': self.id,
+            'report_id': self.report_id,
+            'user_id': self.user_id,
+            'video_id': self.video_id,
+            'child_id': self.child_id,
+            'child_name': self.child_name,
+            'child_age_months': self.child_age_months,
+            'status': self.status,
+            'error_message': self.error_message,
+            'pdf_gcs_url': self.pdf_gcs_url,
+            'created_at': self.created_at.isoformat() if self.created_at else None,
+            'updated_at': self.updated_at.isoformat() if self.updated_at else None,
+            'completed_at': self.completed_at.isoformat() if self.completed_at else None,
+        }
+        if include_full:
+            data['motor_analysis'] = self.motor_analysis
+            data['language_analysis'] = self.language_analysis
+            data['overall_assessment'] = self.overall_assessment
+            data['recommendations'] = self.recommendations
+            data['raw_transcription'] = self.raw_transcription
+            data['agent_log'] = self.agent_log
+        return data
+
+
 class VideoTimestamp(db.Model):
     """Model for storing 1-minute segment transcriptions"""
     __tablename__ = 'video_timestamps'

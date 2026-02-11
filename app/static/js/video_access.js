@@ -90,6 +90,13 @@
     function closeResultModal() {
         const modal = $('analysisResultModal');
         if (modal) modal.style.display = 'none';
+        // Restore default footer with 確定 button
+        const footer = document.querySelector('.analysis-result-modal__footer');
+        if (footer) {
+            footer.innerHTML = '<button type="button" class="btn btn-primary" id="analysisResultOk">確定</button>';
+            const newOkBtn = document.getElementById('analysisResultOk');
+            if (newOkBtn) newOkBtn.addEventListener('click', closeResultModal);
+        }
     }
 
     async function showAnalysisResultWithDelay(html, { delayMs = 5000, animationText = '正在整理分析結果...' } = {}) {
@@ -198,6 +205,8 @@
     }
 
     function showPreview(file) {
+        const zone = $('videoUploadZone');
+        const hint = $('uploadHint');
         const previewArea = $('previewArea');
         const previewPlayer = $('previewPlayer');
         const previewMeta = $('previewMeta');
@@ -206,6 +215,10 @@
 
         if (!previewArea || !previewPlayer || !previewMeta || !submitBtn || !cancelBtn) return;
 
+        // Hide upload zone and hint to focus on preview/submission
+        if (zone) zone.style.display = 'none';
+        if (hint) hint.style.display = 'none';
+
         const url = URL.createObjectURL(file);
         previewPlayer.src = url;
         previewMeta.textContent = `${file.name} — ${formatMB(file.size)}`;
@@ -213,7 +226,7 @@
         previewArea.style.display = 'block';
         submitBtn.disabled = false;
 
-    cancelBtn.onclick = () => {
+        cancelBtn.onclick = () => {
             try {
                 URL.revokeObjectURL(url);
             } catch (_) {
@@ -225,6 +238,10 @@
             previewArea.style.display = 'none';
             submitBtn.disabled = true;
 
+            // Show upload zone and hint again
+            if (zone) zone.style.display = 'flex';
+            if (hint) hint.style.display = 'block';
+
             const input = $('videoModalInput');
             if (input) input.value = '';
 
@@ -232,44 +249,290 @@
             if (progressDiv) progressDiv.style.display = 'none';
         };
 
-    // Replace any previous handler cleanly
+        // Replace any previous handler cleanly
         submitBtn.onclick = async () => {
+            // --- Validate child selection ---
+            const childSelect = $('childSelect');
+            const selectedChildId = childSelect ? childSelect.value : '';
+            if (!selectedChildId) {
+                openResultModal('<p style="color:#b00020;">⚠️ 請先選擇分析對象（兒童）再提交影片。</p>');
+                return;
+            }
+
             // Immediate UI feedback
             setSubmitState(true, '<i class="fas fa-spinner fa-spin"></i> 上載中...');
             setProgress(1, '開始上載...');
 
             try {
                 const uploadPayload = await uploadVideo(file);
-                setSubmitState(false, '<i class="fas fa-check"></i> 已提交，可繼續上載其他影片');
+                setSubmitState(false, '<i class="fas fa-check"></i> 已提交');
 
-                // === FIX: show analysis result after submit (no other changes) ===
                 const videoId = uploadPayload?.video_id;
                 if (!videoId) {
                     openResultModal('<p style="color:#b00020;">❌ 找不到影片 ID，請重試</p>');
                     return;
                 }
 
-                // Get the filename from upload payload or user's selected file
-                const filename = uploadPayload?.filename || file?.name || '';
-                
-                // Use the mapping system to get the appropriate result
-                const analysisResult = window.getAnalysisResult 
-                    ? window.getAnalysisResult(filename)
-                    : '<p>✅ 分析完成！請重新整理頁面以查看結果。</p>';
-                
-                await showAnalysisResultWithDelay(analysisResult, {
-                    delayMs: 5000,
-                    animationText: '正在準備分析結果...',
+                // Start AI child-development analysis
+                openResultModal('<div class="analysis-animation"><div class="analysis-animation__circle" aria-hidden="true"></div><p>正在啟動 AI 分析...</p></div>');
+
+                const analyzeRes = await authedFetch(`/api/video/${videoId}/child-analyze`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ child_id: parseInt(selectedChildId) }),
                 });
+                const analyzePayload = await analyzeRes.json().catch(() => ({}));
+                if (!analyzeRes.ok || !analyzePayload?.success) {
+                    openResultModal(`<p style="color:#b00020;">❌ ${escapeHtml(analyzePayload?.error || '分析啟動失敗')}</p>`);
+                    return;
+                }
+
+                const reportId = analyzePayload.report_id;
+
+                // Poll for report completion
+                await pollForReport(reportId, { videoId });
 
                 const input = $('videoModalInput');
                 if (input) input.value = '';
+
+                // Reset UI state after successful process
+                previewArea.style.display = 'none';
+                if (zone) zone.style.display = 'flex';
+                if (hint) hint.style.display = 'block';
+                const progressDiv = $('uploadProgress');
+                if (progressDiv) progressDiv.style.display = 'none';
+
             } catch (e) {
                 setSubmitState(false, '<i class="fas fa-cloud-upload-alt"></i> 重新提交');
                 setProgress(100, e?.message || '上載失敗，請重試');
                 openResultModal(`<p style="color:#b00020;">❌ ${escapeHtml(e?.message || '失敗')}</p>`);
             }
         };
+    }
+
+    // ---------------------------------------------------------------
+    //  Child Selector – loads children from /api/children
+    // ---------------------------------------------------------------
+    async function loadChildren() {
+        const select = $('childSelect');
+        const warning = $('noChildWarning');
+        const addBtn = $('addChildHintBtn');
+        const ageDisplay = $('childAgeDisplay');
+        if (!select) return;
+
+        try {
+            const res = await authedFetch('/api/children');
+            const data = await res.json().catch(() => ({}));
+            const children = data?.children || [];
+
+            // Clear existing options except placeholder
+            select.innerHTML = '<option value="">— 請選擇兒童 —</option>';
+            if (children.length === 0) {
+                if (warning) warning.style.display = 'block';
+                if (addBtn) addBtn.style.display = 'inline-flex';
+                return;
+            }
+            if (warning) warning.style.display = 'none';
+            if (addBtn) addBtn.style.display = 'none';
+
+            children.forEach((child) => {
+                const opt = document.createElement('option');
+                opt.value = child.id;
+                const ageMonths = child.age_months ? `${child.age_months.toFixed(0)}個月` : '';
+                opt.textContent = `${child.name}${ageMonths ? ' (' + ageMonths + ')' : ''}`;
+                opt.dataset.ageMonths = child.age_months || 0;
+                select.appendChild(opt);
+            });
+
+            select.addEventListener('change', () => {
+                const selectedOpt = select.options[select.selectedIndex];
+                if (ageDisplay && selectedOpt && selectedOpt.value) {
+                    const age = parseFloat(selectedOpt.dataset.ageMonths || 0);
+                    ageDisplay.textContent = `年齡：${age.toFixed(0)} 個月（${(age / 12).toFixed(1)} 歲）`;
+                } else if (ageDisplay) {
+                    ageDisplay.textContent = '';
+                }
+            });
+        } catch (e) {
+            console.error('Failed to load children:', e);
+            if (warning) {
+                warning.textContent = '⚠️ 無法載入兒童資料，請重新整理頁面。';
+                warning.style.display = 'block';
+            }
+        }
+    }
+
+    // ---------------------------------------------------------------
+    //  Poll for analysis report completion
+    // ---------------------------------------------------------------
+    async function pollForReport(reportId, { timeoutMs = 600000, intervalMs = 3000, videoId = null } = {}) {
+        const start = Date.now();
+        const statusMessages = {
+            pending: '⏳ 排隊中...',
+            processing: '🔄 AI 正在分析影片...',
+        };
+
+        while (Date.now() - start < timeoutMs) {
+            const res = await authedFetch(`/api/video-analysis-report/${reportId}`);
+            const payload = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                openResultModal(`<p style="color:#b00020;">❌ ${escapeHtml(payload?.error || '查詢報告失敗')}</p>`);
+                return;
+            }
+
+            const report = payload?.report;
+            const status = (report?.status || '').toLowerCase();
+
+            if (status === 'completed') {
+                showReportResult(report, videoId);
+                return;
+            }
+
+            if (status === 'failed') {
+                openResultModal(`<p style="color:#b00020;">❌ 分析失敗：${escapeHtml(report?.error_message || '未知錯誤')}</p>`);
+                return;
+            }
+
+            // Still processing – update animation
+            const msg = statusMessages[status] || '分析中...';
+            openResultModal(`
+                <div class="analysis-animation">
+                    <div class="analysis-animation__circle" aria-hidden="true"></div>
+                    <p>${escapeHtml(msg)}</p>
+                    <span class="analysis-animation__hint">這可能需要 1-3 分鐘，取決於影片長度</span>
+                </div>
+            `);
+
+            await sleep(intervalMs);
+        }
+
+        openResultModal('<p style="color:#b00020;">⏰ 分析時間較長，請稍後在報告列表中查看結果。</p>');
+    }
+
+    // ---------------------------------------------------------------
+    //  Render completed report in modal
+    // ---------------------------------------------------------------
+    function showReportResult(report, videoId) {
+        const motor = report?.motor_analysis || {};
+        const language = report?.language_analysis || {};
+        const overall = report?.overall_assessment || {};
+        const recs = report?.recommendations || overall?.overall_recommendations || [];
+
+        function statusBadge(s) {
+            const colors = { TYPICAL: '#c6f6d5', CONCERN: '#fefcbf', NEEDS_ATTENTION: '#fed7d7' };
+            const labels = { TYPICAL: '✅ 正常', CONCERN: '⚠️ 需要關注', NEEDS_ATTENTION: '🔴 需要注意' };
+            const bg = colors[s] || '#e2e8f0';
+            const label = labels[s] || s || '—';
+            return `<span style="background:${bg};padding:2px 10px;border-radius:12px;font-weight:bold;">${escapeHtml(label)}</span>`;
+        }
+
+        function listHtml(items) {
+            if (!items || items.length === 0) return '<li>無</li>';
+            if (typeof items === 'string') return `<li>${escapeHtml(items)}</li>`;
+            return items.map(i => `<li>${escapeHtml(i)}</li>`).join('');
+        }
+
+        const execSummary = overall?.executive_summary || '分析已完成';
+        const motorSection = overall?.motor_development || motor;
+        const langSection = overall?.language_development || language;
+        const overallRecs = Array.isArray(recs) ? recs : (overall?.overall_recommendations || []);
+
+        const downloadBtn = report?.pdf_gcs_url
+            ? `<a href="/api/video-analysis-report/${report.report_id}/download" target="_blank" class="btn btn-primary" style="margin-top:12px;display:inline-block;text-decoration:none;">
+                 <i class="fas fa-download"></i> 下載完整報告（PDF）
+               </a>`
+            : '';
+
+        const html = `
+            <h3>🧒 兒童發展影片分析報告</h3>
+            <p><strong>兒童：</strong>${escapeHtml(report?.child_name || '')}
+               <strong style="margin-left:16px;">年齡：</strong>${report?.child_age_months?.toFixed(0) || '?'} 個月</p>
+
+            <h4>📋 綜合摘要</h4>
+            <p>${escapeHtml(execSummary)}</p>
+
+            <h4>🏃 身體動作發展 ${statusBadge(motorSection?.status)}</h4>
+            <p>${escapeHtml(motorSection?.findings || '')}</p>
+            ${motorSection?.concerns?.length ? '<p><strong>關注事項：</strong></p><ul>' + listHtml(motorSection.concerns) + '</ul>' : ''}
+            ${motorSection?.recommendations?.length ? '<p><strong>建議：</strong></p><ul>' + listHtml(motorSection.recommendations) + '</ul>' : ''}
+
+            <h4>🗣️ 語言發展 ${statusBadge(langSection?.status)}</h4>
+            <p>${escapeHtml(langSection?.findings || '')}</p>
+            ${langSection?.concerns?.length ? '<p><strong>關注事項：</strong></p><ul>' + listHtml(langSection.concerns) + '</ul>' : ''}
+            ${langSection?.recommendations?.length ? '<p><strong>建議：</strong></p><ul>' + listHtml(langSection.recommendations) + '</ul>' : ''}
+
+            ${overallRecs.length ? '<h4>📌 整體建議</h4><ul>' + listHtml(overallRecs) + '</ul>' : ''}
+            ${downloadBtn}
+        `;
+
+        openResultModal(html);
+
+        // Replace footer "確定" button with keep/discard buttons
+        const footer = document.querySelector('.analysis-result-modal__footer');
+        if (footer) {
+            footer.innerHTML = `
+                <button id="keepReportBtn" class="btn btn-keep" style="padding:10px 28px;background:#48bb78;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:background 0.2s;">
+                    <i class="fas fa-check"></i> 保留記錄
+                </button>
+                <button id="discardReportBtn" class="btn btn-discard" style="padding:10px 28px;background:#e53e3e;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;transition:background 0.2s;">
+                    <i class="fas fa-trash-alt"></i> 不保留記錄
+                </button>
+            `;
+        }
+
+        // Bind keep / discard buttons
+        const keepBtn = document.getElementById('keepReportBtn');
+        const discardBtn = document.getElementById('discardReportBtn');
+
+        if (keepBtn) {
+            keepBtn.addEventListener('click', () => {
+                closeResultModal();
+                // Refresh upload history
+                if (window.videoUploadsManager) window.videoUploadsManager.loadUploads('video_assess');
+            });
+        }
+
+        if (discardBtn) {
+            discardBtn.addEventListener('click', async () => {
+                if (!confirm('確定不保留此記錄嗎？影片和分析結果將被永久刪除。')) return;
+                discardBtn.disabled = true;
+                discardBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 刪除中...';
+                try {
+                    await discardVideoAndReport(videoId, report?.report_id);
+                    closeResultModal();
+                    if (window.videoUploadsManager) window.videoUploadsManager.loadUploads('video_assess');
+                } catch (err) {
+                    alert('刪除失敗：' + (err.message || '未知錯誤'));
+                    discardBtn.disabled = false;
+                    discardBtn.innerHTML = '<i class="fas fa-trash-alt"></i> 不保留記錄';
+                }
+            });
+        }
+    }
+
+    /**
+     * Delete video record + analysis report + GCS files in one go.
+     */
+    async function discardVideoAndReport(videoId, reportId) {
+        const token = localStorage.getItem('access_token');
+        const headers = { 'Authorization': `Bearer ${token}` };
+
+        // Delete the video (cascades to report via backend)
+        if (videoId) {
+            const res = await fetch(`/api/videos/${videoId}`, { method: 'DELETE', headers });
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({}));
+                throw new Error(d.error || '刪除影片失敗');
+            }
+        } else if (reportId) {
+            // Fallback: delete report only if we don't have videoId
+            const res = await fetch(`/api/video-analysis-report/${reportId}`, { method: 'DELETE', headers });
+            if (!res.ok) {
+                const d = await res.json().catch(() => ({}));
+                throw new Error(d.error || '刪除報告失敗');
+            }
+        }
     }
 
     function wireUploadZone() {
@@ -326,8 +589,9 @@
 
     document.addEventListener('DOMContentLoaded', () => {
         wireUploadZone();
+        loadChildren();  // Load child profiles for selection
 
-    // Result modal close handlers (existing modal; behavior-only)
+    // Result modal close handlers (existing modal; behaviour-only)
     const okBtn = $('analysisResultOk');
     const closeBtn = $('analysisResultClose');
     const backdrop = $('analysisResultBackdrop');
