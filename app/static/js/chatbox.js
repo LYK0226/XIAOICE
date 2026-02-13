@@ -21,6 +21,9 @@ const filePreviewContainer = document.getElementById('filePreviewContainer');
 // Language support
 let currentLanguage = 'zh-TW'; // Default to Traditional Chinese
 
+// Let chatbox control when the page becomes visible (prevents flash where settings.js marks ready too early)
+window.__i18nDeferReady = true;
+
 // Avatar settings
 window.userAvatar = null; // Will store user avatar URL
 let botAvatar = null; // Will store bot avatar URL
@@ -45,6 +48,31 @@ let translations = {};
 let dataLoaded = false; // Track if data has been loaded
 let dataLoadPromise = null; // Promise that resolves when data is loaded
 
+function loadTranslationCache(lang) {
+    try {
+        const cached = localStorage.getItem(`i18n_cache_${lang}`);
+        if (cached) {
+            return JSON.parse(cached);
+        }
+    } catch (error) {
+        console.warn('Failed to read cached translations:', error);
+    }
+    return null;
+}
+
+function storeTranslationCache(lang, data) {
+    try {
+        localStorage.setItem(`i18n_cache_${lang}`, JSON.stringify(data));
+    } catch (error) {
+        console.warn('Failed to cache translations:', error);
+    }
+}
+
+function markI18nReady() {
+    document.documentElement.setAttribute('data-i18n-ready', 'true');
+    document.documentElement.removeAttribute('data-i18n-pending');
+}
+
 // Load emoji data from JSON
 async function loadEmojiData() {
     try {
@@ -65,12 +93,23 @@ async function loadEmojiData() {
 
 // Load translation data from JSON
 async function loadTranslations() {
-    const languages = ['zh-TW', 'en', 'ja'];
+    const languages = ['zh-TW', 'zh-CN', 'en', 'ja'];
     const promises = languages.map(async (lang) => {
+        if (translations[lang]) {
+            return;
+        }
+
+        const cached = loadTranslationCache(lang);
+        if (cached) {
+            translations[lang] = cached;
+            return;
+        }
+
         try {
             const response = await fetch(`/static/i18n/${lang}.json`);
             if (!response.ok) throw new Error(`Failed to load ${lang} translations`);
             translations[lang] = await response.json();
+            storeTranslationCache(lang, translations[lang]);
         } catch (error) {
             console.error(`Error loading ${lang} translations:`, error);
             // Fallback to basic English
@@ -109,10 +148,13 @@ async function initializeData() {
 
 // Function to update UI language
 async function updateUILanguage(lang) {
-    // Wait for data to load if not ready
-    if (!dataLoaded) {
+    // If we don't have this language yet, load translations (and other data) first.
+    if (!translations[lang]) {
         console.log('Waiting for translations to load...');
         await initializeData();
+    } else if (!dataLoaded) {
+        // Don't block initial paint if we can translate from cache; load the rest in background.
+        initializeData().catch((e) => console.warn('Background init failed:', e));
     }
     
     // Validate language
@@ -188,6 +230,13 @@ async function updateUILanguage(lang) {
     // Refresh conversation list text to match language selection
     if (typeof renderConversationList !== 'undefined' && typeof conversationsCache !== 'undefined') {
         renderConversationList(conversationsCache);
+    }
+
+    // Page can be shown once core UI text is in the right language
+    try {
+        markI18nReady();
+    } catch (e) {
+        // no-op
     }
 }
 
@@ -391,24 +440,46 @@ function createTypingIndicator(text) {
 
 // Load saved language preference and initialize data on page load
 window.addEventListener('DOMContentLoaded', async () => {
-    // Load JSON data first
-    await initializeData();
-    
-    const savedLanguage = localStorage.getItem('preferredLanguage');
-    if (savedLanguage && translations[savedLanguage]) {
+    const savedLanguage = localStorage.getItem('preferredLanguage') || 'zh-TW';
+
+    // Seed translations from localStorage cache to avoid initial language flash
+    const cached = loadTranslationCache(savedLanguage);
+    if (cached) {
+        translations[savedLanguage] = cached;
+        window.translations = window.translations || {};
+        window.translations[savedLanguage] = cached;
+    }
+
+    try {
         currentLanguage = savedLanguage;
-        updateUILanguage(savedLanguage);
-        
-        // Update active language option in settings
-        const langOptions = document.querySelectorAll('.lang-option');
-        langOptions.forEach(option => {
+        await updateUILanguage(savedLanguage);
+    } catch (error) {
+        console.warn('Failed to apply initial UI language:', error);
+        // Ensure the page isn't stuck invisible
+        markI18nReady();
+    }
+
+    // Kick off full data initialization (emojis + all translations) without blocking initial render
+    initializeData()
+        .then(() => {
+            if (savedLanguage && translations[savedLanguage]) {
+                return updateUILanguage(savedLanguage);
+            }
+        })
+        .catch((e) => console.warn('Failed to fully initialize data:', e));
+
+    // Update active language option in settings (if present)
+    const langOptions = document.querySelectorAll('.lang-option');
+    if (langOptions && langOptions.length) {
+        langOptions.forEach((option) => {
             const lang = option.getAttribute('data-lang');
+            const icon = option.querySelector('i');
             if (lang === savedLanguage) {
                 option.classList.add('active');
-                option.querySelector('i').className = 'fas fa-check-circle';
+                if (icon) icon.className = 'fas fa-check-circle';
             } else {
                 option.classList.remove('active');
-                option.querySelector('i').className = 'fas fa-circle';
+                if (icon) icon.className = 'fas fa-circle';
             }
         });
     }

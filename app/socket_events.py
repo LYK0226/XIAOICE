@@ -207,12 +207,26 @@ def handle_send_message(data):
         user_profile = UserProfile.query.filter_by(user_id=user_id).first()
         api_key = None
         ai_model = 'gemini-3-flash'
+        ai_provider = 'ai_studio'
+        vertex_config = None
+        provider_for_request = 'ai_studio'
         
         if user_profile:
             if user_profile.selected_api_key:
                 api_key = user_profile.selected_api_key.get_decrypted_key()
             if user_profile.ai_model:
                 ai_model = user_profile.ai_model
+            if user_profile.ai_provider:
+                ai_provider = user_profile.ai_provider
+            if ai_provider == 'vertex_ai':
+                vertex_config = {
+                    'service_account': user_profile.get_decrypted_vertex_service_account(),
+                    'project_id': user_profile.vertex_project_id,
+                    'location': user_profile.vertex_location or 'us-central1'
+                }
+                provider_for_request = 'vertex_ai'
+            else:
+                provider_for_request = 'ai_studio'
         
         # Set environment variables for AI processing
         credentials_path = os.environ.get('GCS_CREDENTIALS_PATH')
@@ -237,7 +251,9 @@ def handle_send_message(data):
                 model_name=ai_model,
                 user_id=str(user_id),
                 conversation_id=conversation_id,
-                username=username
+                username=username,
+                provider=provider_for_request,
+                vertex_config=vertex_config
             ):
                 chunk = chunk.strip()
                 

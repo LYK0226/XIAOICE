@@ -166,7 +166,10 @@ def delete_file_from_gcs(gcs_url):
             bucket_name = parts[0]
             blob_name = '/'.join(parts[1:])
         else:
-            raise ValueError("Invalid GCS URL format")
+            bucket_name = os.environ.get('GCS_BUCKET_NAME')
+            if not bucket_name:
+                raise ValueError("GCS_BUCKET_NAME not configured")
+            blob_name = gcs_url
 
         bucket = client.bucket(bucket_name)
         blob = bucket.blob(blob_name)

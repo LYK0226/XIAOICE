@@ -128,40 +128,6 @@
                         </button>
                     </div>
                     
-                    <!-- Child Form (shown when adding/editing) -->
-                    <div class="child-form" id="childForm" style="display: none;">
-                        <div class="form-header">
-                            <h4 id="childFormTitle" data-i18n="settings.children.form.add">添加小朋友</h4>
-                            <button class="form-close" id="closeChildForm">&times;</button>
-                        </div>
-                        <div class="form-body">
-                            <div class="form-field">
-                                <label data-i18n="settings.children.form.name">姓名 *</label>
-                                <input type="text" id="childProfileName" placeholder="例如：小明" required>
-                            </div>
-                            <div class="form-field">
-                                <label data-i18n="settings.children.form.birthdate">生日 *</label>
-                                <input type="date" id="childProfileBirthdate" required>
-                            </div>
-                            <div class="form-field">
-                                <label data-i18n="settings.children.form.gender">性別</label>
-                                <select id="childProfileGender">
-                                    <option value="" data-i18n="settings.children.form.gender.unspecified">不透露</option>
-                                    <option value="male" data-i18n="settings.children.form.gender.male">男</option>
-                                    <option value="female" data-i18n="settings.children.form.gender.female">女</option>
-                                    <option value="other" data-i18n="settings.children.form.gender.other">其他</option>
-                                </select>
-                            </div>
-                            <div class="form-field">
-                                <label data-i18n="settings.children.form.notes">備註</label>
-                                <textarea id="childProfileNotes" rows="3" placeholder="例如：早產、過敏等特殊情況"></textarea>
-                            </div>
-                        </div>
-                        <div class="form-actions">
-                            <button class="form-btn cancel" id="cancelChildForm" data-i18n="alert.cancel">取消</button>
-                            <button class="form-btn save" id="saveChildForm" data-i18n="alert.save">保存</button>
-                        </div>
-                    </div>
                 </div>
                 
                 <!-- Personalization Settings -->
@@ -183,15 +149,19 @@
                         <div class="language-grid">
                             <div class="lang-option active" data-lang="zh-TW">
                                 <i class="fas fa-font"></i>
-                                <span data-i18n="settings.personalization.language.zh-TW">繁體中文</span>
+                                <span>繁體中文</span>
+                            </div>
+                            <div class="lang-option" data-lang="zh-CN">
+                                <i class="fas fa-font"></i>
+                                <span>简体中文</span>
                             </div>
                             <div class="lang-option" data-lang="en">
                                 <i class="fas fa-language"></i>
-                                <span data-i18n="settings.personalization.language.en">English</span>
+                                <span>English</span>
                             </div>
                             <div class="lang-option" data-lang="ja">
                                 <i class="fas fa-comment-dots"></i>
-                                <span data-i18n="settings.personalization.language.ja">日本語</span>
+                                <span>日本語</span>
                             </div>
                         </div>
                     </div>
@@ -203,29 +173,51 @@
                         <h3><i class="fa-solid fa-key"></i> <span data-i18n="settings.advanced.title">API 金鑰管理</span></h3>
                         <p class="settings-description" data-i18n="settings.advanced.description">管理您的 Google AI API 金鑰</p>
                     </div>
-                    <!-- AI Model Selection -->
-                    <div class="setting-item">
-                        <label data-i18n="settings.advanced.model">AI 模型選擇</label>
-                        <div class="model-selection">
-                            <select id="aiModelSelect" class="setting-select">
-                                <option value="gemini-3-flash-preview" data-i18n="settings.advanced.model.gemini-3-flash">Gemini 3 Flash</option>
-                                <option value="gemini-3-pro-preview" data-i18n="settings.advanced.model.gemini-3-pro">Gemini 3 Pro</option>
-                            </select>
-                        </div>
-                    </div>
-                    <!-- API Key Management -->
-                    <div class="setting-item">
-                        <label data-i18n="settings.advanced.api_key">API 金鑰 / API Key</label>
-                        <p class="setting-description" style="font-size: 15px;" data-i18n="settings.advanced.api_key.description">您可以添加多個 API 金鑰以分散使用量</p>
-                        <div class="api-key-section">
-                            <div class="api-key-list" id="apiKeyList">
-                                <!-- API keys will be loaded here -->
+
+                    <div class="setting-item advanced-summary" id="advancedSummary">
+                        <label data-i18n="settings.advanced.summary.title">目前設定</label>
+                        <div class="advanced-summary-grid">
+                            <div class="summary-block">
+                                <div class="summary-title" data-i18n="settings.advanced.summary.model">已選擇模型</div>
+                                <div class="summary-value" id="advancedSelectedModel">-</div>
+                                <div class="summary-sub" id="advancedSelectedProvider">-</div>
+                                <div class="summary-controls">
+                                    <div class="summary-control">
+                                        <span class="summary-control-label" data-i18n="settings.advanced.provider">AI 提供商</span>
+                                        <div class="summary-provider-toggle" id="summaryProviderToggle">
+                                            <button type="button" class="summary-provider-btn" data-provider="ai_studio" data-i18n="settings.advanced.provider.ai_studio">AI Studio (Gemini API)</button>
+                                            <button type="button" class="summary-provider-btn" data-provider="vertex_ai" data-i18n="settings.advanced.provider.vertex_ai">Vertex AI (Service Account)</button>
+                                        </div>
+                                    </div>
+                                    <div class="summary-control">
+                                        <span class="summary-control-label" data-i18n="settings.advanced.model">AI 模型選擇</span>
+                                        <select id="summaryModelSelect" class="setting-select summary-select"></select>
+                                    </div>
+                                    <div class="summary-control">
+                                        <span class="summary-control-label" data-i18n="settings.advanced.api_key">API 金鑰</span>
+                                        <select id="summaryApiKeySelect" class="setting-select summary-select"></select>
+                                    </div>
+                                </div>
                             </div>
-                            
-                            <button class="add-api-key-btn" id="addApiKeyBtn">
-                                <i class="fas fa-plus"></i> <span data-i18n="settings.advanced.api_key.add">添加 API 金鑰</span>
-                            </button>
                         </div>
+                        <button class="add-api-key-btn" id="showAdvancedConfigBtn">
+                            <i class="fas fa-cog"></i> <span data-i18n="settings.advanced.manage_config">管理配置</span>
+                        </button>
+                    </div>
+
+                    <div class="advanced-config-details" id="advancedConfigDetails" style="display: none;">
+                    
+                    <!-- Configuration List -->
+                    <div class="setting-item" id="configListSection">
+                        <label data-i18n="settings.advanced.config_list">已添加的配置</label>
+                        <p class="setting-description" style="font-size: 15px; margin-bottom: 12px;" data-i18n="settings.advanced.config_list.description">管理您已添加的 AI Studio 和 Vertex AI 配置</p>
+                        <div class="config-list-container" id="configListContainer">
+                            <!-- Configuration items will be loaded here -->
+                        </div>
+                        <button class="add-api-key-btn" id="openAddConfigModalBtn" style="margin-top: 16px;">
+                            <i class="fas fa-plus"></i> <span data-i18n="settings.advanced.add_new_config">添加配置</span>
+                        </button>
+                    </div>
                     </div>
                 </div>
             </div>
@@ -274,7 +266,84 @@
     </div>
 </div>
 
-<!-- API Key Modal -->
+<!-- Add Configuration Modal -->
+<div id="addConfigModal" class="modal">
+    <div class="modal-content custom-modal-mini" style="max-width: 600px; width: 90%;">
+        <h2 data-i18n="config_modal.title">添加配置</h2>
+        
+        <!-- Provider Selection Tabs -->
+        <div class="config-provider-tabs" style="display: flex; gap: 8px; margin-bottom: 20px; border-bottom: 2px solid #e0e0e0;">
+            <button type="button" class="config-tab-btn active" data-config-provider="ai_studio" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid #8B7AA8; font-weight: 600; color: #8B7AA8;">
+                <i class="fas fa-robot"></i> <span data-i18n="settings.advanced.provider.ai_studio">AI Studio</span>
+            </button>
+            <button type="button" class="config-tab-btn" data-config-provider="vertex_ai" style="flex: 1; padding: 12px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 500; color: #666;">
+                <i class="fas fa-cloud"></i> <span data-i18n="settings.advanced.provider.vertex_ai">Vertex AI</span>
+            </button>
+        </div>
+        
+        <!-- AI Studio Configuration Form -->
+        <div class="config-form-content" id="aiStudioConfigForm">
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="config_modal.ai_studio.name">配置名稱</label>
+                <input type="text" id="configAiStudioName" class="custom-modal-input" placeholder="例如：My Gemini Key" required>
+            </div>
+            
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="config_modal.ai_studio.api_key">API 金鑰</label>
+                <input type="password" id="configAiStudioKey" class="custom-modal-input" placeholder="輸入您的 Google AI API 金鑰" required>
+                <small class="form-hint" style="display: block; margin-top: 8px; color: #8B7AA8; font-size: 12px;" data-i18n="config_modal.hint">您的 API 金鑰將被加密存儲</small>
+            </div>
+        </div>
+        
+        <!-- Vertex AI Configuration Form -->
+        <div class="config-form-content" id="vertexAiConfigForm" style="display: none;">
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="config_modal.vertex.name">配置名稱</label>
+                <input type="text" id="configVertexName" class="custom-modal-input" placeholder="例如：My Vertex Account" required>
+            </div>
+            
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="config_modal.vertex.location">區域 / Location</label>
+                <select id="configVertexLocation" class="custom-modal-input">
+                    <option value="us-central1">us-central1 (Iowa)</option>
+                    <option value="us-east4">us-east4 (Virginia)</option>
+                    <option value="us-west1">us-west1 (Oregon)</option>
+                    <option value="europe-west4">europe-west4 (Netherlands)</option>
+                    <option value="asia-northeast1">asia-northeast1 (Tokyo)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="config_modal.vertex.service_account">服務帳戶 JSON</label>
+                <div style="display: flex; gap: 8px; margin-bottom: 8px;">
+                    <button type="button" id="configVertexUploadBtn" class="add-api-key-btn" style="flex: 1; margin: 0; padding: 10px;">
+                        <i class="fas fa-upload"></i> <span data-i18n="config_modal.vertex.upload">上傳檔案</span>
+                    </button>
+                    <button type="button" id="configVertexClearBtn" class="clear-btn" style="flex: 1; margin: 0; padding: 10px; display: none;">
+                        <i class="fas fa-times"></i> <span data-i18n="config_modal.vertex.clear">清除</span>
+                    </button>
+                </div>
+                <input type="file" id="configVertexServiceAccountFile" accept=".json" style="display: none;">
+                <input type="hidden" id="configVertexServiceAccount">
+                <small class="form-hint" style="display: block; margin-top: 8px; color: #666; font-size: 12px;" data-i18n="config_modal.vertex.hint">從 GCP 主控台下載的服務帳戶 JSON 金鑰文件</small>
+                <div id="configVertexProjectIdDisplay" style="display: none; margin-top: 8px; padding: 8px; background: #f0f0f0; border-radius: 4px;">
+                    <small style="color: #666; font-size: 12px;"><strong data-i18n="config_modal.vertex.detected_project">檢測到的專案 ID</strong>: <span id="configDetectedProjectId" style="color: #333; font-weight: 600;"></span></small>
+                </div>
+            </div>
+        </div>
+        
+        <div class="custom-modal-actions" style="margin-top: 24px;">
+            <button id="saveConfigBtn" class="custom-modal-btn primary">
+                <i class="fas fa-save"></i> <span data-i18n="config_modal.save">保存配置</span>
+            </button>
+            <button id="cancelConfigBtn" class="custom-modal-btn secondary">
+                <i class="fas fa-times"></i> <span data-i18n="config_modal.cancel">取消</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- API Key Modal (Legacy - kept for compatibility) -->
 <div id="apiKeyModal" class="modal">
     <div class="modal-content custom-modal-mini">
         <h2 data-i18n="api_key_modal.title">添加 API 金鑰</h2>
@@ -387,6 +456,47 @@
             </button>
             <button id="cancelDeleteAccountBtn" class="custom-modal-btn secondary">
                 <i class="fas fa-times"></i> <span data-i18n="settings.profile.cancel">取消</span>
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Add/Edit Child Modal -->
+<div id="childModal" class="modal">
+    <div class="modal-content custom-modal-mini" style="max-width: 500px; width: 90%;">
+        <h2 id="childModalTitle" data-i18n="settings.children.form.add">添加小朋友</h2>
+        
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="settings.children.form.name">姓名 *</label>
+            <input type="text" id="childModalName" class="custom-modal-input" placeholder="例如：小明" required>
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="settings.children.form.birthdate">出生日期 *</label>
+            <input type="date" id="childModalBirthdate" class="custom-modal-input" required style="cursor: pointer;">
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="settings.children.form.gender">性別</label>
+            <select id="childModalGender" class="custom-modal-input">
+                <option value="" data-i18n="settings.children.form.gender.unspecified">不透露</option>
+                <option value="male" data-i18n="settings.children.form.gender.male">男</option>
+                <option value="female" data-i18n="settings.children.form.gender.female">女</option>
+                <option value="other" data-i18n="settings.children.form.gender.other">其他</option>
+            </select>
+        </div>
+        
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="settings.children.form.notes">備註</label>
+            <textarea id="childModalNotes" class="custom-modal-input" rows="3" placeholder="例如：早產、過敏等特殊情況" style="resize: vertical; min-height: 80px; padding: 12px;"></textarea>
+        </div>
+        
+        <div class="custom-modal-actions" style="margin-top: 24px;">
+            <button id="saveChildModalBtn" class="custom-modal-btn primary">
+                <i class="fas fa-save"></i> <span data-i18n="alert.save">保存</span>
+            </button>
+            <button id="cancelChildModalBtn" class="custom-modal-btn secondary">
+                <i class="fas fa-times"></i> <span data-i18n="alert.cancel">取消</span>
             </button>
         </div>
     </div>

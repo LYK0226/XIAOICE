@@ -1,21 +1,50 @@
 <!DOCTYPE html>
-<html lang="zh-tw">
+<html lang="zh-tw" data-i18n-pending="true">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>聊天盒子</title>
+    <title data-i18n="index.pageTitle">聊天盒子</title>
+    <!-- Anti-FOUC: inline critical background -->
+    <style>
+        html, body { margin: 0; padding: 0; }
+        body { background: linear-gradient(135deg, #D4C5E8 0%, #C8B8DB 50%, #B8A8D8 100%); min-height: 100vh; }
+        body.dark-theme, html.dark-theme-early body { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%); color: #E2D7F5; }
+    </style>
+    <script>
+        try {
+            const preferredLang = localStorage.getItem('preferredLanguage') || 'zh-TW';
+            document.documentElement.setAttribute('lang', preferredLang.toLowerCase());
+            // Early dark-theme detection to prevent background flash
+            var _t = localStorage.getItem('themeMode');
+            if (_t === 'dark' || (_t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark-theme-early');
+            }
+        } catch (e) {
+            // no-op
+        }
+    </script>
     <!-- Assessment styles -->
     <link rel="stylesheet" href="../static/css/index.css">
-    <link rel="stylesheet" href="../static/css/settings.css">
+    <link rel="stylesheet" href="../static/css/settings.css?v=2">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Prefetch resources for other pages to speed up navigation -->
+    <link rel="prefetch" href="../static/css/pose_detection.css" as="style">
+    <link rel="prefetch" href="../static/css/sidebar.css" as="style">
+    <link rel="prefetch" href="../static/css/chatbox.css" as="style">
+    <link rel="dns-prefetch" href="https://cdn.jsdelivr.net">
+    <link rel="dns-prefetch" href="https://cdn.socket.io">
 </head>
 <body>
+    <header class="child-backbar" id="childBackBar" style="display: none;">
+        <button class="btn btn-secondary" onclick="backToAssessmentList()">
+            <i class="fas fa-arrow-left"></i>
+            <span data-i18n="index.back">返回</span>
+        </button>
+    </header>
     <div id="messages" aria-live="polite"></div>
     
     <!-- Assessment Container (默認顯示) -->
     <div id="assessment-container" style="display: flex;">
-        <!-- 左側邊欄 (已移除) -->
-
         <!-- 主內容區域 -->
         <div class="assessment-content-area" style="width: 100%;">
             <!-- 貓頭鷹裝飾 -->
@@ -26,7 +55,7 @@
                 <!-- Start Screen -->
                 <div id="startScreen">
                     <div class="new-start-card">
-                        <h1 class="new-card-title">開始新的評估</h1>
+                        <h1 class="new-card-title" data-i18n="index.startNewAssessment">開始新的評估</h1>
                         
                         <div class="new-upload-options">
                             <!-- Start Assessment (was Upload PDF) -->
@@ -34,7 +63,7 @@
                                 <div class="new-upload-icon">
                                     <i class="fas fa-clipboard-list"></i>
                                 </div>
-                                <div class="new-upload-label">開始評估</div>
+                                <div class="new-upload-label" data-i18n="index.startAssessment">開始評估</div>
                             </div>
 
                             <!-- Upload Video -->
@@ -43,8 +72,8 @@
                                     <i class="fas fa-video"></i>
                                 </div>
                                 <div class="new-upload-label">
-                                    上傳影片<br>
-                                    <small>（用於動作評估）</small>
+                                    <span data-i18n="index.uploadVideo">上傳影片</span><br>
+                                    <small data-i18n="index.uploadVideoHint">（用於動作評估）</small>
                                 </div>
                             </div>
                         </div>
@@ -52,10 +81,10 @@
                         <!-- 底部按鈕 -->
                         <div class="bottom-buttons">
                             <button class="bottom-btn primary" onclick="window.location.href='/pose_detection'">
-                                <i class="fas fa-running"></i> 姿勢檢測評估
+                                <i class="fas fa-running"></i> <span data-i18n="index.poseAssessment">姿勢檢測評估</span>
                             </button>
                             <button class="bottom-btn primary" onclick="window.location.href='/chatbox'">
-                                <i class="fas fa-comments"></i> 進入聊天室
+                                <i class="fas fa-comments"></i> <span data-i18n="index.enterChat">進入聊天室</span>
                             </button>
                         </div>
                     </div>
@@ -64,12 +93,12 @@
                 <!-- Begin Evaluation Modal -->
                 <div id="evaluationModal" class="evaluation-modal">
                     <div class="modal-content-evaluation">
-                        <h2 class="modal-title">開始評估</h2>
+                        <h2 class="modal-title" data-i18n="index.modal.title">開始評估</h2>
                         
                         <div class="modal-form">
-                            <label class="modal-label">選擇評估類型</label>
+                            <label class="modal-label" data-i18n="index.modal.typeLabel">選擇評估類型</label>
                             <select class="modal-input" id="assessmentType" onchange="updateAssessmentInfo()">
-                                <option value="">選擇評估…</option>
+                                <option value="" data-i18n="index.modal.typePlaceholder">選擇評估…</option>
                             </select>
                             
                             <div id="assessmentInfoBox" class="assessment-info-box" style="display: none;">
@@ -82,14 +111,14 @@
                                 </div>
                             </div>
                             
-                            <label class="modal-label">兒童姓名</label>
-                            <input type="text" class="modal-input" id="childName" placeholder="輸入兒童姓名">
+                            <label class="modal-label" data-i18n="index.modal.childNameLabel">兒童姓名</label>
+                            <input type="text" class="modal-input" id="childName" placeholder="輸入兒童姓名" data-i18n-placeholder="index.modal.childNamePlaceholder">
                             
-                            <label class="modal-label">兒童年齡（月數）</label>
-                            <input type="number" class="modal-input" id="childAge" placeholder="例如：24" min="0" max="84">
+                            <label class="modal-label" data-i18n="index.modal.childAgeLabel">兒童年齡（月數）</label>
+                            <input type="number" class="modal-input" id="childAge" placeholder="例如：24" min="0" max="84" data-i18n-placeholder="index.modal.childAgePlaceholder">
                             
                             <button class="modal-btn primary" onclick="startEvaluation()">
-                                <i class="fas fa-play"></i> 開始評估
+                                <i class="fas fa-play"></i> <span data-i18n="index.modal.startButton">開始評估</span>
                             </button>
                         </div>
                         
@@ -108,11 +137,8 @@
                         <div id="assessmentContent"></div>
                         
                         <div class="control-buttons">
-                            <button class="btn-secondary" onclick="backToAssessmentList()">
-                                ← 返回評估列表
-                            </button>
                             <button class="btn-primary-submit" id="submitBtn" style="display: none;" onclick="submitAssessment()">
-                                ✓ 提交評估
+                                <span data-i18n="index.assessment.submit">✓ 提交評估</span>
                             </button>
                         </div>
                     </div>
@@ -124,49 +150,49 @@
     <div class="floating-actions" aria-label="快速操作">
         <button id="settings" class="floating-btn" type="button" title="設定">
             <i class="fas fa-gear"></i>
-            <span>設定</span>
+            <span data-i18n="settings">設定</span>
         </button>
         <button id="logout" class="floating-btn danger" type="button" title="登出">
             <i class="fas fa-right-from-bracket"></i>
-            <span>登出</span>
+            <span data-i18n="logout">登出</span>
         </button>
     </div>
 
     <!-- Evaluation Modal -->
     <div class="evaluation-modal" id="evaluationModal">
         <div class="modal-content">
-            <h2>🐻 開始評估</h2>
+            <h2><span data-i18n="index.modal2.title">🐻 開始評估</span></h2>
             
             <form id="evaluationForm" onsubmit="startEvaluation(event)">
                 <div class="form-group">
-                    <label>評估名稱</label>
-                    <input type="text" id="assessmentName" placeholder="輸入評估名稱" required>
+                    <label data-i18n="index.modal2.assessmentNameLabel">評估名稱</label>
+                    <input type="text" id="assessmentName" placeholder="輸入評估名稱" required data-i18n-placeholder="index.modal2.assessmentNamePlaceholder">
                 </div>
 
                 <div class="form-group">
-                    <label>兒童姓名</label>
-                    <input type="text" id="childName" placeholder="輸入兒童姓名" required>
+                    <label data-i18n="index.modal2.childNameLabel">兒童姓名</label>
+                    <input type="text" id="childName" placeholder="輸入兒童姓名" required data-i18n-placeholder="index.modal2.childNamePlaceholder">
                 </div>
 
                 <div class="form-group">
-                    <label>兒童年齡（月數）</label>
-                    <input type="number" id="childAge" placeholder="例如：24" min="0" max="84" required>
+                    <label data-i18n="index.modal2.childAgeLabel">兒童年齡（月數）</label>
+                    <input type="number" id="childAge" placeholder="例如：24" min="0" max="84" required data-i18n-placeholder="index.modal2.childAgePlaceholder">
                 </div>
 
                 <div class="form-group">
-                    <label>選擇影片檔案或貼上 YouTube 連結</label>
+                    <label data-i18n="index.modal2.videoLabel">選擇影片檔案或貼上 YouTube 連結</label>
                     <div class="file-input-group" onclick="document.getElementById('videoInput').click()">
                         <i class="fas fa-video"></i>
-                        <p>選擇影片檔案</p>
-                        <small>或</small>
+                        <p data-i18n="index.modal2.videoSelect">選擇影片檔案</p>
+                        <small data-i18n="index.modal2.or">或</small>
                     </div>
                         <input type="file" id="videoInput" accept="video/*" class="hidden" onchange="handleVideoSelect(event)">
                     <div id="videoFileName" class="file-name-display"></div>
-                    <input type="url" class="youtube-input" id="youtubeUrl" placeholder="貼上 YouTube 連結">
+                    <input type="url" class="youtube-input" id="youtubeUrl" placeholder="貼上 YouTube 連結" data-i18n-placeholder="index.modal2.youtubePlaceholder">
                 </div>
 
                 <button type="submit" class="btn-start">
-                    開始
+                    <span data-i18n="index.modal2.startButton">開始</span>
                 </button>
             </form>
         </div>
@@ -174,6 +200,9 @@
 
     <!-- Settings Modal (included from separate file) -->
     {% include 'setting.html' %}
+
+    <!-- Child Assessment Templates -->
+    {% include 'child_assessment_templates.html' %}
 
     <script src="../static/js/settings.js"></script>
     
@@ -288,6 +317,10 @@
             // 隱藏開始畫面，顯示評估畫面
             document.getElementById('startScreen').style.display = 'none';
             document.getElementById('assessmentScreen').style.display = 'block';
+            const backBar = document.getElementById('childBackBar');
+            if (backBar) {
+                backBar.style.display = 'flex';
+            }
 
             // 使用評估模塊開始評估
             if (typeof ChildAssessmentModule !== 'undefined') {
@@ -315,6 +348,10 @@
             // 隱藏評估畫面，顯示開始畫面
             document.getElementById('assessmentScreen').style.display = 'none';
             document.getElementById('startScreen').style.display = 'block';
+            const backBar = document.getElementById('childBackBar');
+            if (backBar) {
+                backBar.style.display = 'none';
+            }
             
             // 重置評估數據
             if (typeof ChildAssessmentModule !== 'undefined') {
@@ -333,7 +370,7 @@
     </script>
     
     <!-- 載入視頻管理模塊 -->
-    <script src="../static/js/video_management.js"></script>
+    <script src="../static/js/video_access.js"></script>
     <!-- 載入評估配置 -->
     <script src="../static/js/assessment_config.js"></script>
     <!-- 載入評估題庫 -->

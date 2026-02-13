@@ -5,6 +5,51 @@
  * Simplified text-based assessment without chatbot
  */
 
+function resolveAssessmentLanguage() {
+    const stored = localStorage.getItem('preferredLanguage');
+    const fallback = (typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW');
+    const candidate = stored || fallback || 'zh-TW';
+    if (window.translations && window.translations[candidate]) {
+        return candidate;
+    }
+    if (window.translations && window.translations['zh-TW']) {
+        return 'zh-TW';
+    }
+    return 'zh-TW';
+}
+
+function formatAssessmentTemplate(template, vars) {
+    if (!vars) {
+        return template;
+    }
+    return template.replace(/\{(\w+)\}/g, (match, key) => {
+        if (Object.prototype.hasOwnProperty.call(vars, key)) {
+            return String(vars[key]);
+        }
+        return match;
+    });
+}
+
+function translateAssessment(key, fallback, vars) {
+    const lang = resolveAssessmentLanguage();
+    const translations = (window.translations && window.translations[lang]) || {};
+    const template = translations[key] || fallback || key;
+    return formatAssessmentTemplate(template, vars);
+}
+
+function applyAssessmentTranslations(root) {
+    if (!root) {
+        return;
+    }
+    root.querySelectorAll('[data-i18n]').forEach((element) => {
+        const key = element.getAttribute('data-i18n');
+        const text = translateAssessment(key, element.textContent);
+        if (text) {
+            element.textContent = text;
+        }
+    });
+}
+
 class ChildAssessmentModule {
     static assessmentData = null;
     static currentQuestionIndex = 0;
@@ -15,7 +60,7 @@ class ChildAssessmentModule {
      */
     static startNewAssessment(childName, childAge, pdfFile, assessmentType) {
         if (!childName || !childAge) {
-            alert('請填寫兒童姓名和年齡');
+            alert(translateAssessment('assessment.alert.missingChildInfo', '請填寫兒童姓名和年齡'));
             return;
         }
         
@@ -38,6 +83,10 @@ class ChildAssessmentModule {
             assessmentScreen.style.display = 'flex';
             assessmentScreen.style.justifyContent = 'center';
             assessmentScreen.style.width = '100%';
+        }
+        const backBar = document.getElementById('childBackBar');
+        if (backBar) {
+            backBar.style.display = 'flex';
         }
         
         // Load assessment questions
@@ -108,62 +157,35 @@ class ChildAssessmentModule {
         
         document.getElementById('progressFill').style.width = progress + '%';
         
-        let html = `
-            <div class="question-card">
-                <div class="question-badge-row">
-                    <div class="question-domain-badge">
-                        <span>${question.emoji}</span>
-                        <span>${question.domain}</span>
-                    </div>
-                    <div class="question-count-badge">
-                        ${current} / ${total}
-                    </div>
-                </div>
-                
-                <div class="question-main-content">
-                    <h3>${question.question}</h3>
-                    
-                    <div class="video-frame-container">
-                        <video 
-                            id="demoVideo"
-                            class="demo-video"
-                            controls 
-                            autoplay
-                            loop
-                            muted
-                        >
-                            <source src="${question.videoUrl}" type="video/mp4">
-                            您的瀏覽器不支持視頻播放。
-                        </video>
-                    </div>
-                    
-                    <div class="desc-info-box">
-                        <h4>📋 評估說明</h4>
-                        <p>${question.description}</p>
-                    </div>
-                    
-                    <div class="action-options">
-                        <p class="action-title">您的孩子能做到這個動作嗎？</p>
-                        <div class="assessment-btns">
-                            <button 
-                                class="action-btn can"
-                                onclick="ChildAssessmentModule.recordAnswer(${question.id}, 'yes')">
-                                <i class="fas fa-check-circle"></i>
-                                <span>做到</span>
-                            </button>
-                            <button 
-                                class="action-btn cannot"
-                                onclick="ChildAssessmentModule.recordAnswer(${question.id}, 'no')">
-                                <i class="fas fa-times-circle"></i>
-                                <span>做不到</span>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        `;
+        const template = document.getElementById('questionCardTemplate');
+        const clone = template.content.cloneNode(true);
+
+        applyAssessmentTranslations(clone);
         
-        document.getElementById('assessmentContent').innerHTML = html;
+        // Fill in question data
+        clone.querySelector('.question-emoji').textContent = question.emoji;
+        clone.querySelector('.question-domain').textContent = question.domain;
+        clone.querySelector('.current-count').textContent = current;
+        clone.querySelector('.total-count').textContent = total;
+        clone.querySelector('.question-text').textContent = question.question;
+        clone.querySelector('.question-description').textContent = question.description;
+        
+        // Set up answer buttons
+        const canBtn = clone.querySelector('[data-answer="yes"]');
+        const cannotBtn = clone.querySelector('[data-answer="no"]');
+        
+        canBtn.addEventListener('click', () => this.recordAnswer(question.id, 'yes'));
+        cannotBtn.addEventListener('click', () => this.recordAnswer(question.id, 'no'));
+        
+        const container = document.getElementById('assessmentContent');
+        container.innerHTML = '';
+        container.appendChild(clone);
+        
+        // Set video source after appending to DOM
+        const video = document.getElementById('demoVideo');
+        if (video && question.videoUrl) {
+            video.src = question.videoUrl;
+        }
     }
     
     /**
@@ -202,16 +224,33 @@ class ChildAssessmentModule {
         } else {
             // Show submit button
             document.getElementById('submitBtn').style.display = 'inline-block';
-            document.getElementById('assessmentContent').innerHTML = `
-                <div class="question-card finished-card">
-                    <div class="finished-icon">🎉</div>
-                    <h3>評估已完成！</h3>
-                    <p>您已經完成了所有 10 個項目的評估。現在可以查看您的孩子的發育商 (DQ) 報告了。</p>
-                    <div class="finished-info">
-                        <span>已作答: 10 / 10 題</span>
-                    </div>
-                </div>
-            `;
+            
+            // Use template for finished card
+            const template = document.getElementById('finishedCardTemplate');
+            const clone = template.content.cloneNode(true);
+
+            applyAssessmentTranslations(clone);
+            
+            const totalQuestions = 10;
+            clone.querySelectorAll('.total-questions').forEach(el => {
+                el.textContent = totalQuestions;
+            });
+            clone.querySelector('.answered-count').textContent = totalQuestions;
+
+            const finishedDesc = clone.querySelector('[data-i18n-template="assessment.finishedDesc"]');
+            if (finishedDesc) {
+                const templateText = translateAssessment(
+                    'assessment.finishedDesc',
+                    '您已經完成了所有 {count} 個項目的評估。現在可以查看您的孩子的發育商 (DQ) 報告了。'
+                );
+                finishedDesc.innerHTML = formatAssessmentTemplate(templateText, {
+                    count: `<span class="total-questions">${totalQuestions}</span>`
+                });
+            }
+            
+            const container = document.getElementById('assessmentContent');
+            container.innerHTML = '';
+            container.appendChild(clone);
         }
     }
     
@@ -244,63 +283,35 @@ class ChildAssessmentModule {
         const yesCount = Object.values(this.assessmentAnswers).filter(a => a === 'yes').length;
         const percentage = (yesCount / totalQuestions) * 100;
         
-        const resultsHtml = `
-            <div class="question-card results-view">
-                <h2 class="results-main-title">📊 評估診斷報告</h2>
-                
-                <div class="score-display-card">
-                    <div class="dq-score">${dq.toFixed(0)}</div>
-                    <div class="dq-label">發育商 (DQ)</div>
-                    <div class="level-badge">${level}</div>
-                </div>
-                
-                <div class="results-grid">
-                    <div class="result-info-item">
-                        <span class="label">兒童姓名</span>
-                        <span class="value">${this.assessmentData.childName}</span>
-                    </div>
-                    <div class="result-info-item">
-                        <span class="label">年齡</span>
-                        <span class="value">${this.assessmentData.childAge} 個月</span>
-                    </div>
-                    <div class="result-info-item">
-                        <span class="label">評估類型</span>
-                        <span class="value">${this.getAssessmentTypeLabel(this.assessmentData.assessmentType)}</span>
-                    </div>
-                    <div class="result-info-item">
-                        <span class="label">完成率</span>
-                        <span class="value">${percentage.toFixed(0)}% (${yesCount}/${totalQuestions})</span>
-                    </div>
-                </div>
+        // Use template for results view
+        const template = document.getElementById('resultsViewTemplate');
+        const clone = template.content.cloneNode(true);
 
-                <div class="results-summary-box">
-                    <h4>💡 專業建議與說明</h4>
-                    <div class="summary-content">
-                        <p>根據本次評估，您的孩子在<strong>${this.getAssessmentTypeLabel(this.assessmentData.assessmentType)}</strong>領域的表現為<strong>${level}</strong>。</p>
-                        <div class="dq-scale-info">
-                            <div class="scale-item"><span class="range">90-100</span> <span class="tag excellent">優異</span></div>
-                            <div class="scale-item"><span class="range">80-89</span> <span class="tag good">良好</span></div>
-                            <div class="scale-item"><span class="range">70-79</span> <span class="tag normal">中等</span></div>
-                            <div class="scale-item"><span class="range">60-69</span> <span class="tag fair">及格</span></div>
-                            <div class="scale-item"><span class="range">&lt; 60</span> <span class="tag concern">關注</span></div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="result-actions">
-                    <button class="result-btn primary" onclick="ChildAssessmentModule.exportResults()">
-                        <i class="fas fa-file-export"></i> 導出報告
-                    </button>
-                    <button class="result-btn secondary" onclick="ChildAssessmentModule.reset()">
-                        <i class="fas fa-undo"></i> 重新評估
-                    </button>
-                </div>
-            </div>
-        `;
+        applyAssessmentTranslations(clone);
+        
+        // Fill in results data
+        clone.querySelector('.dq-score').textContent = dq.toFixed(0);
+        clone.querySelector('.level-badge').textContent = level;
+        clone.querySelector('.child-name').textContent = this.assessmentData.childName;
+        clone.querySelector('.child-age').textContent = this.assessmentData.childAge + ' 個月';
+        clone.querySelector('.assessment-type').textContent = this.getAssessmentTypeLabel(this.assessmentData.assessmentType);
+        clone.querySelector('.completion-rate').textContent = `${percentage.toFixed(0)}% (${yesCount}/${totalQuestions})`;
+        
+        // Update summary text
+        const summaryText = clone.querySelector('.summary-text');
+        const summaryTemplate = translateAssessment(
+            'assessment.summaryTemplate',
+            '根據本次評估，您的孩子在<strong>{type}</strong>領域的表現為<strong>{level}</strong>。'
+        );
+        summaryText.innerHTML = formatAssessmentTemplate(summaryTemplate, {
+            type: this.getAssessmentTypeLabel(this.assessmentData.assessmentType),
+            level: level
+        });
         
         const assessmentContent = document.getElementById('assessmentContent');
         if (assessmentContent) {
-            assessmentContent.innerHTML = resultsHtml;
+            assessmentContent.innerHTML = '';
+            assessmentContent.appendChild(clone);
         }
         
         // Hide progress bar

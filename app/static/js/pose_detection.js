@@ -3,25 +3,8 @@ if (!localStorage.getItem('access_token')) {
 	window.location.href = '/login';
 }
 
-// Theme toggle
-const themeToggle = document.getElementById('themeToggle');
-const body = document.body;
-
-// Load saved theme
-const savedTheme = localStorage.getItem('theme') || 'light';
-if (savedTheme === 'dark') {
-	body.classList.add('dark-theme');
-	if (themeToggle) themeToggle.innerHTML = '<i class="fas fa-sun"></i>';
-}
-
-if (themeToggle) {
-	themeToggle.addEventListener('click', () => {
-		body.classList.toggle('dark-theme');
-		const isDark = body.classList.contains('dark-theme');
-		themeToggle.innerHTML = isDark ? '<i class="fas fa-sun"></i>' : '<i class="fas fa-moon"></i>';
-		localStorage.setItem('theme', isDark ? 'dark' : 'light');
-	});
-}
+// Theme is now managed by settings.js (initializeTheme/applyTheme)
+// No standalone toggle needed here
 
 // 3D Pose Detection System with Multi-Person Support
 let poseDetector3D = null;
@@ -221,8 +204,6 @@ async function submitPoseAssessmentRun(payload) {
 		// If evaluation exists, show it immediately
 		if (data.run && data.run.evaluation) {
 			await renderEvaluation(data.run.evaluation);
-		} else {
-			await renderEvaluation(buildLocalEvaluationFallback());
 		}
 
 		return data.run || null;
@@ -252,19 +233,6 @@ async function fetchChildInfo() {
 	return null;
 }
 
-function escapeHtml(value) {
-	return String(value ?? '')
-		.replaceAll('&', '&amp;')
-		.replaceAll('<', '&lt;')
-		.replaceAll('>', '&gt;')
-		.replaceAll('"', '&quot;')
-		.replaceAll("'", '&#39;');
-}
-
-function escapeHtmlWithLineBreaks(value) {
-	return escapeHtml(value).replaceAll('\n', '<br>');
-}
-
 // Render evaluation summary and details into the UI
 async function renderEvaluation(evaluation) {
 	if (!evaluation) return;
@@ -281,6 +249,8 @@ async function renderEvaluation(evaluation) {
 
 	// Fetch child info for the report cards
 	const childInfo = await fetchChildInfo();
+	const childName = childInfo ? childInfo.child_name : '—';
+	const childAge = childInfo ? `${childInfo.child_age_months} 個月` : '—';
 	
 	let assessmentType = '大運動評估 (動態)';
 	if (childInfo && childInfo.child_age_months) {
@@ -293,23 +263,6 @@ async function renderEvaluation(evaluation) {
 	// Calculate DQ score
 	const s = evaluation.score || {completed:0, total: ASSESSMENT_STEPS.length, percent:0};
 	const dqScore = s.percent || 0;
-
-	const recommendations = Array.isArray(evaluation.recommendations) ? evaluation.recommendations : [];
-	let suggestionItems = recommendations
-		.filter(Boolean)
-		.slice(0, 6)
-		.map(r => `<li>${escapeHtml(r)}</li>`)
-		.join('');
-
-	if (!suggestionItems) {
-		const fallback = [];
-		fallback.push('確認鏡頭能完整拍到頭、手與腳，避免遮擋。');
-		fallback.push('光線充足且背景乾淨，提升偵測穩定度。');
-		fallback.push('動作放慢一點、幅度做完整，系統更容易判斷。');
-		if (dqScore < 70) fallback.push('先練習保持類動作（hold），再進行重複類動作（rep）。');
-		if (dqScore < 50) fallback.push('將鏡頭距離拉遠一點，讓全身都在畫面內。');
-		suggestionItems = fallback.slice(0, 6).map(t => `<li>${escapeHtml(t)}</li>`).join('');
-	}
 	
 	// Create badge based on score
 	let badgeText = '優異';
@@ -320,25 +273,6 @@ async function renderEvaluation(evaluation) {
 	else if (dqScore >= 60) { badgeText = '及格'; badgeColor = '#ff9800'; }
 	else { badgeText = '需注意'; badgeColor = '#f44336'; }
 
-	// Generate dynamic summary based on score
-	let dynamicSummary = '';
-	if (dqScore >= 90) {
-		dynamicSummary = '您的孩子在大運動發展方面表現優異，動作協調性和平衡感都非常出色。繼續保持這種活躍的生活方式，將有助於全面的發育。';
-	} else if (dqScore >= 80) {
-		dynamicSummary = '您的孩子在大運動發展方面表現良好，基本動作掌握得不錯。建議繼續練習一些複雜的動作，以進一步提升協調能力。';
-	} else if (dqScore >= 70) {
-		dynamicSummary = '您的孩子在大運動發展方面表現中等，一些動作需要更多練習。建議增加日常運動時間，並注意動作的正確性。';
-	} else if (dqScore >= 60) {
-		dynamicSummary = '您的孩子在大運動發展方面表現及格，但還有進步空間。建議從基礎動作開始練習，並尋求專業指導。';
-	} else {
-		dynamicSummary = '您的孩子在大運動發展方面需要特別關注，建議及早進行專業評估和訓練，以幫助改善動作協調和身體發育。';
-	}
-
-	const FALLBACK_SUMMARY_ZH = '測驗已完成。若完整評語尚未生成，請稍候或稍後重整頁面查看。';
-	const summaryText = (evaluation.summaryZh && String(evaluation.summaryZh).trim() && evaluation.summaryZh !== FALLBACK_SUMMARY_ZH)
-		? String(evaluation.summaryZh)
-		: dynamicSummary;
-
 	// Prepare the Report Content HTML matching the image style
 	let reportHtml = `
 		<div class="report-score-card">
@@ -348,6 +282,14 @@ async function renderEvaluation(evaluation) {
 		</div>
 
 		<div class="report-grid">
+			<div class="report-grid-card">
+				<div class="report-card-label">兒童姓名</div>
+				<div class="report-card-value">${childName}</div>
+			</div>
+			<div class="report-grid-card">
+				<div class="report-card-label">年齡</div>
+				<div class="report-card-value">${childAge}</div>
+			</div>
 			<div class="report-grid-card">
 				<div class="report-card-label">評估類型</div>
 				<div class="report-card-value">${assessmentType}</div>
@@ -361,13 +303,7 @@ async function renderEvaluation(evaluation) {
 		<div class="report-advice-section">
 			<div class="report-advice-title">💡 專業建議與說明</div>
 			<div class="report-advice-text">
-				${escapeHtmlWithLineBreaks(summaryText)}
-			</div>
-			<div style="margin-top: 12px; background: rgba(255,255,255,0.7); border-radius: 14px; padding: 12px 14px; border: 1px solid rgba(0,0,0,0.04);">
-				<div style="font-weight: 800; color: #3d2e52; margin-bottom: 8px;">建議你可以這樣做</div>
-				<ul style="margin: 0; padding-left: 18px; color: #6b5a86; line-height: 1.6;">
-					${suggestionItems}
-				</ul>
+				${evaluation.summaryZh || `根據本次大運動評估，您的孩子在整體領域的表現為${badgeText}。建議平時多進行相關動作練習，增強肢體協調能力。`}
 			</div>
 			<div class="report-legend">
 				<span class="legend-item" style="background:#4caf50;">90-100 優異</span>
@@ -432,35 +368,6 @@ async function renderEvaluation(evaluation) {
 			}
 		};
 	}
-}
-
-function buildLocalEvaluationFallback() {
-	const total = ASSESSMENT_STEPS.length;
-	const completed = assessmentState.completed.filter(Boolean).length;
-	const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
-
-	const steps = (poseAssessmentRunState.steps || []).map((s) => ({
-		key: s.key,
-		nameZh: s.nameZh,
-		status: s.status,
-		passed: s.status === 'completed',
-		notes: s.status === 'completed' ? ['動作已完成（本機紀錄）'] : ['此動作已跳過（本機紀錄）'],
-		advice: s.status === 'completed' ? [] : ['可重做此動作以獲得更完整評估'],
-		target: s.target || {},
-		achieved: s.achieved || {},
-		durationMs: s.durationMs
-	}));
-
-	return {
-		score: { completed, total, percent },
-		level: null,
-		// Keep empty so UI uses dynamic, score-based summary immediately.
-		summaryZh: '',
-		steps,
-		recommendations: [],
-		failures: steps.filter(p => !p.passed).map(p => p.key || p.nameZh),
-		evaluatedAt: new Date().toISOString()
-	};
 }
 
 // Fetch latest run on load and render evaluation if present
@@ -702,9 +609,6 @@ function completeCurrentStep() {
 		assessmentState.finished = true;
 		assessmentState.running = false;
 
-		// Ensure the report button is available immediately after completion
-		renderEvaluation(buildLocalEvaluationFallback());
-
 		// Submit run to backend for scoring/storage
 		if (!assessmentState.submitting) {
 			const payload = {
@@ -749,9 +653,6 @@ function skipCurrentStep() {
 	if (assessmentState.stepIndex >= ASSESSMENT_STEPS.length) {
 		assessmentState.finished = true;
 		assessmentState.running = false;
-
-		// Ensure the report button is available immediately after completion
-		renderEvaluation(buildLocalEvaluationFallback());
 
 		// Submit run to backend for scoring/storage
 		if (!assessmentState.submitting) {
