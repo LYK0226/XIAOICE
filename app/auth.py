@@ -475,67 +475,49 @@ def delete_account():
 
 @auth_bp.route('/forgot-password', methods=['POST'])
 def forgot_password():
-    """Handle password reset request."""
+    """Handle password reset - verify email + username, then set new password."""
     try:
         data = request.get_json()
         email = data.get('email', '').strip().lower()
+        username = data.get('username', '').strip()
+        new_password = data.get('new_password', '')
 
+        # Step 1: Verify identity (email + username)
         if not email:
             return jsonify({'error': 'Email is required'}), 400
 
         if not validate_email(email):
             return jsonify({'error': 'Invalid email format'}), 400
 
-        # Check if user exists
+        if not username:
+            return jsonify({'error': 'Username is required'}), 400
+
+        # Find user by email
         user = User.query.filter_by(email=email).first()
 
-        if not user:
-            # Don't reveal if email exists or not for security
+        if not user or user.username != username:
             return jsonify({
-                'message': 'If an account with this email exists, a password reset link has been sent.'
+                'error': 'Email and username do not match any account.'
+            }), 400
+
+        # Step 2: If new_password provided, reset it
+        if new_password:
+            if not validate_password(new_password):
+                return jsonify({'error': 'Password must be at least 6 characters'}), 400
+
+            user.set_password(new_password)
+            db.session.commit()
+
+            return jsonify({
+                'message': 'Password has been reset successfully!'
+            }), 200
+        else:
+            # Identity verified, prompt for new password
+            return jsonify({
+                'verified': True,
+                'message': 'Identity verified. Please enter your new password.'
             }), 200
 
-        # In a real application, you would:
-        # 1. Generate a secure reset token
-        # 2. Store it in database with expiration
-        # 3. Send email with reset link
-        # For now, we'll just return a success message
-
-        # TODO: Implement actual password reset functionality
-        # - Generate secure token
-        # - Store in database with expiration
-        # - Send email with reset link
-
-        return jsonify({
-            'message': 'Password reset link sent! Please check your email.'
-        }), 200
-
     except Exception as e:
-        return jsonify({'error': f'An error occurred: {str(e)}'}), 500
-
-@auth_bp.route('/reset-password/<token>', methods=['POST'])
-def reset_password(token):
-    """Handle password reset with token."""
-    try:
-        data = request.get_json()
-        new_password = data.get('password', '')
-
-        if not new_password:
-            return jsonify({'error': 'New password is required'}), 400
-
-        if not validate_password(new_password):
-            return jsonify({'error': 'Password must be at least 6 characters'}), 400
-
-        # TODO: Implement token validation
-        # - Verify token exists and is not expired
-        # - Get user from token
-        # - Update password
-        # - Delete used token
-
-        # For now, return success
-        return jsonify({
-            'message': 'Password reset successfully!'
-        }), 200
-
-    except Exception as e:
+        db.session.rollback()
         return jsonify({'error': f'An error occurred: {str(e)}'}), 500

@@ -579,7 +579,7 @@ def update_user_profile():
     }
     
     # Validate allowed languages
-    allowed_languages = ['zh-TW', 'en', 'ja']
+    allowed_languages = ['zh-TW', 'zh-CN', 'en', 'ja']
     if 'language' in data and data['language'] not in allowed_languages:
         return jsonify({'error': f'Invalid language. Allowed: {", ".join(allowed_languages)}'}), 400
     
@@ -800,6 +800,7 @@ def delete_child(child_id):
     """Delete a child profile."""
     from flask_jwt_extended import get_jwt_identity
     from .models import Child, db
+    from .video_cleanup import delete_reports_for_child
     
     user_id = get_jwt_identity()
     
@@ -808,6 +809,8 @@ def delete_child(child_id):
         if not child:
             return jsonify({'error': 'Child profile not found'}), 404
         
+        delete_reports_for_child(child_id, user_id, db)
+
         db.session.delete(child)
         db.session.commit()
         

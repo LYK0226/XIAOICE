@@ -335,7 +335,8 @@ def analyze_video(video_id):
 @jwt_required()
 def delete_video(video_id):
     """Delete video and associated files (including analysis reports)."""
-    from .models import db, VideoRecord, VideoAnalysisReport
+    from .models import db, VideoRecord
+    from .video_cleanup import delete_video_with_reports
 
     try:
         user_id = int(get_jwt_identity())
@@ -343,24 +344,7 @@ def delete_video(video_id):
         if not video:
             return jsonify({'error': 'Video not found'}), 404
 
-        # Delete from GCS if applicable
-        if isinstance(video.file_path, str) and video.file_path.startswith('https://storage.googleapis.com/'):
-            try:
-                gcp_bucket.delete_file_from_gcs(video.file_path)
-            except Exception:
-                pass
-
-        # Delete associated analysis reports & their PDFs
-        reports = VideoAnalysisReport.query.filter_by(video_id=video.id).all()
-        for rpt in reports:
-            if rpt.pdf_storage_key:
-                try:
-                    gcp_bucket.delete_file_from_gcs(rpt.pdf_storage_key)
-                except Exception:
-                    pass
-            db.session.delete(rpt)
-
-        db.session.delete(video)
+        delete_video_with_reports(video, db)
         db.session.commit()
         return jsonify({'success': True, 'message': 'Video deleted'}), 200
 
@@ -375,6 +359,7 @@ def delete_video(video_id):
 def clear_all_videos():
     """Clear all user videos."""
     from .models import db, VideoRecord
+    from .video_cleanup import delete_video_with_reports
 
     try:
         user_id = int(get_jwt_identity())
@@ -382,9 +367,7 @@ def clear_all_videos():
 
         deleted_count = 0
         for video in videos:
-            if isinstance(video.file_path, str) and video.file_path.startswith('https://storage.googleapis.com/'):
-                gcp_bucket.delete_file_from_gcs(video.file_path)
-            db.session.delete(video)
+            delete_video_with_reports(video, db)
             deleted_count += 1
 
         db.session.commit()
@@ -405,7 +388,8 @@ def clear_all_videos():
 @jwt_required()
 def batch_delete_videos():
     """Delete multiple videos by IDs."""
-    from .models import db, VideoRecord, VideoAnalysisReport
+    from .models import db, VideoRecord
+    from .video_cleanup import delete_video_with_reports
 
     try:
         user_id = int(get_jwt_identity())
@@ -431,17 +415,7 @@ def batch_delete_videos():
                 except Exception:
                     pass
 
-            # Delete associated analysis reports & PDFs
-            reports = VideoAnalysisReport.query.filter_by(video_id=video.id).all()
-            for rpt in reports:
-                if rpt.pdf_storage_key:
-                    try:
-                        gcp_bucket.delete_file_from_gcs(rpt.pdf_storage_key)
-                    except Exception:
-                        pass
-                db.session.delete(rpt)
-
-            db.session.delete(video)
+            delete_video_with_reports(video, db)
             deleted_count += 1
 
         db.session.commit()
@@ -669,6 +643,7 @@ def delete_upload(upload_id):
 @jwt_required()
 def delete_video_record(video_id):
     from .models import VideoRecord, db
+    from .video_cleanup import delete_report_records, delete_video_assets
     
     user_id = int(get_jwt_identity())
     
@@ -678,15 +653,15 @@ def delete_video_record(video_id):
         if not video:
             return jsonify({'error': 'Video not found or access denied'}), 404
         
-        if video.storage_key:
-            try:
-                success = gcp_bucket.delete_file_from_gcs(video.file_path)
-                if not success:
-                    raise Exception(f"Failed to delete video from GCS: {video.storage_key}")
-            except Exception as e:
-                current_app.logger.error(f"Failed to delete GCS video {video.storage_key}: {e}")
-                return jsonify({'error': f'刪除失敗: {str(e)}'}), 500
-        
+        try:
+            delete_video_assets(video, require_success=True)
+        except Exception as e:
+            current_app.logger.error(f"Failed to delete GCS video {video.storage_key}: {e}")
+            return jsonify({'error': f'刪除失敗: {str(e)}'}), 500
+
+        reports = list(video.analysis_reports or [])
+        delete_report_records(reports, db)
+
         db.session.delete(video)
         db.session.commit()
         
@@ -903,6 +878,28 @@ def get_analysis_report(report_id):
         return jsonify({'error': str(e)}), 500
 
 
+@bp.route('/api/video-analysis-report/<report_id>', methods=['DELETE'])
+@jwt_required()
+def delete_analysis_report(report_id):
+    """Delete a single analysis report and its PDF if present."""
+    from .models import VideoAnalysisReport, db
+    from .video_cleanup import delete_report_records
+
+    user_id = int(get_jwt_identity())
+    try:
+        report = VideoAnalysisReport.query.filter_by(report_id=report_id, user_id=user_id).first()
+        if not report:
+            return jsonify({'error': '找不到報告'}), 404
+
+        delete_report_records([report], db)
+        db.session.commit()
+        return jsonify({'success': True, 'message': 'Report deleted'}), 200
+    except Exception as e:
+        current_app.logger.error(f"Error deleting report: {e}")
+        db.session.rollback()
+        return jsonify({'error': str(e)}), 500
+
+
 @bp.route('/api/video-analysis-report/<report_id>/download', methods=['GET'])
 @jwt_required()
 def download_analysis_report(report_id):
@@ -919,22 +916,22 @@ def download_analysis_report(report_id):
 
         # Download file bytes from GCS and serve with attachment header
         try:
+            from urllib.parse import quote
             file_bytes = gcp_bucket.download_file_from_gcs(
                 report.pdf_gcs_url
             )
-            # Determine filename and content type
             if report.pdf_storage_key.endswith('.pdf'):
                 content_type = 'application/pdf'
                 download_name = f"兒童發展分析報告_{report.child_name}_{report.report_id[:8]}.pdf"
             else:
                 content_type = 'text/html'
                 download_name = f"兒童發展分析報告_{report.child_name}_{report.report_id[:8]}.html"
-
+            encoded_name = quote(download_name, safe='')
             return Response(
                 file_bytes,
                 mimetype=content_type,
                 headers={
-                    'Content-Disposition': f'attachment; filename*=UTF-8\'\'{download_name}',
+                    'Content-Disposition': f"attachment; filename*=UTF-8''{encoded_name}",
                     'Content-Length': str(len(file_bytes)),
                 },
             )

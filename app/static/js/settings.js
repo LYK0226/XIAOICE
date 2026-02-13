@@ -2,16 +2,227 @@
 
 // ===== Translation System for Settings =====
 
-// Function to update settings page language
-function updateSettingsLanguage(lang) {
-    // Use translations from the global translations object loaded in chatbox.js
-    const t = window.translations && window.translations[lang] ? window.translations[lang] : null;
-    
-    if (!t) {
-        console.warn(`Translations for ${lang} not loaded yet`);
+const settingsSupportedLanguages = ['zh-TW', 'zh-CN', 'en', 'ja'];
+let settingsTranslationsPromise = null;
+let i18nNavigationInProgress = false;
+
+function loadTranslationCache(lang) {
+    try {
+        const cached = localStorage.getItem(`i18n_cache_${lang}`);
+        if (cached) {
+            return JSON.parse(cached);
+        }
+    } catch (error) {
+        console.warn('Failed to read cached translations:', error);
+    }
+    return null;
+}
+
+function storeTranslationCache(lang, data) {
+    try {
+        localStorage.setItem(`i18n_cache_${lang}`, JSON.stringify(data));
+    } catch (error) {
+        console.warn('Failed to cache translations:', error);
+    }
+}
+
+function withTimeout(promise, ms) {
+    let timeoutId;
+    const timeoutPromise = new Promise((resolve) => {
+        timeoutId = setTimeout(resolve, ms);
+    });
+
+    return Promise.race([
+        promise.finally(() => clearTimeout(timeoutId)),
+        timeoutPromise
+    ]);
+}
+
+async function preloadPreferredLanguage() {
+    const preferred = localStorage.getItem('preferredLanguage') || 'zh-TW';
+    const lang = settingsSupportedLanguages.includes(preferred) ? preferred : 'zh-TW';
+    const cached = loadTranslationCache(lang);
+
+    if (cached) {
+        window.translations = window.translations || {};
+        window.translations[lang] = cached;
         return;
     }
-    
+
+    try {
+        const response = await fetch(`/static/i18n/${lang}.json`, { cache: 'force-cache' });
+        if (!response.ok) {
+            throw new Error(`Failed to preload ${lang} translations`);
+        }
+        const data = await response.json();
+        storeTranslationCache(lang, data);
+        window.translations = window.translations || {};
+        window.translations[lang] = data;
+    } catch (error) {
+        console.warn('Failed to preload preferred language before navigation:', error);
+    }
+}
+
+function resolveNavigationPath(targetUrl) {
+    try {
+        const parsed = new URL(targetUrl, window.location.origin);
+        if (parsed.origin !== window.location.origin) {
+            return null;
+        }
+        return `${parsed.pathname}${parsed.search}`;
+    } catch (error) {
+        return null;
+    }
+}
+
+function setPreloadedNavigationMarker(targetUrl) {
+    const path = resolveNavigationPath(targetUrl);
+    if (!path) {
+        return;
+    }
+
+    const normalizedPath = path === '/index' ? '/' : path;
+    try {
+        sessionStorage.setItem('__preloaded_nav_ready_path', normalizedPath);
+    } catch (error) {
+        // no-op
+    }
+}
+
+async function waitForIframeI18nReady(frame, timeoutMs) {
+    const startedAt = Date.now();
+
+    while (Date.now() - startedAt < timeoutMs) {
+        try {
+            const doc = frame.contentDocument;
+            if (doc && doc.documentElement) {
+                const root = doc.documentElement;
+                const ready = root.getAttribute('data-i18n-ready') === 'true';
+                const pending = root.getAttribute('data-i18n-pending') === 'true';
+                if (ready || !pending) {
+                    return;
+                }
+            }
+        } catch (error) {
+            return;
+        }
+
+        await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+}
+
+async function preloadTargetPage(targetUrl) {
+    const path = resolveNavigationPath(targetUrl);
+    if (!path) {
+        return;
+    }
+
+    const frame = document.createElement('iframe');
+    frame.setAttribute('aria-hidden', 'true');
+    frame.style.position = 'fixed';
+    frame.style.width = '1px';
+    frame.style.height = '1px';
+    frame.style.opacity = '0';
+    frame.style.pointerEvents = 'none';
+    frame.style.left = '-9999px';
+    frame.style.top = '-9999px';
+    frame.src = path;
+
+    try {
+        const loadPromise = new Promise((resolve) => {
+            frame.addEventListener('load', resolve, { once: true });
+            frame.addEventListener('error', resolve, { once: true });
+        });
+
+        document.body.appendChild(frame);
+        await withTimeout(loadPromise, 10000);
+        await waitForIframeI18nReady(frame, 5000);
+    } catch (error) {
+        try {
+            await fetch(path, {
+                method: 'GET',
+                credentials: 'same-origin',
+                cache: 'force-cache'
+            });
+        } catch (fallbackError) {
+            console.warn('Failed to preload target page before navigation:', fallbackError);
+        }
+    } finally {
+        if (frame.parentNode) {
+            frame.parentNode.removeChild(frame);
+        }
+    }
+}
+
+async function navigateWithPreloadedPage(targetUrl) {
+    if (!targetUrl || i18nNavigationInProgress) {
+        return;
+    }
+
+    i18nNavigationInProgress = true;
+
+    try {
+        await withTimeout(Promise.all([
+            preloadPreferredLanguage(),
+            preloadTargetPage(targetUrl)
+        ]), 16000);
+    } finally {
+        setPreloadedNavigationMarker(targetUrl);
+        window.location.href = targetUrl;
+    }
+}
+
+window.navigateWithPreloadedPage = navigateWithPreloadedPage;
+
+async function ensureSettingsTranslations() {
+    const existingTranslations = window.translations || {};
+    settingsSupportedLanguages.forEach((lang) => {
+        if (!existingTranslations[lang]) {
+            const cached = loadTranslationCache(lang);
+            if (cached) {
+                existingTranslations[lang] = cached;
+            }
+        }
+    });
+    const hasAllTranslations = settingsSupportedLanguages.every((lang) => existingTranslations[lang]);
+
+    if (hasAllTranslations) {
+        return existingTranslations;
+    }
+
+    if (!settingsTranslationsPromise) {
+        settingsTranslationsPromise = Promise.all(
+            settingsSupportedLanguages.map(async (lang) => {
+                if (existingTranslations[lang]) {
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`/static/i18n/${lang}.json`);
+                    if (!response.ok) {
+                        throw new Error(`Failed to load ${lang} translations`);
+                    }
+                    existingTranslations[lang] = await response.json();
+                    storeTranslationCache(lang, existingTranslations[lang]);
+                } catch (error) {
+                    console.error(`Error loading ${lang} translations:`, error);
+                    existingTranslations[lang] = {};
+                }
+            })
+        ).then(() => {
+            window.translations = existingTranslations;
+            return existingTranslations;
+        });
+    }
+
+    return settingsTranslationsPromise;
+}
+
+function applySettingsLanguage(t) {
+    if (!t) {
+        return;
+    }
+
     // Update all elements with data-i18n attributes
     document.querySelectorAll('[data-i18n]').forEach(element => {
         const key = element.getAttribute('data-i18n');
@@ -19,7 +230,7 @@ function updateSettingsLanguage(lang) {
             element.textContent = t[key];
         }
     });
-    
+
     // Update select options
     document.querySelectorAll('option[data-i18n]').forEach(option => {
         const key = option.getAttribute('data-i18n');
@@ -27,7 +238,15 @@ function updateSettingsLanguage(lang) {
             option.textContent = t[key];
         }
     });
-    
+
+    // Update placeholders for generic fields
+    document.querySelectorAll('[data-i18n-placeholder]').forEach(element => {
+        const key = element.getAttribute('data-i18n-placeholder');
+        if (t[key]) {
+            element.placeholder = t[key];
+        }
+    });
+
     // Update placeholders
     const apiKeyNameInput = document.getElementById('apiKeyName');
     const apiKeyValueInput = document.getElementById('apiKeyValue');
@@ -36,7 +255,7 @@ function updateSettingsLanguage(lang) {
     const oldPasswordInput = document.getElementById('oldPasswordInput');
     const newPasswordInput = document.getElementById('newPasswordInput');
     const confirmPasswordInput = document.getElementById('confirmPasswordInput');
-    
+
     if (apiKeyNameInput && t['placeholder.apiKeyName']) apiKeyNameInput.placeholder = t['placeholder.apiKeyName'];
     if (apiKeyValueInput && t['placeholder.apiKeyValue']) apiKeyValueInput.placeholder = t['placeholder.apiKeyValue'];
     if (editUsernameInput && t['placeholder.editUsername']) editUsernameInput.placeholder = t['placeholder.editUsername'];
@@ -44,7 +263,7 @@ function updateSettingsLanguage(lang) {
     if (oldPasswordInput && t['placeholder.oldPassword']) oldPasswordInput.placeholder = t['placeholder.oldPassword'];
     if (newPasswordInput && t['placeholder.newPassword']) newPasswordInput.placeholder = t['placeholder.newPassword'];
     if (confirmPasswordInput && t['placeholder.confirmPassword']) confirmPasswordInput.placeholder = t['placeholder.confirmPassword'];
-    
+
     // Delete Account Password Input
     const deleteAccountPasswordInput = document.getElementById('deleteAccountPasswordInput');
     if (deleteAccountPasswordInput && t['placeholder.confirmDeletionPassword']) deleteAccountPasswordInput.placeholder = t['placeholder.confirmDeletionPassword'];
@@ -56,6 +275,71 @@ function updateSettingsLanguage(lang) {
     if (typeof updateSummaryApiKeyOptions === 'function') {
         updateSummaryApiKeyOptions(advancedConfigState.apiKeys, advancedConfigState.selectedApiKeyId);
     }
+}
+
+// Function to update settings page language
+function updateSettingsLanguage(lang) {
+    const translationsSource = window.translations && window.translations[lang] ? window.translations[lang] : null;
+
+    if (translationsSource) {
+        applySettingsLanguage(translationsSource);
+        return;
+    }
+
+    ensureSettingsTranslations()
+        .then((translations) => {
+            const t = translations && translations[lang] ? translations[lang] : null;
+            if (!t) {
+                console.warn(`Translations for ${lang} not loaded yet`);
+                return;
+            }
+            applySettingsLanguage(t);
+        })
+        .catch((error) => {
+            console.error('Failed to load translations for settings:', error);
+        });
+}
+
+function initializeSettingsLanguage() {
+    const savedLanguage = localStorage.getItem('preferredLanguage');
+    const initialLanguage = savedLanguage || 'zh-TW';
+
+    if (typeof currentLanguage === 'undefined') {
+        window.currentLanguage = initialLanguage;
+    }
+
+    let cacheHit = false;
+    const cached = loadTranslationCache(initialLanguage);
+    if (cached) {
+        window.translations = window.translations || {};
+        window.translations[initialLanguage] = cached;
+        updateSettingsLanguage(initialLanguage);
+        cacheHit = true;
+    }
+
+    const markReady = () => {
+        if (window.__i18nDeferReady) {
+            return;
+        }
+        document.documentElement.setAttribute('data-i18n-ready', 'true');
+        document.documentElement.removeAttribute('data-i18n-pending');
+    };
+
+    if (cacheHit) {
+        markReady();
+    }
+
+    ensureSettingsTranslations()
+        .then(() => {
+            if (!cacheHit) {
+                updateSettingsLanguage(initialLanguage);
+                markReady();
+            }
+        })
+        .catch((error) => {
+            console.error('Failed to initialize settings language:', error);
+            markReady();
+        });
 }
 
 // ===== Custom Modal Functions =====
@@ -72,7 +356,7 @@ function showCustomAlert(message) {
         
         // Update language for the modal
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         updateSettingsLanguage(langToUse);
         
@@ -110,7 +394,7 @@ function showCustomConfirm(message, callback) {
         
         // Update language for the modal
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         updateSettingsLanguage(langToUse);
         
@@ -209,7 +493,7 @@ function showCustomPrompt(message, defaultValue, callback, options = {}) {
         
         // Update language for the modal
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         updateSettingsLanguage(langToUse);
         
@@ -259,6 +543,26 @@ function showCustomPrompt(message, defaultValue, callback, options = {}) {
 
 window.showCustomPrompt = showCustomPrompt;
 
+(() => {
+    const boot = () => {
+        try {
+            initializeSettingsLanguage();
+        } catch (error) {
+            console.error('Failed to boot settings language:', error);
+            if (!window.__i18nDeferReady) {
+                document.documentElement.setAttribute('data-i18n-ready', 'true');
+                document.documentElement.removeAttribute('data-i18n-pending');
+            }
+        }
+    };
+
+    if (document.readyState === 'loading') {
+        window.addEventListener('DOMContentLoaded', boot);
+    } else {
+        boot();
+    }
+})();
+
 // ===== Avatar Settings =====
 
 // Avatar Modal Functionality
@@ -271,9 +575,11 @@ document.getElementById('settings').addEventListener('click', () => {
     avatarModal.style.display = 'block';
     
     // Update settings language to current interface language
-    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const currentLang = (typeof currentLanguage !== 'undefined' && currentLanguage)
+        ? currentLanguage
+        : (localStorage.getItem('preferredLanguage') || 'zh-TW');
     // If current language is not supported, default to English
-    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const supportedLangs = settingsSupportedLanguages;
     const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
     updateSettingsLanguage(langToUse);
     
@@ -476,7 +782,7 @@ function openEditUsernameModal() {
     
     // Update language for the modal
     const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const supportedLangs = settingsSupportedLanguages;
     const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
     updateSettingsLanguage(langToUse);
     
@@ -495,7 +801,7 @@ function openEditEmailModal() {
     
     // Update language for the modal
     const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const supportedLangs = settingsSupportedLanguages;
     const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
     updateSettingsLanguage(langToUse);
     
@@ -554,7 +860,7 @@ function openChangePasswordModal() {
     
     // Update language for the modal
     const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const supportedLangs = settingsSupportedLanguages;
     const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
     updateSettingsLanguage(langToUse);
     
@@ -580,7 +886,7 @@ document.getElementById('saveUsernameBtn').addEventListener('click', async () =>
     
     if (!value) {
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         const errorMessages = {
             'zh-TW': '用戶名稱不能為空',
@@ -609,7 +915,7 @@ document.getElementById('saveUsernameBtn').addEventListener('click', async () =>
             document.getElementById('editUsernameModal').style.display = 'none';
             
             const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const supportedLangs = settingsSupportedLanguages;
             const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
             const successMessages = {
                 'zh-TW': '用戶名稱已更新',
@@ -620,7 +926,7 @@ document.getElementById('saveUsernameBtn').addEventListener('click', async () =>
         } else {
             const error = await response.json();
             const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const supportedLangs = settingsSupportedLanguages;
             const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
             const errorMessages = {
                 'zh-TW': '更新失敗',
@@ -632,7 +938,7 @@ document.getElementById('saveUsernameBtn').addEventListener('click', async () =>
     } catch (error) {
         console.error('Error updating username:', error);
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         const errorMessages = {
             'zh-TW': '更新失敗',
@@ -650,7 +956,7 @@ document.getElementById('saveEmailBtn').addEventListener('click', async () => {
     
     if (!value) {
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         const errorMessages = {
             'zh-TW': '電子郵件不能為空',
@@ -665,7 +971,7 @@ document.getElementById('saveEmailBtn').addEventListener('click', async () => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(value)) {
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         const errorMessages = {
             'zh-TW': '請輸入有效的電子郵件地址',
@@ -694,7 +1000,7 @@ document.getElementById('saveEmailBtn').addEventListener('click', async () => {
             document.getElementById('editEmailModal').style.display = 'none';
             
             const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const supportedLangs = settingsSupportedLanguages;
             const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
             const successMessages = {
                 'zh-TW': '電子郵件已更新',
@@ -705,7 +1011,7 @@ document.getElementById('saveEmailBtn').addEventListener('click', async () => {
         } else {
             const error = await response.json();
             const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const supportedLangs = settingsSupportedLanguages;
             const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
             const errorMessages = {
                 'zh-TW': '更新失敗',
@@ -717,7 +1023,7 @@ document.getElementById('saveEmailBtn').addEventListener('click', async () => {
     } catch (error) {
         console.error('Error updating email:', error);
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         const errorMessages = {
             'zh-TW': '更新失敗',
@@ -737,7 +1043,7 @@ document.getElementById('savePasswordBtn').addEventListener('click', async () =>
     // Validation
     if (!oldPassword || !newPassword || !confirmPassword) {
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         const errorMessages = {
             'zh-TW': '請填寫所有欄位',
@@ -750,7 +1056,7 @@ document.getElementById('savePasswordBtn').addEventListener('click', async () =>
     
     if (newPassword !== confirmPassword) {
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         const errorMessages = {
             'zh-TW': '新密碼與確認密碼不匹配',
@@ -763,7 +1069,7 @@ document.getElementById('savePasswordBtn').addEventListener('click', async () =>
     
     if (newPassword.length < 6) {
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         const errorMessages = {
             'zh-TW': '新密碼至少需要6個字符',
@@ -792,7 +1098,7 @@ document.getElementById('savePasswordBtn').addEventListener('click', async () =>
             document.getElementById('changePasswordModal').style.display = 'none';
             
             const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const supportedLangs = settingsSupportedLanguages;
             const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
             const successMessages = {
                 'zh-TW': '密碼已成功更改',
@@ -803,7 +1109,7 @@ document.getElementById('savePasswordBtn').addEventListener('click', async () =>
         } else {
             const error = await response.json();
             const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const supportedLangs = settingsSupportedLanguages;
             const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
             const errorMessages = {
                 'zh-TW': '密碼更改失敗',
@@ -815,7 +1121,7 @@ document.getElementById('savePasswordBtn').addEventListener('click', async () =>
     } catch (error) {
         console.error('Error changing password:', error);
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         const errorMessages = {
             'zh-TW': '密碼更改失敗',
@@ -860,7 +1166,7 @@ if (deleteAccountBtn) {
 
         // Update language for the modal
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         updateSettingsLanguage(langToUse);
 
@@ -970,12 +1276,19 @@ window.onclick = function(event) {
 };
 
 // Initialize settings functionality when DOM is loaded
-window.addEventListener('DOMContentLoaded', () => {
+if (document.readyState === 'loading') {
+    window.addEventListener('DOMContentLoaded', () => {
+        initializeTheme();
+        initSettingsUI();
+    });
+} else {
+    initializeTheme();
+    initSettingsUI();
+}
+
+function initSettingsUI() {
     const settingsGroups = document.querySelectorAll('.settings-group');
     const settingsContents = document.querySelectorAll('.settings-content');
-
-    // Initialize theme
-    initializeTheme();
 
     // Switch between settings groups (new sidebar navigation)
     settingsGroups.forEach(group => {
@@ -995,7 +1308,7 @@ window.addEventListener('DOMContentLoaded', () => {
             });
         });
     });
-});
+}
 
 // ===== Personalization Settings =====
 
@@ -1023,6 +1336,9 @@ document.addEventListener('click', (e) => {
 // Function to apply theme
 function applyTheme(theme) {
     const body = document.body;
+    
+    // Remove the early anti-FOUC class now that real theme class takes over
+    document.documentElement.classList.remove('dark-theme-early');
     
     if (theme === 'dark') {
         body.classList.add('dark-theme');
@@ -1085,6 +1401,8 @@ langOptions.forEach(option => {
         // Update current language and UI
         if (typeof currentLanguage !== 'undefined') {
             currentLanguage = lang;
+        } else {
+            window.currentLanguage = lang;
         }
         if (typeof updateUILanguage === 'function') {
             updateUILanguage(lang);
@@ -1092,6 +1410,9 @@ langOptions.forEach(option => {
         
         // Update settings page language
         updateSettingsLanguage(lang);
+
+        // Persist language locally for non-chat pages
+        localStorage.setItem('preferredLanguage', lang);
         
         // Reload API keys to update button text
         if (typeof loadApiKeys === 'function') {
@@ -1104,6 +1425,7 @@ langOptions.forEach(option => {
         // Show language change banner
         const bannerMessages = {
             'zh-TW': '語言已切換為繁體中文',
+            'zh-CN': '语言已切换为简体中文',
             'en': 'Language switched to English',
             'ja': '言語が日本語に切り替わりました'
         };
@@ -1203,7 +1525,7 @@ const modelOptions = {
 
 function getSettingsLang() {
     const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const supportedLangs = settingsSupportedLanguages;
     return supportedLangs.includes(currentLang) ? currentLang : 'en';
 }
 
@@ -1553,7 +1875,7 @@ if (summaryModelSelect) {
                 'ja': '保存に失敗しました'
             };
             const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const supportedLangs = settingsSupportedLanguages;
             const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
             showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
         }
@@ -1619,7 +1941,7 @@ if (addApiKeyBtn) {
     addApiKeyBtn.addEventListener('click', () => {
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
         // If current language is not supported, default to English
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         updateSettingsLanguage(langToUse); // Update language for the modal
         apiKeyModal.style.display = 'block';
@@ -1638,7 +1960,7 @@ if (saveApiKeyBtn) {
     if (!name || !apiKey) {
         // Get current language for error message
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         
         const errorMessages = {
@@ -1675,7 +1997,7 @@ if (saveApiKeyBtn) {
                 'ja': '保存に失敗しました'
             };
             const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const supportedLangs = settingsSupportedLanguages;
             const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
             showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
         }
@@ -1687,7 +2009,7 @@ if (saveApiKeyBtn) {
             'ja': '保存に失敗しました'
         };
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
     }
@@ -1775,7 +2097,7 @@ function renderApiKeys(apiKeys, selectedId) {
     
     // Get current language
     const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const supportedLangs = settingsSupportedLanguages;
     const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
     const t = window.translations && window.translations[langToUse] ? window.translations[langToUse] : {};
 
@@ -1861,7 +2183,7 @@ async function toggleApiKey(keyId) {
                 'ja': '切り替えに失敗しました'
             };
             const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-            const supportedLangs = ['zh-TW', 'en', 'ja'];
+            const supportedLangs = settingsSupportedLanguages;
             const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
             showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
         }
@@ -1873,7 +2195,7 @@ async function toggleApiKey(keyId) {
             'ja': '切り替えに失敗しました'
         };
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
     }
@@ -1887,7 +2209,7 @@ async function deleteApiKey(keyId, name) {
         'ja': `APIキー "${name}" を削除してもよろしいですか？`
     };
     const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const supportedLangs = settingsSupportedLanguages;
     const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
     
     showCustomConfirm(confirmMessages[langToUse] || confirmMessages['en'], async (confirmed) => {
@@ -1938,7 +2260,7 @@ function resetApiKeyForm() {
     apiKeyValueInput.value = '';
     // Update placeholder to current language
     const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-    const supportedLangs = ['zh-TW', 'en', 'ja'];
+    const supportedLangs = settingsSupportedLanguages;
     const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
     const placeholders = {
         'zh-TW': { 'apiKeyValue': '輸入您的 Google AI API 金鑰' },
@@ -2459,7 +2781,7 @@ if (vertexUploadFileBtn && vertexServiceAccountFile) {
         if (file) {
             if (!file.name.endsWith('.json')) {
                 const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-                const supportedLangs = ['zh-TW', 'en', 'ja'];
+                const supportedLangs = settingsSupportedLanguages;
                 const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
                 const messages = {
                     'zh-TW': '請選擇 JSON 檔案',
@@ -2482,7 +2804,7 @@ if (vertexUploadFileBtn && vertexServiceAccountFile) {
                         const projectId = serviceAccountData.project_id;
                         if (!projectId) {
                             const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-                            const supportedLangs = ['zh-TW', 'en', 'ja'];
+                            const supportedLangs = settingsSupportedLanguages;
                             const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
                             const messages = {
                                 'zh-TW': '服務帳戶 JSON 檔案缺少 project_id 欄位',
@@ -2496,7 +2818,7 @@ if (vertexUploadFileBtn && vertexServiceAccountFile) {
                         // Validate required fields
                         if (!serviceAccountData.private_key || !serviceAccountData.client_email) {
                             const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-                            const supportedLangs = ['zh-TW', 'en', 'ja'];
+                            const supportedLangs = settingsSupportedLanguages;
                             const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
                             const messages = {
                                 'zh-TW': '服務帳戶 JSON 檔案缺少必要欄位',
@@ -2526,7 +2848,7 @@ if (vertexUploadFileBtn && vertexServiceAccountFile) {
                     } catch (err) {
                         console.error('JSON parse error:', err);
                         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-                        const supportedLangs = ['zh-TW', 'en', 'ja'];
+                        const supportedLangs = settingsSupportedLanguages;
                         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
                         const messages = {
                             'zh-TW': 'JSON 檔案格式無效',
@@ -2570,7 +2892,7 @@ if (saveVertexConfigBtn) {
         const serviceAccount = document.getElementById('vertexServiceAccount').value.trim();
         
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = ['zh-TW', 'en', 'ja'];
+        const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
         
         // Validation
@@ -2778,14 +3100,18 @@ async function loadUserProfileSettings() {
             }
             
             // Apply language
-            if (profile.language && typeof currentLanguage !== 'undefined') {
-                currentLanguage = profile.language;
+            if (profile.language) {
+                if (typeof currentLanguage !== 'undefined') {
+                    currentLanguage = profile.language;
+                } else {
+                    window.currentLanguage = profile.language;
+                }
                 if (typeof updateUILanguage === 'function') {
                     updateUILanguage(profile.language);
                 }
                 updateSettingsLanguage(profile.language);
                 
-                // Update language selector UI
+                // Always update language selector UI to reflect server state
                 const langOptions = document.querySelectorAll('.lang-option');
                 langOptions.forEach(option => {
                     const lang = option.getAttribute('data-lang');

@@ -1,9 +1,28 @@
 <!DOCTYPE html>
-<html lang="zh-tw">
+<html lang="zh-tw" data-i18n-pending="true">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>聊天盒子 - Chatbox</title>
+    <!-- Anti-FOUC: inline critical background -->
+    <style>
+        html, body { margin: 0; padding: 0; }
+        body { background: linear-gradient(135deg, #D4C5E8 0%, #C8B8DB 100%); min-height: 100vh; }
+        body.dark-theme, html.dark-theme-early body { background: linear-gradient(135deg, #2D2736 0%, #1F1B24 100%); }
+    </style>
+    <script>
+        try {
+            const preferredLang = localStorage.getItem('preferredLanguage') || 'zh-TW';
+            document.documentElement.setAttribute('lang', preferredLang.toLowerCase());
+            // Early dark-theme detection to prevent background flash
+            var _t = localStorage.getItem('themeMode');
+            if (_t === 'dark' || (_t === 'auto' && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                document.documentElement.classList.add('dark-theme-early');
+            }
+        } catch (e) {
+            // no-op
+        }
+    </script>
     <!-- Main chat interface styles -->
     <link rel="stylesheet" href="../static/css/chatbox.css">
     <!-- Sidebar styles -->

@@ -1889,3 +1889,377 @@
         display: none;
     }
 }
+
+/* ==========================================================================
+   Dark Theme Overrides
+   ========================================================================== */
+
+body.dark-theme #assessment-container,
+html.dark-theme-early #assessment-container {
+    background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%);
+}
+
+/* Start Card */
+body.dark-theme .start-card {
+    background: linear-gradient(135deg, rgba(45, 39, 54, 0.95) 0%, rgba(40, 35, 50, 0.95) 100%);
+    border-color: rgba(155, 138, 184, 0.3);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-theme .start-card-title {
+    color: #E2D7F5;
+}
+
+body.dark-theme .start-card-subtitle {
+    color: #9B8AB8;
+}
+
+body.dark-theme .upload-item {
+    background: rgba(45, 39, 54, 0.9);
+    border-color: rgba(155, 138, 184, 0.3);
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .upload-item:hover {
+    background: rgba(55, 48, 65, 1);
+    border-color: rgba(155, 138, 184, 0.5);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-theme .upload-icon {
+    background: linear-gradient(135deg, #7B68AE, #9B8AB8);
+}
+
+body.dark-theme .upload-label {
+    color: #E2D7F5;
+}
+
+body.dark-theme .upload-label small {
+    color: #9B8AB8;
+}
+
+/* New Start Card */
+body.dark-theme .new-start-card {
+    background: linear-gradient(135deg, rgba(45, 39, 54, 0.6) 0%, rgba(40, 35, 50, 0.55) 100%);
+    border-color: rgba(155, 138, 184, 0.3);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4),
+                inset 0 1px 0 rgba(155, 138, 184, 0.2);
+}
+
+body.dark-theme .new-start-card::before {
+    background: linear-gradient(180deg, rgba(155, 138, 184, 0.1) 0%, transparent 100%);
+}
+
+body.dark-theme .new-card-title {
+    color: #E2D7F5;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .new-upload-item {
+    background: linear-gradient(135deg, #5A4D7A 0%, #7B68AE 100%);
+    border-color: rgba(155, 138, 184, 0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35),
+                inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+body.dark-theme .new-upload-item:hover {
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45),
+                inset 0 1px 0 rgba(255, 255, 255, 0.15);
+    border-color: rgba(155, 138, 184, 0.5);
+}
+
+/* Decorations */
+body.dark-theme .star {
+    color: #FFE066;
+    filter: drop-shadow(0 0 8px rgba(255, 224, 102, 0.3));
+    opacity: 0.4;
+}
+
+body.dark-theme .cloud {
+    color: rgba(155, 138, 184, 0.3);
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.2));
+    opacity: 0.3;
+}
+
+/* Modal */
+body.dark-theme .modal-content {
+    background: linear-gradient(135deg, #2D2736 0%, #352E40 100%);
+    border-color: rgba(155, 138, 184, 0.3);
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-theme .modal-content h3 {
+    color: #E2D7F5;
+}
+
+body.dark-theme .modal-content-evaluation {
+    background: #2D2736;
+    border-color: rgba(155, 138, 184, 0.2);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
+body.dark-theme .modal-title {
+    color: #E2D7F5;
+}
+
+body.dark-theme .modal-label {
+    color: #C8B8DB;
+}
+
+body.dark-theme .modal-input {
+    background: #1F1B24;
+    border-color: rgba(155, 138, 184, 0.25);
+    color: #E2D7F5;
+}
+
+body.dark-theme .modal-input:focus {
+    border-color: #9B8AB8;
+    background: #252030;
+    box-shadow: 0 0 0 4px rgba(155, 138, 184, 0.15);
+}
+
+body.dark-theme .modal-close-btn {
+    background: rgba(155, 138, 184, 0.15);
+    color: #C8B8DB;
+}
+
+body.dark-theme .modal-close-btn:hover {
+    background: rgba(155, 138, 184, 0.25);
+}
+
+/* Form Elements */
+body.dark-theme .form-group label {
+    color: #C8B8DB;
+}
+
+body.dark-theme .form-group input,
+body.dark-theme .form-group select {
+    background: #1F1B24;
+    border-color: rgba(155, 138, 184, 0.25);
+    color: #E2D7F5;
+}
+
+body.dark-theme .form-group input:focus,
+body.dark-theme .form-group select:focus {
+    border-color: #9B8AB8;
+    background: #252030;
+}
+
+/* Question Container */
+body.dark-theme .question-container {
+    background: #2D2736;
+}
+
+body.dark-theme .question-number {
+    color: #9B8AB8;
+}
+
+body.dark-theme .question-title {
+    color: #E2D7F5;
+}
+
+body.dark-theme .question-description {
+    color: #C8B8DB;
+    background: rgba(155, 138, 184, 0.08);
+    border-left-color: #7B68AE;
+}
+
+/* Question Card */
+body.dark-theme .question-card {
+    background: rgba(45, 39, 54, 0.95);
+    border-color: rgba(155, 138, 184, 0.25);
+    box-shadow: 0 25px 70px rgba(0, 0, 0, 0.4);
+}
+
+body.dark-theme .question-domain-badge {
+    background: linear-gradient(135deg, rgba(90, 77, 122, 0.6) 0%, rgba(75, 65, 100, 0.6) 100%);
+    color: #C8B8DB;
+    border-color: rgba(155, 138, 184, 0.2);
+}
+
+body.dark-theme .question-main-content h3 {
+    color: #E2D7F5;
+}
+
+body.dark-theme .desc-info-box {
+    background: linear-gradient(135deg, #352E40 0%, #2D2736 100%);
+    border-color: rgba(155, 138, 184, 0.2);
+}
+
+body.dark-theme .desc-info-box h4 {
+    color: #C8B8DB;
+}
+
+body.dark-theme .desc-info-box p {
+    color: #B8A8D8;
+}
+
+body.dark-theme .action-title {
+    color: #E2D7F5;
+}
+
+/* Assessment List & Cards */
+body.dark-theme .assessment-list {
+    background: rgba(45, 39, 54, 0.95);
+    border-color: rgba(155, 138, 184, 0.25);
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .assessment-card {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.25);
+    border-color: rgba(155, 138, 184, 0.2);
+}
+
+body.dark-theme .assessment-card:hover {
+    background: rgba(55, 48, 65, 1);
+    box-shadow: 0 14px 32px rgba(0, 0, 0, 0.35);
+    border-color: rgba(155, 138, 184, 0.4);
+}
+
+body.dark-theme .assessment-card-title {
+    color: #E2D7F5;
+}
+
+body.dark-theme .assessment-card-description {
+    color: #9B8AB8;
+}
+
+/* Results */
+body.dark-theme .results-details {
+    background: #1F1B24;
+    border-color: rgba(155, 138, 184, 0.15);
+}
+
+body.dark-theme .results-details h3 {
+    color: #E2D7F5;
+}
+
+body.dark-theme .results-details p {
+    color: #B8A8D8;
+}
+
+body.dark-theme .results-note {
+    background: rgba(46, 125, 50, 0.15);
+    border-left-color: #4caf50;
+}
+
+body.dark-theme .results-note p {
+    color: #81c784;
+}
+
+/* Backbar */
+body.dark-theme .child-backbar .btn-secondary {
+    background: rgba(45, 39, 54, 0.9);
+    border-color: rgba(155, 138, 184, 0.3);
+    color: #E2D7F5;
+}
+
+/* Assessment Info Box */
+body.dark-theme .assessment-info-box {
+    background: linear-gradient(135deg, #2D2736 0%, #352E40 100%);
+    border-color: rgba(155, 138, 184, 0.15);
+}
+
+body.dark-theme .info-title {
+    color: #E2D7F5;
+}
+
+body.dark-theme .info-desc {
+    color: #9B8AB8;
+}
+
+body.dark-theme .file-name-display {
+    background: rgba(155, 138, 184, 0.1);
+    color: #B8A8D8;
+}
+
+/* Progress Bar */
+body.dark-theme .progress-bar {
+    background: rgba(155, 138, 184, 0.15);
+}
+
+/* Finished Card */
+body.dark-theme .finished-card {
+    background: linear-gradient(135deg, #2D2736 0%, #352E40 100%);
+}
+
+body.dark-theme .finished-card h3 {
+    color: #E2D7F5;
+}
+
+body.dark-theme .finished-info {
+    background: rgba(155, 138, 184, 0.12);
+    color: #C8B8DB;
+}
+
+/* Results View */
+body.dark-theme .results-main-title {
+    color: #E2D7F5;
+}
+
+body.dark-theme .result-info-item {
+    background: #1F1B24;
+    border-color: rgba(155, 138, 184, 0.1);
+}
+
+body.dark-theme .result-info-item .label {
+    color: #9B8AB8;
+}
+
+body.dark-theme .result-info-item .value {
+    color: #E2D7F5;
+}
+
+body.dark-theme .results-summary-box {
+    background: #2D2736;
+    border-color: rgba(155, 138, 184, 0.15);
+}
+
+body.dark-theme .results-summary-box h4 {
+    color: #E2D7F5;
+}
+
+body.dark-theme .summary-content p {
+    color: #B8A8D8;
+}
+
+body.dark-theme .scale-item {
+    background: #1F1B24;
+}
+
+body.dark-theme .scale-item .range {
+    color: #B8A8D8;
+}
+
+body.dark-theme .result-btn.secondary {
+    background: rgba(155, 138, 184, 0.12);
+    color: #E2D7F5;
+}
+
+body.dark-theme .result-btn.secondary:hover {
+    background: rgba(155, 138, 184, 0.2);
+}
+
+/* Control Buttons */
+body.dark-theme .btn-secondary {
+    background: rgba(45, 39, 54, 0.7);
+    color: #E2D7F5;
+    border-color: rgba(155, 138, 184, 0.3);
+}
+
+body.dark-theme .btn-secondary:hover {
+    background: rgba(55, 48, 65, 0.9);
+    border-color: rgba(155, 138, 184, 0.5);
+}
+
+/* Floating Buttons - adjust tooltip */
+body.dark-theme .floating-btn span {
+    background: rgba(45, 39, 54, 0.95);
+    color: #E2D7F5;
+    border-color: rgba(155, 138, 184, 0.3);
+    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.3);
+}
+
+body.dark-theme .floating-btn span::before {
+    border-color: transparent rgba(45, 39, 54, 0.95) transparent transparent;
+}

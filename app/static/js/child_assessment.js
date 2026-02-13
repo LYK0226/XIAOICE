@@ -5,6 +5,51 @@
  * Simplified text-based assessment without chatbot
  */
 
+function resolveAssessmentLanguage() {
+    const stored = localStorage.getItem('preferredLanguage');
+    const fallback = (typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW');
+    const candidate = stored || fallback || 'zh-TW';
+    if (window.translations && window.translations[candidate]) {
+        return candidate;
+    }
+    if (window.translations && window.translations['zh-TW']) {
+        return 'zh-TW';
+    }
+    return 'zh-TW';
+}
+
+function formatAssessmentTemplate(template, vars) {
+    if (!vars) {
+        return template;
+    }
+    return template.replace(/\{(\w+)\}/g, (match, key) => {
+        if (Object.prototype.hasOwnProperty.call(vars, key)) {
+            return String(vars[key]);
+        }
+        return match;
+    });
+}
+
+function translateAssessment(key, fallback, vars) {
+    const lang = resolveAssessmentLanguage();
+    const translations = (window.translations && window.translations[lang]) || {};
+    const template = translations[key] || fallback || key;
+    return formatAssessmentTemplate(template, vars);
+}
+
+function applyAssessmentTranslations(root) {
+    if (!root) {
+        return;
+    }
+    root.querySelectorAll('[data-i18n]').forEach((element) => {
+        const key = element.getAttribute('data-i18n');
+        const text = translateAssessment(key, element.textContent);
+        if (text) {
+            element.textContent = text;
+        }
+    });
+}
+
 class ChildAssessmentModule {
     static assessmentData = null;
     static currentQuestionIndex = 0;
@@ -15,7 +60,7 @@ class ChildAssessmentModule {
      */
     static startNewAssessment(childName, childAge, pdfFile, assessmentType) {
         if (!childName || !childAge) {
-            alert('請填寫兒童姓名和年齡');
+            alert(translateAssessment('assessment.alert.missingChildInfo', '請填寫兒童姓名和年齡'));
             return;
         }
         
@@ -114,6 +159,8 @@ class ChildAssessmentModule {
         
         const template = document.getElementById('questionCardTemplate');
         const clone = template.content.cloneNode(true);
+
+        applyAssessmentTranslations(clone);
         
         // Fill in question data
         clone.querySelector('.question-emoji').textContent = question.emoji;
@@ -181,12 +228,25 @@ class ChildAssessmentModule {
             // Use template for finished card
             const template = document.getElementById('finishedCardTemplate');
             const clone = template.content.cloneNode(true);
+
+            applyAssessmentTranslations(clone);
             
             const totalQuestions = 10;
             clone.querySelectorAll('.total-questions').forEach(el => {
                 el.textContent = totalQuestions;
             });
             clone.querySelector('.answered-count').textContent = totalQuestions;
+
+            const finishedDesc = clone.querySelector('[data-i18n-template="assessment.finishedDesc"]');
+            if (finishedDesc) {
+                const templateText = translateAssessment(
+                    'assessment.finishedDesc',
+                    '您已經完成了所有 {count} 個項目的評估。現在可以查看您的孩子的發育商 (DQ) 報告了。'
+                );
+                finishedDesc.innerHTML = formatAssessmentTemplate(templateText, {
+                    count: `<span class="total-questions">${totalQuestions}</span>`
+                });
+            }
             
             const container = document.getElementById('assessmentContent');
             container.innerHTML = '';
@@ -226,6 +286,8 @@ class ChildAssessmentModule {
         // Use template for results view
         const template = document.getElementById('resultsViewTemplate');
         const clone = template.content.cloneNode(true);
+
+        applyAssessmentTranslations(clone);
         
         // Fill in results data
         clone.querySelector('.dq-score').textContent = dq.toFixed(0);
@@ -237,7 +299,14 @@ class ChildAssessmentModule {
         
         // Update summary text
         const summaryText = clone.querySelector('.summary-text');
-        summaryText.innerHTML = `根據本次評估，您的孩子在<strong>${this.getAssessmentTypeLabel(this.assessmentData.assessmentType)}</strong>領域的表現為<strong>${level}</strong>。`;
+        const summaryTemplate = translateAssessment(
+            'assessment.summaryTemplate',
+            '根據本次評估，您的孩子在<strong>{type}</strong>領域的表現為<strong>{level}</strong>。'
+        );
+        summaryText.innerHTML = formatAssessmentTemplate(summaryTemplate, {
+            type: this.getAssessmentTypeLabel(this.assessmentData.assessmentType),
+            level: level
+        });
         
         const assessmentContent = document.getElementById('assessmentContent');
         if (assessmentContent) {

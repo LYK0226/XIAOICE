@@ -1,5 +1,45 @@
 /* Settings Modal Styles - Playful & Premium Lavender */
 
+:root {
+    --app-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Microsoft JhengHei", "微軟正黑體", sans-serif;
+}
+
+.modal,
+.modal input,
+.modal textarea,
+.modal select,
+.modal button,
+.modal label,
+.modal p,
+.modal span,
+.modal h1,
+.modal h2,
+.modal h3,
+.modal h4,
+.modal h5,
+.modal h6,
+.modal div {
+    font-family: var(--app-font-family);
+}
+
+.modal {
+    font-weight: 700;
+    font-synthesis: weight;
+}
+
+html[data-i18n-pending="true"] body {
+    opacity: 0;
+}
+
+html[data-i18n-pending="true"] {
+    background: linear-gradient(135deg, #D4C5E8 0%, #C8B8DB 50%, #B8A8D8 100%);
+}
+
+html[data-i18n-ready="true"] body {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+}
+
 .modal {
     display: none;
     position: fixed;
@@ -1251,7 +1291,7 @@ body.dark-theme .custom-modal-toggle {
 /* Language Selection Grid - Index Style */
 .language-grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
+    grid-template-columns: repeat(2, 1fr);
     gap: 20px;
     margin-top: 10px;
 }
@@ -1297,6 +1337,14 @@ body.dark-theme .custom-modal-toggle {
     font-size: 16px;
     font-weight: 800;
     color: #4A3B5C;
+}
+
+#webcamModal .modal-content #webcamFeed {
+    width: 100%;
+    height: auto;
+    max-height: 60vh;
+    object-fit: contain;
+    background: #000;
 }
 
 /* Fix for the excessive height modal in Image 2 */
