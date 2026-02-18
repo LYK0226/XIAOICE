@@ -1,9 +1,9 @@
 version: '3.8'
 
 services:
-  # PostgreSQL 数据库
+  # PostgreSQL 数据库（with pgvector extension）
   postgres:
-    image: postgres:15-alpine
+    image: pgvector/pgvector:pg15
     container_name: xiaoice_postgres
     environment:
       POSTGRES_DB: xiaoice

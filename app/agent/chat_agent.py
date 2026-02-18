@@ -9,9 +9,10 @@ Multi-Agent Architecture (AI Studio):
 - Media Agent: Analyzes images and videos and returns structured results to coordinator (does not interact with users)
 
 Vertex AI Support:
-- Direct Vertex AI text generation with service account authentication
-- Supports multimodal inputs (text, images, videos, PDFs)
-- Streaming responses with same interface as ADK
+- Uses same ADK multi-agent system via GOOGLE_GENAI_USE_VERTEXAI env var
+- Service account credentials written to temp file for GOOGLE_APPLICATION_CREDENTIALS
+- Separate agent cache namespace (vertex_user_id) prevents mixing with AI Studio agents
+- Environment variables cleaned up after each streaming response
 
 Key Features:
 - Dual provider support: AI Studio (ADK) and Vertex AI
@@ -45,6 +46,100 @@ from app.agent.prompts import (
 
 # Configure logging
 logger = logging.getLogger(__name__)
+
+
+# ---------------------------------------------------------------------------
+# RAG Retrieval Tool (FunctionTool for ADK coordinator)
+# ---------------------------------------------------------------------------
+
+def _make_retrieve_knowledge_tool(user_id: Optional[int] = None):
+    """
+    Factory that returns a retrieve_knowledge FunctionTool bound to a specific
+    user_id so that RAG embedding calls can use the user's own API key.
+
+    The tool is declared `async` so ADK awaits it instead of calling it
+    synchronously (which would block the event loop).  The actual DB + embedding
+    I/O is offloaded to a threadpool via run_in_executor so the LLM API
+    connection keepalive is not disrupted.
+    """
+
+    async def retrieve_knowledge(query: str) -> str:
+        """
+        Search the early childhood education knowledge base for information
+        relevant to the query.  Returns referenced excerpts from uploaded
+        documents (developmental standards, guidelines, research papers, etc.).
+
+        Use this tool when answering questions about:
+        - Child developmental milestones or standards
+        - Early childhood education best practices
+        - Developmental assessment criteria
+        - Motor, language, cognitive, or social development guidelines
+        - Any topic that may be covered by the admin-uploaded knowledge base
+
+        Args:
+            query: A natural-language question or search phrase describing what
+                   information you need from the knowledge base.
+
+        Returns:
+            Relevant knowledge base excerpts with source citations, or a message
+            indicating no relevant information was found.
+        """
+        def _do_search():
+            """Run the synchronous RAG query in a dedicated threadpool worker."""
+            logger.info("[RAG-TOOL] retrieve_knowledge called | query=%r | user_id=%s", query, user_id)
+            # Resolve which Flask app to use for the app context
+            flask_app = None
+            try:
+                from flask import current_app as _ca
+                flask_app = _ca._get_current_object()
+            except RuntimeError:
+                pass
+            if flask_app is None:
+                from app import get_app as _get_app
+                flask_app = _get_app()
+
+            try:
+                from app.rag.retriever import search_knowledge, format_context
+
+                def _query():
+                    results = search_knowledge(query, top_k=5, user_id=user_id)
+                    logger.info("[RAG-TOOL] search_knowledge returned %d results", len(results) if results else 0)
+                    if not results:
+                        logger.info("[RAG-TOOL] No results → answering from general knowledge")
+                        return (
+                            "KNOWLEDGE BASE RETURNED EMPTY — no documents are currently stored. "
+                            "You MUST answer from your general knowledge ONLY. "
+                            "Do NOT cite any document titles or sources, since no documents were retrieved."
+                        )
+                    context = format_context(results, max_chars=6000)
+                    logger.info("[RAG-TOOL] Returning %d chars of context", len(context))
+                    return (
+                        "The following information was retrieved from the knowledge base. "
+                        "Use it to support your answer and cite the sources:\n\n"
+                        + context
+                    )
+
+                if flask_app is not None:
+                    with flask_app.app_context():
+                        return _query()
+                else:
+                    return _query()
+            except Exception as exc:
+                logger.warning("RAG retrieval failed: %s", exc)
+                return "Knowledge base retrieval is currently unavailable. Answer based on your general knowledge."
+
+        # Run synchronous DB + embedding call in a threadpool so that the ADK
+        # async event loop is NOT blocked during the HTTP round-trip.  If the
+        # event loop is blocked, the LLM API connection's keepalive timeout
+        # expires and causes "Server disconnected without sending a response."
+        try:
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, _do_search)
+        except Exception as exc:
+            logger.warning("RAG retrieval failed: %s", exc)
+            return "Knowledge base retrieval is currently unavailable. Answer based on your general knowledge."
+
+    return retrieve_knowledge
 
 # Supported MIME types for file uploads
 SUPPORTED_MIME_TYPES = [
@@ -82,7 +177,7 @@ class ChatAgentManager:
         self._api_keys: Dict[str, str] = {}  # Cache API keys per user to avoid global env pollution
         self._created_sessions: set = set()  # Track created sessions
     
-    def _create_agent(self, api_key: str, model_name: str = "gemini-3-flash") -> Agent:
+    def _create_agent(self, api_key: str, model_name: str = "gemini-3-flash", user_id: Optional[int] = None) -> Agent:
         """
         Create a new ADK Agent with the specified configuration.
         This creates a multi-agent system with:
@@ -98,7 +193,9 @@ class ChatAgentManager:
             Configured Agent instance (coordinator with sub-agents)
         """
         # Store API key for later use (avoid setting in os.environ for thread safety)
-        os.environ['GOOGLE_API_KEY'] = api_key
+        # Only set for AI Studio; Vertex AI uses GOOGLE_GENAI_USE_VERTEXAI instead
+        if api_key and api_key != "vertex-ai-backend":
+            os.environ['GOOGLE_API_KEY'] = api_key
         
         # Configure generation settings
         generation_config = types.GenerateContentConfig(
@@ -150,12 +247,13 @@ class ChatAgentManager:
             description="XIAOICE coordinator that manages conversations, delegates analysis tasks, receives results from specialists, and interacts directly with users",
             instruction=COORDINATOR_AGENT_INSTRUCTION,
             generate_content_config=generation_config,
+            tools=[_make_retrieve_knowledge_tool(user_id)],  # RAG knowledge retrieval tool (user-scoped)
             sub_agents=[pdf_agent, media_agent],  # Register sub-agents
         )
         
         return coordinator_agent
     
-    def get_or_create_agent(self, user_id: str, api_key: str, model_name: str = "gemini-3-flash") -> Agent:
+    def get_or_create_agent(self, user_id: str, api_key: str, model_name: str = "gemini-3-flash", _numeric_user_id: Optional[int] = None) -> Agent:
         """
         Get an existing agent for a user or create a new one.
         
@@ -167,6 +265,12 @@ class ChatAgentManager:
         Returns:
             Agent instance for the user
         """
+        # Parse numeric user_id for RAG API key lookup (user_id here may be a string)
+        if _numeric_user_id is None:
+            try:
+                _numeric_user_id = int(user_id)
+            except (ValueError, TypeError):
+                _numeric_user_id = None
         agent_key = f"{user_id}_{model_name}"
         
         # Store API key per user for later retrieval
@@ -174,7 +278,7 @@ class ChatAgentManager:
         
         # Check if we need to create a new agent (different model or new user)
         if agent_key not in self._agents:
-            self._agents[agent_key] = self._create_agent(api_key, model_name)
+            self._agents[agent_key] = self._create_agent(api_key, model_name, user_id=_numeric_user_id)
         
         return self._agents[agent_key]
     
@@ -392,9 +496,15 @@ def _format_error_message(error: Exception) -> str:
     elif "api key" in error_str and ("invalid" in error_str or "unauthorized" in error_str):
         return ("API key error: Please check that your Google AI API key is valid and has the necessary permissions. "
                 "You can verify your API key in the settings page.")
-    elif "quota" in error_str or "rate limit" in error_str:
+    elif "quota" in error_str or "rate limit" in error_str or "429" in error_str or "resource_exhausted" in error_str:
         return ("API quota exceeded: You've reached the usage limit for your Google AI API key. "
-                "Please wait a few minutes before trying again, or check your API usage limits.")
+                "Please wait a few minutes before trying again, or check your API usage limits. "
+                "Pro models have stricter rate limits — try switching to Gemini Flash.")
+    elif any(kw in error_str for kw in ("servererror", "server disconnected", "remoteprotocolerror",
+                                         "remotedisconnected", "500", "502", "503", "504")):
+        return ("Server error: The AI model is temporarily unavailable or overloaded. "
+                "This can happen with preview/Pro models. "
+                "Please try again in a moment, or switch to Gemini Flash for more stable performance.")
     else:
         return f"Error: Failed to generate response. {str(error)}"
 
@@ -752,27 +862,70 @@ def generate_streaming_response(
         Text chunks as they are generated
     """
     # Route to the appropriate provider
-    if provider == 'vertex_ai':
-        # Use Vertex AI streaming
-        yield from _generate_vertex_streaming_response(
-            message=message,
-            image_path=image_path,
-            image_mime_type=image_mime_type,
-            history=history,
-            model_name=model_name or 'gemini-1.5-flash',
-            vertex_config=vertex_config,
-            username=username
+    if provider == 'vertex_ai' and vertex_config:
+        # Configure ADK to use Vertex AI as backend via environment variables.
+        # ADK's genai Client auto-detects the backend from these env vars.
+        service_account_json = vertex_config.get('service_account')
+        project_id = vertex_config.get('project_id')
+        location = vertex_config.get('location', 'us-central1')
+
+        if not service_account_json or not project_id:
+            yield "Error: Vertex AI service account and project ID are required."
+            return
+
+        # Write service-account JSON to a temp file for GOOGLE_APPLICATION_CREDENTIALS
+        _sa_tmp = tempfile.NamedTemporaryFile(
+            mode='w', suffix='.json', prefix='vertex_sa_', delete=False
         )
-        return
-    
-    # AI Studio / ADK path
+        try:
+            _sa_tmp.write(service_account_json if isinstance(service_account_json, str)
+                          else json.dumps(service_account_json))
+            _sa_tmp.flush()
+            _sa_tmp.close()
+
+            os.environ['GOOGLE_GENAI_USE_VERTEXAI'] = 'true'
+            os.environ['GOOGLE_CLOUD_PROJECT'] = project_id
+            os.environ['GOOGLE_CLOUD_LOCATION'] = location
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = _sa_tmp.name
+
+            # Remove AI Studio key so ADK doesn't accidentally use it
+            _saved_api_key = os.environ.pop('GOOGLE_API_KEY', None)
+
+            logger.info("Vertex AI ADK mode: project=%s  location=%s  model=%s",
+                        project_id, location, model_name)
+        except Exception as exc:
+            logger.error("Failed to configure Vertex AI env: %s", exc)
+            yield f"Error configuring Vertex AI: {exc}"
+            return
+
+        # Use a distinct agent_key suffix so Vertex agents aren't mixed with
+        # AI Studio agents in the cache.
+        vertex_user_id = f"{user_id}_vertex"
+        try:
+            # Ensure a dummy api_key is passed (not used for Vertex, but avoids
+            # validation errors in our wrapper code).
+            _dummy_api_key = "vertex-ai-backend"
+        except Exception:
+            pass
+    else:
+        vertex_user_id = None
+        _saved_api_key = None
+        _sa_tmp = None
+
+    # AI Studio / ADK path (also used by Vertex AI now)
     # Validate and set defaults
-    if api_key is None:
-        api_key = os.environ.get('GOOGLE_API_KEY')
-    
-    if not api_key:
-        yield "Error: API key is required but not provided. Please set your API key in the settings."
-        return
+    _is_vertex = vertex_user_id is not None
+
+    if not _is_vertex:
+        # AI Studio needs an API key
+        if api_key is None:
+            api_key = os.environ.get('GOOGLE_API_KEY')
+        if not api_key:
+            yield "Error: API key is required but not provided. Please set your API key in the settings."
+            return
+    else:
+        # Vertex AI — api_key not needed; use placeholder for internal cache logic
+        api_key = api_key or "vertex-ai-backend"
     
     if model_name is None:
         model_name = os.environ.get('GEMINI_MODEL', 'gemini-3-flash')
@@ -814,18 +967,20 @@ def generate_streaming_response(
         return
     
     try:
-        # Set the API key in environment for ADK
-        os.environ['GOOGLE_API_KEY'] = api_key
+        # Set the API key in environment for ADK (AI Studio only)
+        if not _is_vertex:
+            os.environ['GOOGLE_API_KEY'] = api_key
         
-        # Get the Runner for this user
-        runner = _agent_manager.get_or_create_runner(user_id, api_key, model_name)
+        # Get the Runner for this user (Vertex gets its own cache namespace)
+        effective_uid = vertex_user_id if _is_vertex else user_id
+        runner = _agent_manager.get_or_create_runner(effective_uid, api_key, model_name)
         
         # Use persistent session ID tied to conversation
-        session_id = _agent_manager.get_session_id(user_id, conversation_id)
+        session_id = _agent_manager.get_session_id(effective_uid, conversation_id)
         
         # Ensure the session exists before using it (sync version)
-        _agent_manager.ensure_session_exists(user_id, session_id)
-        logger.info(f"Using session: {session_id} for user: {user_id}, conversation: {conversation_id}")
+        _agent_manager.ensure_session_exists(effective_uid, session_id)
+        logger.info(f"Using session: {session_id} for user: {effective_uid}, conversation: {conversation_id}")
         
         # Create the content message for ADK
         user_content = types.Content(
@@ -851,14 +1006,17 @@ def generate_streaming_response(
                 
                 async def stream_chunks():
                     """Async function to stream chunks into the queue."""
-                    try:
+                    # No retry — if Pro fails, fallback to Flash immediately
+                    is_pro_model = 'pro' in (model_name or '').lower()
+
+                    async def _try_stream(target_runner, uid, sid, content):
+                        """Attempt streaming once. Raises on failure."""
                         has_content = False
-                        async for event in runner.run_async(
-                            user_id=user_id,
-                            session_id=session_id,
-                            new_message=user_content
+                        async for event in target_runner.run_async(
+                            user_id=uid,
+                            session_id=sid,
+                            new_message=content
                         ):
-                            # Handle different event types from ADK
                             if hasattr(event, 'content') and event.content:
                                 if hasattr(event.content, 'parts') and event.content.parts:
                                     for part in event.content.parts:
@@ -868,13 +1026,50 @@ def generate_streaming_response(
                             elif hasattr(event, 'text') and getattr(event, 'text', None):
                                 chunk_queue.put(getattr(event, 'text'))
                                 has_content = True
-                        
                         if not has_content:
                             chunk_queue.put("I apologize, but I couldn't generate a response. Please try again.")
-                    except Exception as e:
-                        exception_holder[0] = e
+
+                    try:
+                        await _try_stream(runner, effective_uid, session_id, user_content)
+                    except Exception as primary_err:
+                        primary_str = str(primary_err)
+                        is_model_unavailable = any(kw in primary_str for kw in (
+                            "503", "UNAVAILABLE", "high demand",
+                            "RESOURCE_EXHAUSTED", "overloaded",
+                        ))
+                        # --- Automatic fallback: Pro → Flash ---
+                        if is_pro_model and is_model_unavailable:
+                            fallback_model = (model_name or '').replace('pro', 'flash')
+                            logger.warning(
+                                "Model %s unavailable — falling back to %s",
+                                model_name, fallback_model,
+                            )
+                            # Notify user about the fallback, with blank line before AI response
+                            chunk_queue.put(
+                                f"⚠️ {model_name} is currently experiencing high demand on Google's servers. "
+                                f"Automatically switching to **{fallback_model}** for this response.\n\n*\n\n"
+                            )
+                            try:
+                                fb_runner = _agent_manager.get_or_create_runner(
+                                    effective_uid, api_key, fallback_model
+                                )
+                                fb_session = _agent_manager.get_session_id(effective_uid, conversation_id)
+                                await _agent_manager.ensure_session_exists_async(effective_uid, fb_session)
+                                await _try_stream(fb_runner, effective_uid, fb_session, user_content)
+                            except Exception as fb_err:
+                                logger.error("Fallback model %s also failed: %s", fallback_model, fb_err)
+                                exception_holder[0] = primary_err  # Report original error
+                        else:
+                            # Not a Pro model or not an availability error — report as-is
+                            runner_key = f"{effective_uid}_{model_name}"
+                            _agent_manager._runners.pop(runner_key, None)
+                            _agent_manager._agents.pop(runner_key, None)
+                            logger.error(
+                                "ADK stream failed (%s): %s",
+                                type(primary_err).__name__, primary_str[:300],
+                            )
+                            exception_holder[0] = primary_err
                     finally:
-                        # Signal completion
                         chunk_queue.put(None)
                 
                 # Run the async streaming function
@@ -914,6 +1109,21 @@ def generate_streaming_response(
         logger.error(f"Error generating streaming response: {e}")
         traceback.print_exc()
         yield _format_error_message(e)
+    finally:
+        # --- Vertex AI env-var cleanup ---
+        if _is_vertex:
+            for _var in ('GOOGLE_GENAI_USE_VERTEXAI', 'GOOGLE_CLOUD_PROJECT',
+                         'GOOGLE_CLOUD_LOCATION', 'GOOGLE_APPLICATION_CREDENTIALS'):
+                os.environ.pop(_var, None)
+            # Restore the original AI Studio API key if one was saved
+            if _saved_api_key is not None:
+                os.environ['GOOGLE_API_KEY'] = _saved_api_key
+            # Delete temporary service-account file
+            if _sa_tmp is not None:
+                try:
+                    os.unlink(_sa_tmp.name)
+                except OSError:
+                    pass
 
 
 # Export the agent manager for external access if needed

@@ -47,7 +47,7 @@ class ChatAPI {
      * @param {function} onError - 錯誤時的回調函數
      * @returns {Promise} - 可取消的 Promise
      */
-    async streamChatMessage(userMessage, imageFile = null, imageUrl = null, imageMimeType = null, currentLanguage = 'zh-TW', history = null, onChunk, onComplete, onError) {
+    async streamChatMessage(userMessage, imageFile = null, imageUrl = null, imageMimeType = null, currentLanguage = 'zh-TW', history = null, onChunk, onComplete, onError, conversationId = null) {
         const formData = new FormData();
         formData.append('message', userMessage);
         
@@ -63,6 +63,11 @@ class ChatAPI {
         if (history) {
             // attach conversation history as JSON string
             formData.append('history', JSON.stringify(history));
+        }
+
+        // Send conversation_id so the backend uses per-conversation ADK sessions
+        if (conversationId) {
+            formData.append('conversation_id', conversationId);
         }
 
         // Get access token from localStorage
@@ -101,9 +106,14 @@ class ChatAPI {
                     
                     for (const line of lines) {
                         if (line.startsWith('data: ')) {
-                            const data = line.slice(6); // Remove 'data: '
-                            if (data.trim()) {
-                                onChunk(data);
+                            const raw = line.slice(6); // Remove 'data: '
+                            if (raw.trim()) {
+                                // Server JSON-encodes chunks to preserve newlines in SSE.
+                                try {
+                                    onChunk(JSON.parse(raw));
+                                } catch (_) {
+                                    onChunk(raw); // fallback for non-JSON data
+                                }
                             }
                         }
                     }
@@ -115,9 +125,13 @@ class ChatAPI {
                 const lines = buffer.split('\n');
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
-                        const data = line.slice(6);
-                        if (data.trim()) {
-                            onChunk(data);
+                        const raw = line.slice(6);
+                        if (raw.trim()) {
+                            try {
+                                onChunk(JSON.parse(raw));
+                            } catch (_) {
+                                onChunk(raw);
+                            }
                         }
                     }
                 }

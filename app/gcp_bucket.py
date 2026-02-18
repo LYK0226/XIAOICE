@@ -1,9 +1,14 @@
 import os
 from google.cloud import storage
+from google.api_core.exceptions import NotFound
 import tempfile
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import uuid
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 def get_gcs_client():
     credentials_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS') or os.environ.get('GCS_CREDENTIALS_PATH')
@@ -289,3 +294,78 @@ def generate_signed_url(storage_key, bucket_name=None, expiration_minutes=60):
     )
     
     return signed_url
+
+
+# ---------------------------------------------------------------------------
+# RAG document storage helpers
+# ---------------------------------------------------------------------------
+
+def upload_rag_document(file_obj, original_filename, content_type=None):
+    """
+    Upload a document to the RAG folder in GCS.
+
+    Args:
+        file_obj:           File-like object (from request.files).
+        original_filename:  Original filename for extension preservation.
+        content_type:       MIME type override.
+
+    Returns:
+        tuple: (gcs_path, file_size)  where gcs_path is the GCS object key
+               (e.g. "RAG/a1b2c3d4_20260216120000.pdf").
+    """
+    from flask import current_app
+    import os as _os
+
+    rag_folder = current_app.config.get("RAG_GCS_FOLDER", "RAG") if current_app else _os.environ.get("RAG_GCS_FOLDER", "RAG")
+    bucket_name = _os.environ.get("GCS_BUCKET_NAME") or (current_app.config.get("GCS_BUCKET_NAME") if current_app else None)
+    if not bucket_name:
+        raise ValueError("GCS_BUCKET_NAME not configured")
+
+    # Measure file size
+    file_obj.seek(0, 2)
+    file_size = file_obj.tell()
+    file_obj.seek(0)
+
+    # Build unique GCS key
+    fname = secure_filename(original_filename)
+    ext = fname.rsplit(".", 1)[-1] if "." in fname else "bin"
+    ts = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
+    uid = str(uuid.uuid4())[:8]
+    gcs_path = f"{rag_folder}/{uid}_{ts}.{ext}"
+
+    # Upload
+    client = get_gcs_client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(gcs_path)
+    ct = content_type or getattr(file_obj, "content_type", None) or "application/octet-stream"
+    blob.upload_from_file(file_obj, content_type=ct)
+
+    return gcs_path, file_size
+
+
+def delete_rag_document(gcs_path):
+    """
+    Delete a RAG document from GCS by its object path.
+
+    Args:
+        gcs_path: The GCS object key (e.g. "RAG/a1b2c3d4_2026.pdf").
+
+    Returns:
+        bool: True if deleted, False on error.
+    """
+    try:
+        bucket_name = os.environ.get("GCS_BUCKET_NAME")
+        if not bucket_name:
+            raise ValueError("GCS_BUCKET_NAME not configured")
+        client = get_gcs_client()
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(gcs_path)
+        blob.delete()
+        return True
+    except NotFound:
+        # Idempotent delete: if object is already gone, treat as success.
+        logger.info("RAG object already missing in GCS, skipping delete: %s", gcs_path)
+        return True
+    except Exception as e:
+        logger.error("Error deleting RAG document from GCS (%s): %s", gcs_path, e)
+        return False

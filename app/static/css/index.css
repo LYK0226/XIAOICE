@@ -1814,6 +1814,44 @@
     color: #fff;
 }
 
+/* --- Admin Orb (Golden/Authority) --- */
+#admin {
+    /* Golden Shield Gradient */
+    background: radial-gradient(circle at 40% 40%, rgba(255, 215, 0, 0.9), rgba(184, 134, 11, 0.95));
+    border-color: rgba(255, 235, 155, 0.5);
+    animation: orbFloatLarge 6s ease-in-out infinite;
+}
+
+/* Admin Aura/Pulse Glow */
+#admin::before {
+    content: '';
+    position: absolute;
+    top: -10%;
+    left: -10%;
+    width: 120%;
+    height: 120%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(255, 215, 0, 0.4), transparent 70%);
+    z-index: -1;
+    animation: auraPulse 3s infinite;
+}
+
+#admin:hover {
+    transform: scale(1.15) rotate(-5deg);
+    background: radial-gradient(circle at 40% 40%, rgba(255, 230, 100, 0.95), rgba(218, 165, 32, 0.95));
+    box-shadow: 
+        0 20px 50px rgba(255, 215, 0, 0.5),
+        inset 0 0 30px rgba(255, 255, 255, 0.5),
+        0 0 40px rgba(255, 215, 0, 0.3);
+    border-color: rgba(255, 255, 255, 0.9);
+}
+
+#admin:hover i {
+    transform: scale(1.2);
+    color: #fff;
+    filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.8));
+}
+
 /* --- Stylish Glass Tooltip --- */
 .floating-btn span {
     position: absolute;
@@ -2262,4 +2300,18 @@ body.dark-theme .floating-btn span {
 
 body.dark-theme .floating-btn span::before {
     border-color: transparent rgba(45, 39, 54, 0.95) transparent transparent;
+}
+
+/* Admin Button Dark Theme */
+body.dark-theme #admin {
+    background: radial-gradient(circle at 40% 40%, rgba(255, 215, 0, 0.85), rgba(184, 134, 11, 0.9));
+    border-color: rgba(255, 235, 155, 0.4);
+}
+
+body.dark-theme #admin:hover {
+    background: radial-gradient(circle at 40% 40%, rgba(255, 230, 100, 0.9), rgba(218, 165, 32, 0.95));
+    box-shadow: 
+        0 20px 50px rgba(255, 215, 0, 0.4),
+        inset 0 0 30px rgba(255, 255, 255, 0.4),
+        0 0 40px rgba(255, 215, 0, 0.25);
 }

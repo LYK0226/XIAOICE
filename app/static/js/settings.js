@@ -1659,15 +1659,19 @@ function updateSummaryApiKeyOptions(apiKeys, selectedId) {
     }
 }
 
-async function persistProviderSelection(selectedProvider) {
+async function persistProviderSelection(selectedProvider, selectedModel) {
     try {
+        const body = { ai_provider: selectedProvider };
+        if (selectedModel) {
+            body.ai_model = selectedModel;
+        }
         const response = await fetch('/api/user/model', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${localStorage.getItem('access_token')}`
             },
-            body: JSON.stringify({ ai_provider: selectedProvider })
+            body: JSON.stringify(body)
         });
 
         if (!response.ok) {
@@ -1738,7 +1742,8 @@ async function applyProviderSelection(selectedProvider, options = {}) {
     }
 
     if (persist) {
-        await persistProviderSelection(selectedProvider);
+        // Persist both provider and the newly-selected model
+        await persistProviderSelection(selectedProvider, advancedConfigState.model);
     }
 }
 

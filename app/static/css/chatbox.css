@@ -1266,5 +1266,57 @@ body.dark-theme .webcam-content {
     font-size: 16px;
 }
 
+/* ===== Markdown inside bot messages ===== */
+.bot-message-container .message-content ol,
+.bot-message-container .message-content ul {
+    margin: 6px 0 6px 1.4em;
+    padding: 0;
+    line-height: 1.7;
+}
+
+.bot-message-container .message-content li {
+    margin-bottom: 3px;
+}
+
+.bot-message-container .message-content h2,
+.bot-message-container .message-content h3,
+.bot-message-container .message-content h4 {
+    margin: 10px 0 4px;
+    line-height: 1.3;
+}
+
+.bot-message-container .message-content h2 { font-size: 1.15em; }
+.bot-message-container .message-content h3 { font-size: 1.05em; }
+.bot-message-container .message-content h4 { font-size: 1em; }
+
+.bot-message-container .message-content code {
+    background: rgba(168, 155, 197, 0.15);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.bot-message-container .message-content pre {
+    background: rgba(168, 155, 197, 0.1);
+    padding: 10px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 8px 0;
+}
+
+.bot-message-container .message-content pre code {
+    background: none;
+    padding: 0;
+}
+
+body.dark-theme .bot-message-container .message-content code {
+    background: rgba(168, 155, 197, 0.25);
+}
+
+body.dark-theme .bot-message-container .message-content pre {
+    background: rgba(0, 0, 0, 0.3);
+}
+
 /* Settings styles moved to settings.css */
 

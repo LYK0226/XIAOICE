@@ -18,6 +18,64 @@ const retakeBtn = document.getElementById('retakeBtn');
 const usePhotoBtn = document.getElementById('usePhotoBtn');
 const filePreviewContainer = document.getElementById('filePreviewContainer');
 
+/**
+ * Lightweight Markdown → HTML renderer.
+ * Handles: headings, bold, italic, numbered/bullet lists, code blocks, inline code, line breaks.
+ * HTML entities are escaped first to prevent XSS.
+ */
+function renderMarkdown(text) {
+    if (!text) return '';
+
+    // 1. Escape HTML entities
+    let html = text
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+
+    // 2. Fenced code blocks (```...```)
+    html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) => {
+        return `<pre><code>${code.trim()}</code></pre>`;
+    });
+
+    // 3. Inline code (`...`)
+    html = html.replace(/`([^`\n]+)`/g, '<code>$1</code>');
+
+    // 4. Headings (### / ## / #)
+    html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+    html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+    html = html.replace(/^# (.+)$/gm, '<h2>$1</h2>');
+
+    // 5. Bold (**text**) and Italic (*text*)
+    html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
+
+    // 6. Lists — convert blocks of consecutive list lines
+    // Numbered lists: lines starting with "1. ", "2. ", etc.
+    html = html.replace(/(^|\n)((?:\d+\.\s.+(?:\n|$))+)/g, (_m, pre, block) => {
+        const items = block.trim().split('\n').map(line =>
+            `<li>${line.replace(/^\d+\.\s/, '')}</li>`
+        ).join('');
+        return `${pre}<ol>${items}</ol>`;
+    });
+
+    // Bullet lists: lines starting with "- " or "* "
+    html = html.replace(/(^|\n)((?:[-*]\s.+(?:\n|$))+)/g, (_m, pre, block) => {
+        const items = block.trim().split('\n').map(line =>
+            `<li>${line.replace(/^[-*]\s/, '')}</li>`
+        ).join('');
+        return `${pre}<ul>${items}</ul>`;
+    });
+
+    // 7. Remaining newlines → <br> (but not inside <pre> or after block elements)
+    html = html.replace(/\n/g, '<br>');
+
+    // Clean up extra <br> around block elements
+    html = html.replace(/<br>\s*(<(?:ol|ul|li|h[2-4]|pre|\/ol|\/ul|\/pre))/g, '$1');
+    html = html.replace(/(<\/(?:ol|ul|h[2-4]|pre)>)\s*<br>/g, '$1');
+
+    return html;
+}
+
 // Language support
 let currentLanguage = 'zh-TW'; // Default to Traditional Chinese
 
@@ -279,7 +337,12 @@ function createMessage(text, isUser = false) {
     messageContent.className = 'message-content';
     
     const paragraph = document.createElement('p');
-    paragraph.textContent = text;
+    if (isUser) {
+        paragraph.textContent = text;
+    } else {
+        // Render Markdown for bot messages (history, loaded conversations, etc.)
+        paragraph.innerHTML = renderMarkdown(text);
+    }
     messageContent.appendChild(paragraph);
 
     if (!isUser && text.trim()) {
@@ -400,7 +463,11 @@ function createImageMessage(imageData, text, isUser = true) {
     // Add text if provided
     if (text) {
         const paragraph = document.createElement('p');
-        paragraph.textContent = text;
+        if (isUser) {
+            paragraph.textContent = text;
+        } else {
+            paragraph.innerHTML = renderMarkdown(text);
+        }
         messageContent.appendChild(paragraph);
     }
     
@@ -1030,7 +1097,6 @@ async function sendMessageWithFiles() {
             const mediaUrl = userMessageResponse.message.uploaded_files[mediaIndex];
             const mediaMimeType = mediaFile.type;
 
-            let currentTypingIndex = 0;
             let pendingText = '';
             
             await chatAPI.streamChatMessage(
@@ -1042,22 +1108,13 @@ async function sendMessageWithFiles() {
                 conversationHistory,
                 (chunk) => {
                     pendingText += chunk;
-                    
-                    const typePendingText = () => {
-                        if (currentTypingIndex < pendingText.length) {
-                            botMessageContent.textContent = pendingText.slice(0, currentTypingIndex + 1);
-                            currentTypingIndex++;
-                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                            setTimeout(typePendingText, 30);
-                        }
-                    };
-                    
-                    if (currentTypingIndex < pendingText.length) {
-                        typePendingText();
-                    }
+                    botMessageContent.innerHTML = renderMarkdown(pendingText);
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
                 },
                 () => {
                     fullResponse = pendingText;
+                    // Final render to ensure complete markdown
+                    botMessageContent.innerHTML = renderMarkdown(fullResponse);
                     botMessageElement.classList.remove('typing-indicator');
                     const speakBtn = document.createElement('button');
                     speakBtn.className = 'speak-btn';
@@ -1077,11 +1134,11 @@ async function sendMessageWithFiles() {
                     speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
                     speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
                     botMessageElement.querySelector('.message-content').appendChild(speakBtn);
-                }
+                },
+                conversationId
             );
         } else {
             // Use streaming for text messages
-            let currentTypingIndex = 0;
             let pendingText = '';
             
             await chatAPI.streamChatMessage(
@@ -1093,22 +1150,13 @@ async function sendMessageWithFiles() {
                 conversationHistory,
                 (chunk) => {
                     pendingText += chunk;
-                    
-                    const typePendingText = () => {
-                        if (currentTypingIndex < pendingText.length) {
-                            botMessageContent.textContent = pendingText.slice(0, currentTypingIndex + 1);
-                            currentTypingIndex++;
-                            messagesDiv.scrollTop = messagesDiv.scrollHeight;
-                            setTimeout(typePendingText, 30);
-                        }
-                    };
-                    
-                    if (currentTypingIndex < pendingText.length) {
-                        typePendingText();
-                    }
+                    botMessageContent.innerHTML = renderMarkdown(pendingText);
+                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
                 },
                 () => {
                     fullResponse = pendingText;
+                    // Final render to ensure complete markdown
+                    botMessageContent.innerHTML = renderMarkdown(fullResponse);
                     botMessageElement.classList.remove('typing-indicator');
                     const speakBtn = document.createElement('button');
                     speakBtn.className = 'speak-btn';
@@ -1128,7 +1176,8 @@ async function sendMessageWithFiles() {
                     speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
                     speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
                     botMessageElement.querySelector('.message-content').appendChild(speakBtn);
-                }
+                },
+                conversationId
             );
         }
         
@@ -1556,7 +1605,11 @@ function createMessageWithUploadedFiles(text, uploadedFiles, isUser = true) {
     // Add text if provided
     if (text) {
         const paragraph = document.createElement('p');
-        paragraph.textContent = text;
+        if (isUser) {
+            paragraph.textContent = text;
+        } else {
+            paragraph.innerHTML = renderMarkdown(text);
+        }
         messageContent.appendChild(paragraph);
     }
     
