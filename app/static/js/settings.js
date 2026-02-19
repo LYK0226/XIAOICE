@@ -1388,7 +1388,7 @@ function initializeTheme() {
 // Language options in settings
 const langOptions = document.querySelectorAll('.lang-option');
 langOptions.forEach(option => {
-    option.addEventListener('click', () => {
+    option.addEventListener('click', async () => {
         langOptions.forEach(o => {
             o.classList.remove('active');
             o.querySelector('i').className = 'fas fa-circle';
@@ -1397,6 +1397,19 @@ langOptions.forEach(option => {
         option.querySelector('i').className = 'fas fa-check-circle';
         const lang = option.getAttribute('data-lang');
         console.log('Language changed to:', lang);
+        
+        // Load translations for the new language
+        try {
+            const response = await fetch(`/static/i18n/${lang}.json`, { cache: 'no-store' });
+            if (response.ok) {
+                const data = await response.json();
+                storeTranslationCache(lang, data);
+                window.translations = window.translations || {};
+                window.translations[lang] = data;
+            }
+        } catch (error) {
+            console.warn('Failed to load translations for', lang, error);
+        }
         
         // Update current language and UI
         if (typeof currentLanguage !== 'undefined') {
@@ -1429,6 +1442,8 @@ langOptions.forEach(option => {
             'en': 'Language switched to English',
             'ja': '言語が日本語に切り替わりました'
         };
+        
+        window.dispatchEvent(new CustomEvent('languageChanged', { detail: { lang } }));
         
         const bannerMessage = bannerMessages[lang] || bannerMessages['en'];
         showBannerMessage(bannerMessage);
@@ -1518,8 +1533,8 @@ const modelOptions = {
     'vertex_ai': [
         { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
         { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-        { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
-        { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro' }
+        //{ value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
+        //{ value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro' }
     ]
 };
 

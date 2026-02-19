@@ -16,258 +16,11 @@
 
 (function () {
     'use strict';
-
-    const videoAccessTranslations = {
-        'zh-TW': {
-            ok: '確定',
-            analysisPreparing: '正在整理分析結果...',
-            analysisHint: '即將顯示分析結果',
-            errorFetchVideo: '無法取得影片詳情（HTTP {status}）',
-            errorStartAnalysis: '無法開始分析（HTTP {status}）',
-            errorTranscriptionFailed: '轉錄失敗，無法開始分析',
-            statusTranscribing: '✅ 已上載成功！正在轉錄中...（{status}）',
-            errorTranscriptionTimeout: '轉錄時間較長，請稍後再試',
-            errorAnalysisFailed: '分析失敗，請稍後再試',
-            statusAnalyzing: '✅ 已開始分析...（{status}）',
-            errorAnalysisTimeout: '分析時間較長，請稍後再試',
-            progressUploading: '上載中... {pct}%',
-            errorUploadFailedHttp: '上載失敗（HTTP {status}）',
-            successUploadPreparing: '上載成功！正在準備轉錄...',
-            errorUploadGeneric: '上載錯誤，請重試',
-            errorSelectChild: '⚠️ 請先選擇分析對象（兒童）再提交影片。',
-            submitUploading: '<i class="fas fa-spinner fa-spin"></i> 上載中...',
-            submitStart: '開始上載...',
-            submitDone: '<i class="fas fa-check"></i> 已提交',
-            errorMissingVideoId: '❌ 找不到影片 ID，請重試',
-            analysisStarting: '正在啟動 AI 分析...',
-            analysisStartFailed: '分析啟動失敗',
-            submitRetry: '<i class="fas fa-cloud-upload-alt"></i> 重新提交',
-            errorUploadRetry: '上載失敗，請重試',
-            errorGeneric: '失敗',
-            childPlaceholder: '— 請選擇兒童 —',
-            childAgeMonths: '{months}個月',
-            childAgeDetail: '年齡：{months} 個月（{years} 歲）',
-            childLoadFailed: '⚠️ 無法載入兒童資料，請重新整理頁面。',
-            reportStatusPending: '⏳ 排隊中...',
-            reportStatusProcessing: '🔄 AI 正在分析影片...',
-            reportQueryFailed: '查詢報告失敗',
-            reportFailed: '分析失敗：{error}',
-            reportProcessing: '分析中...',
-            reportHint: '這可能需要 1-3 分鐘，取決於影片長度',
-            reportTimeout: '⏰ 分析時間較長，請稍後在報告列表中查看結果。',
-            reportTitle: '🧒 兒童發展影片分析報告',
-            reportChildLabel: '兒童：',
-            reportAgeLabel: '年齡：',
-            reportSummaryTitle: '📋 綜合摘要',
-            reportMotorTitle: '🏃 身體動作發展',
-            reportLanguageTitle: '🗣️ 語言發展',
-            reportConcerns: '關注事項：',
-            reportRecommendations: '建議：',
-            reportOverallRecommendations: '📌 整體建議',
-            reportDownload: '下載完整報告（PDF）',
-            reportKeep: '保留記錄',
-            reportDiscard: '不保留記錄',
-            reportDiscardConfirm: '確定不保留此記錄嗎？影片和分析結果將被永久刪除。',
-            reportDiscarding: '<i class="fas fa-spinner fa-spin"></i> 刪除中...',
-            reportDiscardFailed: '刪除失敗：{error}',
-            reportDiscardFailedGeneric: '未知錯誤',
-            reportDeleteVideoFailed: '刪除影片失敗',
-            reportDeleteReportFailed: '刪除報告失敗',
-            reportNoItems: '無',
-            reportCompleted: '分析已完成',
-            reportStatusTypical: '✅ 正常',
-            reportStatusConcern: '⚠️ 需要關注',
-            reportStatusNeedsAttention: '🔴 需要注意'
-        },
-        'zh-CN': {
-            ok: '确定',
-            analysisPreparing: '正在整理分析结果...',
-            analysisHint: '即将显示分析结果',
-            errorFetchVideo: '无法获取视频详情（HTTP {status}）',
-            errorStartAnalysis: '无法开始分析（HTTP {status}）',
-            errorTranscriptionFailed: '转录失败，无法开始分析',
-            statusTranscribing: '✅ 已上传成功！正在转录中...（{status}）',
-            errorTranscriptionTimeout: '转录时间较长，请稍后再试',
-            errorAnalysisFailed: '分析失败，请稍后再试',
-            statusAnalyzing: '✅ 已开始分析...（{status}）',
-            errorAnalysisTimeout: '分析时间较长，请稍后再试',
-            progressUploading: '上传中... {pct}%',
-            errorUploadFailedHttp: '上传失败（HTTP {status}）',
-            successUploadPreparing: '上传成功！正在准备转录...',
-            errorUploadGeneric: '上传错误，请重试',
-            errorSelectChild: '⚠️ 请先选择分析对象（儿童）再提交视频。',
-            submitUploading: '<i class="fas fa-spinner fa-spin"></i> 上传中...',
-            submitStart: '开始上传...',
-            submitDone: '<i class="fas fa-check"></i> 已提交',
-            errorMissingVideoId: '❌ 找不到视频 ID，请重试',
-            analysisStarting: '正在启动 AI 分析...',
-            analysisStartFailed: '分析启动失败',
-            submitRetry: '<i class="fas fa-cloud-upload-alt"></i> 重新提交',
-            errorUploadRetry: '上传失败，请重试',
-            errorGeneric: '失败',
-            childPlaceholder: '— 请选择儿童 —',
-            childAgeMonths: '{months}个月',
-            childAgeDetail: '年龄：{months} 个月（{years} 岁）',
-            childLoadFailed: '⚠️ 无法加载儿童资料，请刷新页面。',
-            reportStatusPending: '⏳ 排队中...',
-            reportStatusProcessing: '🔄 AI 正在分析视频...',
-            reportQueryFailed: '查询报告失败',
-            reportFailed: '分析失败：{error}',
-            reportProcessing: '分析中...',
-            reportHint: '这可能需要 1-3 分钟，取决于视频长度',
-            reportTimeout: '⏰ 分析时间较长，请稍后在报告列表中查看结果。',
-            reportTitle: '🧒 儿童发展视频分析报告',
-            reportChildLabel: '儿童：',
-            reportAgeLabel: '年龄：',
-            reportSummaryTitle: '📋 综合摘要',
-            reportMotorTitle: '🏃 身体动作发展',
-            reportLanguageTitle: '🗣️ 语言发展',
-            reportConcerns: '关注事项：',
-            reportRecommendations: '建议：',
-            reportOverallRecommendations: '📌 整体建议',
-            reportDownload: '下载完整报告（PDF）',
-            reportKeep: '保留记录',
-            reportDiscard: '不保留记录',
-            reportDiscardConfirm: '确定不保留此记录吗？视频和分析结果将被永久删除。',
-            reportDiscarding: '<i class="fas fa-spinner fa-spin"></i> 删除中...',
-            reportDiscardFailed: '删除失败：{error}',
-            reportDiscardFailedGeneric: '未知错误',
-            reportDeleteVideoFailed: '删除视频失败',
-            reportDeleteReportFailed: '删除报告失败',
-            reportNoItems: '无',
-            reportCompleted: '分析已完成',
-            reportStatusTypical: '✅ 正常',
-            reportStatusConcern: '⚠️ 需要关注',
-            reportStatusNeedsAttention: '🔴 需要注意'
-        },
-        en: {
-            ok: 'OK',
-            analysisPreparing: 'Preparing analysis results...',
-            analysisHint: 'Showing results shortly',
-            errorFetchVideo: 'Unable to fetch video details (HTTP {status})',
-            errorStartAnalysis: 'Unable to start analysis (HTTP {status})',
-            errorTranscriptionFailed: 'Transcription failed, cannot start analysis',
-            statusTranscribing: '✅ Upload complete! Transcribing... ({status})',
-            errorTranscriptionTimeout: 'Transcription is taking longer. Please try again later.',
-            errorAnalysisFailed: 'Analysis failed. Please try again later.',
-            statusAnalyzing: '✅ Analysis started... ({status})',
-            errorAnalysisTimeout: 'Analysis is taking longer. Please try again later.',
-            progressUploading: 'Uploading... {pct}%',
-            errorUploadFailedHttp: 'Upload failed (HTTP {status})',
-            successUploadPreparing: 'Upload complete! Preparing transcription...',
-            errorUploadGeneric: 'Upload error. Please retry.',
-            errorSelectChild: '⚠️ Please select a child before submitting the video.',
-            submitUploading: '<i class="fas fa-spinner fa-spin"></i> Uploading...',
-            submitStart: 'Starting upload...',
-            submitDone: '<i class="fas fa-check"></i> Submitted',
-            errorMissingVideoId: '❌ Missing video ID. Please retry.',
-            analysisStarting: 'Starting AI analysis...',
-            analysisStartFailed: 'Failed to start analysis',
-            submitRetry: '<i class="fas fa-cloud-upload-alt"></i> Retry Submit',
-            errorUploadRetry: 'Upload failed. Please retry.',
-            errorGeneric: 'Failed',
-            childPlaceholder: '— Select a child —',
-            childAgeMonths: '{months} months',
-            childAgeDetail: 'Age: {months} months ({years} years)',
-            childLoadFailed: '⚠️ Unable to load child profiles. Please refresh.',
-            reportStatusPending: '⏳ In queue...',
-            reportStatusProcessing: '🔄 AI is analyzing the video...',
-            reportQueryFailed: 'Failed to fetch report',
-            reportFailed: 'Analysis failed: {error}',
-            reportProcessing: 'Analyzing...',
-            reportHint: 'This may take 1-3 minutes depending on video length',
-            reportTimeout: '⏰ Analysis is taking longer. Check the report list later.',
-            reportTitle: '🧒 Child Development Video Report',
-            reportChildLabel: 'Child: ',
-            reportAgeLabel: 'Age: ',
-            reportSummaryTitle: '📋 Summary',
-            reportMotorTitle: '🏃 Motor Development',
-            reportLanguageTitle: '🗣️ Language Development',
-            reportConcerns: 'Concerns:',
-            reportRecommendations: 'Recommendations:',
-            reportOverallRecommendations: '📌 Overall Recommendations',
-            reportDownload: 'Download Full Report (PDF)',
-            reportKeep: 'Keep Record',
-            reportDiscard: 'Discard Record',
-            reportDiscardConfirm: 'Discard this record? The video and analysis will be permanently deleted.',
-            reportDiscarding: '<i class="fas fa-spinner fa-spin"></i> Deleting...',
-            reportDiscardFailed: 'Delete failed: {error}',
-            reportDiscardFailedGeneric: 'Unknown error',
-            reportDeleteVideoFailed: 'Failed to delete video',
-            reportDeleteReportFailed: 'Failed to delete report',
-            reportNoItems: 'None',
-            reportCompleted: 'Analysis complete',
-            reportStatusTypical: '✅ Typical',
-            reportStatusConcern: '⚠️ Needs attention',
-            reportStatusNeedsAttention: '🔴 Needs review'
-        },
-        ja: {
-            ok: 'OK',
-            analysisPreparing: '分析結果を準備中...',
-            analysisHint: 'まもなく分析結果を表示します',
-            errorFetchVideo: '動画の詳細を取得できませんでした（HTTP {status}）',
-            errorStartAnalysis: '分析を開始できませんでした（HTTP {status}）',
-            errorTranscriptionFailed: '文字起こしに失敗しました。分析を開始できません。',
-            statusTranscribing: '✅ アップロード完了！文字起こし中...（{status}）',
-            errorTranscriptionTimeout: '文字起こしに時間がかかっています。後でもう一度お試しください。',
-            errorAnalysisFailed: '分析に失敗しました。後でもう一度お試しください。',
-            statusAnalyzing: '✅ 分析開始...（{status}）',
-            errorAnalysisTimeout: '分析に時間がかかっています。後でもう一度お試しください。',
-            progressUploading: 'アップロード中... {pct}%',
-            errorUploadFailedHttp: 'アップロードに失敗しました（HTTP {status}）',
-            successUploadPreparing: 'アップロード完了！文字起こしを準備中...',
-            errorUploadGeneric: 'アップロードエラー。再試行してください。',
-            errorSelectChild: '⚠️ 動画を送信する前に子どもを選択してください。',
-            submitUploading: '<i class="fas fa-spinner fa-spin"></i> アップロード中...',
-            submitStart: 'アップロード開始...',
-            submitDone: '<i class="fas fa-check"></i> 送信済み',
-            errorMissingVideoId: '❌ 動画 ID が見つかりません。再試行してください。',
-            analysisStarting: 'AI 分析を開始しています...',
-            analysisStartFailed: '分析の開始に失敗しました',
-            submitRetry: '<i class="fas fa-cloud-upload-alt"></i> 再送信',
-            errorUploadRetry: 'アップロードに失敗しました。再試行してください。',
-            errorGeneric: '失敗',
-            childPlaceholder: '— 子どもを選択 —',
-            childAgeMonths: '{months}ヶ月',
-            childAgeDetail: '年齢：{months} ヶ月（{years} 歳）',
-            childLoadFailed: '⚠️ 子ども情報を読み込めませんでした。再読み込みしてください。',
-            reportStatusPending: '⏳ 待機中...',
-            reportStatusProcessing: '🔄 AI が動画を分析中...',
-            reportQueryFailed: 'レポートの取得に失敗しました',
-            reportFailed: '分析に失敗しました：{error}',
-            reportProcessing: '分析中...',
-            reportHint: '動画の長さによって 1-3 分かかる場合があります',
-            reportTimeout: '⏰ 分析に時間がかかっています。後でレポート一覧をご確認ください。',
-            reportTitle: '🧒 児童発達動画分析レポート',
-            reportChildLabel: 'お子様：',
-            reportAgeLabel: '年齢：',
-            reportSummaryTitle: '📋 総合概要',
-            reportMotorTitle: '🏃 運動発達',
-            reportLanguageTitle: '🗣️ 言語発達',
-            reportConcerns: '懸念事項：',
-            reportRecommendations: '提案：',
-            reportOverallRecommendations: '📌 全体的な提案',
-            reportDownload: '完全レポートをダウンロード（PDF）',
-            reportKeep: '記録を保持',
-            reportDiscard: '記録を破棄',
-            reportDiscardConfirm: 'この記録を破棄しますか？動画と分析結果は完全に削除されます。',
-            reportDiscarding: '<i class="fas fa-spinner fa-spin"></i> 削除中...',
-            reportDiscardFailed: '削除に失敗しました：{error}',
-            reportDiscardFailedGeneric: '不明なエラー',
-            reportDeleteVideoFailed: '動画の削除に失敗しました',
-            reportDeleteReportFailed: 'レポートの削除に失敗しました',
-            reportNoItems: 'なし',
-            reportCompleted: '分析が完了しました',
-            reportStatusTypical: '✅ 正常',
-            reportStatusConcern: '⚠️ 要注意',
-            reportStatusNeedsAttention: '🔴 要確認'
-        }
-    };
-
     function resolveVideoAccessLanguage() {
         const stored = localStorage.getItem('preferredLanguage');
         const candidate = stored || (typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW');
-        if (candidate && videoAccessTranslations[candidate]) {
+        const supported = ['zh-TW', 'zh-CN', 'en', 'ja'];
+        if (candidate && supported.includes(candidate)) {
             return candidate;
         }
         return 'en';
@@ -287,8 +40,11 @@
 
     function t(key, vars) {
         const lang = resolveVideoAccessLanguage();
-        const fallback = videoAccessTranslations.en[key] || key;
-        const template = (videoAccessTranslations[lang] && videoAccessTranslations[lang][key]) || fallback;
+        const translations = window.translations && window.translations[lang] ? window.translations[lang] : {};
+        
+        // Try with video. prefix first, then without
+        let template = translations[`video.${key}`] || translations[key] || key;
+        
         return formatTemplate(template, vars);
     }
 
@@ -588,6 +344,8 @@
     // ---------------------------------------------------------------
     //  Child Selector – loads children from /api/children
     // ---------------------------------------------------------------
+    let childSelectChangeHandler = null;
+    
     async function loadChildren() {
         const select = $('childSelect');
         const warning = $('noChildWarning');
@@ -595,12 +353,13 @@
         const ageDisplay = $('childAgeDisplay');
         if (!select) return;
 
+        const previousValue = select.value;
+
         try {
             const res = await authedFetch('/api/children');
             const data = await res.json().catch(() => ({}));
             const children = data?.children || [];
 
-            // Clear existing options except placeholder
             select.innerHTML = `<option value="">${t('childPlaceholder')}</option>`;
             if (children.length === 0) {
                 if (warning) warning.style.display = 'block';
@@ -619,7 +378,14 @@
                 select.appendChild(opt);
             });
 
-            select.addEventListener('change', () => {
+            if (previousValue) {
+                select.value = previousValue;
+            }
+
+            if (childSelectChangeHandler) {
+                select.removeEventListener('change', childSelectChangeHandler);
+            }
+            childSelectChangeHandler = () => {
                 const selectedOpt = select.options[select.selectedIndex];
                 if (ageDisplay && selectedOpt && selectedOpt.value) {
                     const age = parseFloat(selectedOpt.dataset.ageMonths || 0);
@@ -630,7 +396,12 @@
                 } else if (ageDisplay) {
                     ageDisplay.textContent = '';
                 }
-            });
+            };
+            select.addEventListener('change', childSelectChangeHandler);
+
+            if (select.value) {
+                select.dispatchEvent(new Event('change'));
+            }
         } catch (e) {
             console.error('Failed to load children:', e);
             if (warning) {
@@ -920,5 +691,8 @@
     if (okBtn) okBtn.addEventListener('click', closeResultModal);
     if (closeBtn) closeBtn.addEventListener('click', closeResultModal);
     if (backdrop) backdrop.addEventListener('click', closeResultModal);
+    
+    // Re-render child selector when language changes
+    window.addEventListener('languageChanged', loadChildren);
     });
 })();

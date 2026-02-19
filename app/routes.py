@@ -1,5 +1,5 @@
 from datetime import datetime
-from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, Response, send_file, send_from_directory
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, Response, send_file, send_from_directory, make_response
 from flask_jwt_extended import jwt_required, decode_token, get_jwt_identity as _get_jwt_identity
 import os
 import json
@@ -197,10 +197,15 @@ def rag_upload_document():
     try:
         gcs_path, file_size = gcs.upload_rag_document(file, file.filename, file.content_type)
 
+        # Determine correct content type from extension if not provided
+        content_type = file.content_type
+        if not content_type or content_type == 'application/octet-stream':
+            content_type = gcs.get_content_type_from_url(file.filename)
+
         doc = RagDocument(
             filename=gcs_path.split('/')[-1],
             original_filename=file.filename,
-            content_type=file.content_type or 'application/octet-stream',
+            content_type=content_type,
             gcs_path=gcs_path,
             file_size=file_size,
             status='pending',
@@ -1590,14 +1595,32 @@ def serve_file():
     if not gcs_url:
         return jsonify({'error': 'url parameter is required'}), 400
 
+    content_type = request.args.get('content_type')
+    filename = request.args.get('filename')
+
     try:
-        # Download file from GCS and get content type
-        file_data, content_type = gcp_bucket.get_file_data_and_content_type(gcs_url)
+        # If it's a relative path (e.g., "RAG/filename.bin"), construct full URL
+        if not gcs_url.startswith(('https://', 'gs://')):
+            bucket_name = current_app.config.get('GCS_BUCKET_NAME')
+            if bucket_name:
+                gcs_url = f'https://storage.googleapis.com/{bucket_name}/{gcs_url.lstrip("/")}'
+
+        # Download file from GCS
+        file_data = gcp_bucket.download_file_from_gcs(gcs_url)
+        
+        # Determine content type
+        if not content_type:
+            content_type = gcp_bucket.get_content_type_from_url(gcs_url)
         
         # Create a file-like object
         file_obj = io.BytesIO(file_data)
         file_obj.seek(0)
         
+        # Set filename using Content-Disposition header (inline to display in browser)
+        if filename:
+            response = make_response(send_file(file_obj, mimetype=content_type))
+            response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
         return send_file(file_obj, mimetype=content_type, as_attachment=False)
     except Exception as e:
         current_app.logger.error(f"Error serving file from GCS: {e}")
@@ -1605,6 +1628,44 @@ def serve_file():
         if '404' in str(e) or 'No such object' in str(e):
             return jsonify({'error': 'File not found in storage'}), 404
         return jsonify({'error': 'Failed to serve file'}), 500
+
+
+@bp.route('/view_rag_document/<int:doc_id>/<path:filename>', methods=['GET'])
+def view_rag_document(doc_id, filename):
+    """Serve a RAG document with filename in URL for proper browser display."""
+    from .models import RagDocument
+    
+    doc = RagDocument.query.get(doc_id)
+    if not doc:
+        return jsonify({'error': 'Document not found'}), 404
+    
+    try:
+        gcs_path = doc.gcs_path
+        # If it's a relative path, construct full URL
+        if not gcs_path.startswith(('https://', 'gs://')):
+            bucket_name = current_app.config.get('GCS_BUCKET_NAME')
+            if bucket_name:
+                gcs_path = f'https://storage.googleapis.com/{bucket_name}/{gcs_path.lstrip("/")}'
+
+        # Download file from GCS
+        file_data = gcp_bucket.download_file_from_gcs(gcs_path)
+        
+        # Determine content type - use extension if stored type is generic
+        content_type = doc.content_type
+        if not content_type or content_type == 'application/octet-stream':
+            content_type = gcp_bucket.get_content_type_from_url(doc.original_filename or gcs_path)
+        
+        # Create a file-like object
+        file_obj = io.BytesIO(file_data)
+        file_obj.seek(0)
+        
+        return send_file(file_obj, mimetype=content_type, as_attachment=False)
+    except Exception as e:
+        current_app.logger.error(f"Error serving RAG document from GCS: {e}")
+        if '404' in str(e) or 'No such object' in str(e):
+            return jsonify({'error': 'File not found in storage'}), 404
+        return jsonify({'error': 'Failed to serve file'}), 500
+
 
 @bp.route('/api/files', methods=['GET'])
 @jwt_required()

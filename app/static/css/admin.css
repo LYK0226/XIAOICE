@@ -587,6 +587,18 @@ body.admin-page {
     background: rgba(155, 138, 184, 0.08);
 }
 
+.kb-doc-link {
+    color: var(--text-dark);
+    text-decoration: none;
+    cursor: pointer;
+    transition: color 0.2s ease;
+}
+
+.kb-doc-link:hover {
+    color: #512da8;
+    text-decoration: underline;
+}
+
 .kb-status {
     padding: 5px 14px;
     border-radius: 20px;
@@ -1236,6 +1248,14 @@ body.dark-theme .kb-table td,
 body.dark-theme .users-table td {
     color: #E2D7F5;
     border-color: rgba(155, 138, 184, 0.2);
+}
+
+body.dark-theme .kb-doc-link {
+    color: #E2D7F5;
+}
+
+body.dark-theme .kb-doc-link:hover {
+    color: #B8A8D8;
 }
 
 /* Responsive */

@@ -17,18 +17,18 @@ def get_gcs_client():
     return storage.Client()
 
 def build_storage_key(category, user_id, original_filename):
-    """Build standardized GCS object key: {category}/{user_id}/{uuid}_{timestamp}.{ext}"""
+    """Build standardized GCS object key: {user_id}/{category}/{original_filename}_{timestamp}.{ext}"""
     secure_name = secure_filename(original_filename)
     if '.' in secure_name:
-        _, ext = secure_name.rsplit('.', 1)
+        name_part, ext = secure_name.rsplit('.', 1)
     else:
+        name_part = secure_name
         ext = 'bin'
     
-    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-    unique_id = str(uuid.uuid4())[:8]
-    unique_filename = f"{unique_id}_{timestamp}.{ext}"
+    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    unique_filename = f"{name_part}_{timestamp}.{ext}"
     
-    return f"{category}/{user_id}/{unique_filename}"
+    return f"{user_id}/{category}/{unique_filename}"
 
 def upload_file_to_gcs(file_obj, filename, bucket_name=None):
     """
@@ -117,6 +117,10 @@ def get_content_type_from_url(url):
     url_lower = url.lower()
     if url_lower.endswith('.pdf'):
         return 'application/pdf'
+    elif url_lower.endswith('.txt'):
+        return 'text/plain'
+    elif url_lower.endswith('.md'):
+        return 'text/markdown'
     elif url_lower.endswith(('.jpg', '.jpeg')):
         return 'image/jpeg'
     elif url_lower.endswith('.png'):
@@ -206,9 +210,12 @@ def upload_files_to_gcs(files, user_id=None, conversation_id=None, message_id=No
             if user_id:
                 storage_key = build_storage_key(category, user_id, filename)
             else:
-                timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-                unique_id = str(uuid.uuid4())[:8]
-                storage_key = f"{unique_id}_{timestamp}.{file_type}"
+                timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+                if '.' in filename:
+                    name_part, _ = filename.rsplit('.', 1)
+                else:
+                    name_part = filename
+                storage_key = f"{name_part}_{timestamp}.{file_type}"
             
             gcs_url = upload_file_to_gcs(file, storage_key)
 
@@ -250,9 +257,12 @@ def upload_image_to_gcs(image_file, filename=None, user_id=None, conversation_id
     if user_id:
         storage_key = build_storage_key(category, user_id, filename)
     else:
-        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-        unique_id = str(uuid.uuid4())[:8]
-        storage_key = f"{unique_id}_{timestamp}.{file_type}"
+        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+        if '.' in filename:
+            name_part, _ = filename.rsplit('.', 1)
+        else:
+            name_part = filename
+        storage_key = f"{name_part}_{timestamp}.{file_type}"
     
     gcs_url = upload_file_to_gcs(image_file, storage_key)
 
@@ -311,7 +321,7 @@ def upload_rag_document(file_obj, original_filename, content_type=None):
 
     Returns:
         tuple: (gcs_path, file_size)  where gcs_path is the GCS object key
-               (e.g. "RAG/a1b2c3d4_20260216120000.pdf").
+               (e.g. "RAG/original_filename_20260216120000.pdf").
     """
     from flask import current_app
     import os as _os
@@ -326,12 +336,16 @@ def upload_rag_document(file_obj, original_filename, content_type=None):
     file_size = file_obj.tell()
     file_obj.seek(0)
 
-    # Build unique GCS key
+    # Build GCS key: original_filename + timestamp suffix
     fname = secure_filename(original_filename)
-    ext = fname.rsplit(".", 1)[-1] if "." in fname else "bin"
-    ts = datetime.utcnow().strftime("%Y%m%d%H%M%S%f")
-    uid = str(uuid.uuid4())[:8]
-    gcs_path = f"{rag_folder}/{uid}_{ts}.{ext}"
+    ts = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    
+    # Split filename and extension
+    if "." in fname:
+        name_part, ext = fname.rsplit(".", 1)
+        gcs_path = f"{rag_folder}/{name_part}_{ts}.{ext}"
+    else:
+        gcs_path = f"{rag_folder}/{fname}_{ts}"
 
     # Upload
     client = get_gcs_client()

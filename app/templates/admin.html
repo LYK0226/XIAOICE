@@ -167,9 +167,9 @@
                     </div>
                     <div class="upload-text">
                         <h3>點擊或拖放文件上傳</h3>
-                        <p>支援格式：PDF、TXT、Markdown</p>
+                        <p>支援格式：PDF、TXT、Markdown（可批量上傳）</p>
                     </div>
-                    <input type="file" id="kbFileInput" accept=".pdf,.txt,.md" style="display:none;">
+                    <input type="file" id="kbFileInput" accept=".pdf,.txt,.md" multiple style="display:none;">
                 </div>
 
                 <!-- Document List -->
@@ -766,33 +766,56 @@
             kbUploadArea.addEventListener('drop', e => {
                 e.preventDefault();
                 kbUploadArea.classList.remove('dragover');
-                if (e.dataTransfer.files.length) uploadKbFile(e.dataTransfer.files[0]);
+                if (e.dataTransfer.files.length) uploadKbFiles(e.dataTransfer.files);
             });
-            kbFileInput.addEventListener('change', () => { if (kbFileInput.files.length) uploadKbFile(kbFileInput.files[0]); });
+            kbFileInput.addEventListener('change', () => { if (kbFileInput.files.length) uploadKbFiles(kbFileInput.files); });
 
-            async function uploadKbFile(file) {
-                const fd = new FormData();
-                fd.append('file', file);
-                kbUploadArea.innerHTML = '<div class="upload-icon spin"><i class="fas fa-spinner"></i></div><div class="upload-text"><h3>上傳處理中...</h3></div>';
-                try {
-                    const res = await fetch('/admin/rag/documents', {
-                        method: 'POST',
-                        headers: { 'Authorization': 'Bearer ' + getToken() },
-                        body: fd,
-                    });
-                    const data = await res.json();
-                    if (res.ok || res.status === 207) {
-                        alert(data.message || '上傳成功');
-                    } else {
-                        alert('錯誤: ' + (data.error || '上傳失敗'));
+            async function uploadKbFiles(files) {
+                const fileArray = Array.from(files);
+                const total = fileArray.length;
+                let successCount = 0;
+                let failCount = 0;
+                let errors = [];
+
+                for (let i = 0; i < fileArray.length; i++) {
+                    const file = fileArray[i];
+                    kbUploadArea.innerHTML = `<div class="upload-icon spin"><i class="fas fa-spinner"></i></div><div class="upload-text"><h3>上傳中... (${i + 1}/${total})</h3><p>${file.name}</p></div>`;
+                    
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    try {
+                        const res = await fetch('/admin/rag/documents', {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + getToken() },
+                            body: fd,
+                        });
+                        const data = await res.json();
+                        if (res.ok || res.status === 207) {
+                            successCount++;
+                        } else {
+                            failCount++;
+                            errors.push(`${file.name}: ${data.error || '上傳失敗'}`);
+                        }
+                    } catch (e) {
+                        failCount++;
+                        errors.push(`${file.name}: ${e.message}`);
                     }
-                } catch (e) {
-                    alert('上傳失敗: ' + e.message);
-                } finally {
-                    kbUploadArea.innerHTML = '<div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div><div class="upload-text"><h3>點擊或拖放文件上傳</h3><p>支援格式：PDF、TXT、Markdown</p></div><input type="file" id="kbFileInput" accept=".pdf,.txt,.md" style="display:none;">';
-                    document.getElementById('kbFileInput').addEventListener('change', () => { if (kbFileInput.files.length) uploadKbFile(kbFileInput.files[0]); });
-                    loadKbDocuments();
                 }
+
+                let message = `上傳完成：成功 ${successCount} 個`;
+                if (failCount > 0) {
+                    message += `，失敗 ${failCount} 個`;
+                }
+                if (errors.length > 0 && errors.length <= 3) {
+                    message += '\n' + errors.join('\n');
+                } else if (errors.length > 3) {
+                    message += '\n' + errors.slice(0, 3).join('\n') + `\n...及其他 ${errors.length - 3} 個錯誤`;
+                }
+                alert(message);
+
+                kbUploadArea.innerHTML = '<div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div><div class="upload-text"><h3>點擊或拖放文件上傳</h3><p>支援格式：PDF、TXT、Markdown（可批量上傳）</p></div><input type="file" id="kbFileInput" accept=".pdf,.txt,.md" multiple style="display:none;">';
+                document.getElementById('kbFileInput').addEventListener('change', () => { if (kbFileInput.files.length) uploadKbFiles(kbFileInput.files); });
+                loadKbDocuments();
             }
 
             async function loadKbDocuments() {
@@ -808,7 +831,7 @@
                     }
                     kbDocBody.innerHTML = docs.map(d => `
                         <tr>
-                            <td title="${d.original_filename}">${d.original_filename.length > 30 ? d.original_filename.slice(0,27)+'...' : d.original_filename}</td>
+                            <td><a href="/view_rag_document/${d.id}/${encodeURIComponent(d.original_filename)}" target="_blank" class="kb-doc-link" title="${d.original_filename}">${d.original_filename.length > 30 ? d.original_filename.slice(0,27)+'...' : d.original_filename}</a></td>
                             <td>${d.content_type.split('/').pop().toUpperCase()}</td>
                             <td>${formatSize(d.file_size)}</td>
                             <td>${d.chunk_count || 0}</td>

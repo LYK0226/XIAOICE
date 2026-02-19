@@ -413,7 +413,7 @@ class FileUpload(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False, index=True)
     filename = db.Column(db.String(255), nullable=False)  # Original filename
     file_path = db.Column(db.Text, nullable=False)  # GCS URL or file path
-    storage_key = db.Column(db.String(512), nullable=True, index=True)  # GCS object name/key (e.g., chatbox/123/uuid.ext)
+    storage_key = db.Column(db.String(512), nullable=True, index=True)  # GCS object name/key (e.g., 123/chatbox/filename_timestamp.ext)
     file_type = db.Column(db.String(50), nullable=False)  # File extension/type (e.g., 'pdf', 'jpg', 'docx')
     content_type = db.Column(db.String(100), nullable=False)  # MIME type
     upload_category = db.Column(db.String(50), nullable=True, index=True)  # Category: chatbox, video_assess, etc.

@@ -9,6 +9,24 @@ class UploadsManager {
         this.batchMode = false;
     }
 
+    _resolveLanguage() {
+        const lang = typeof currentLanguage !== 'undefined' ? currentLanguage : 
+                     (window.currentLanguage || localStorage.getItem('language') || localStorage.getItem('preferredLanguage') || 'zh-TW');
+        const supported = ['zh-TW', 'zh-CN', 'en', 'ja'];
+        return supported.includes(lang) ? lang : 'en';
+    }
+
+    t(key, vars = {}) {
+        const lang = this._resolveLanguage();
+        const translations = window.translations && window.translations[lang] ? window.translations[lang] : {};
+        let text = translations[key] || key;
+        
+        for (const [k, v] of Object.entries(vars)) {
+            text = text.replace(`{${k}}`, v);
+        }
+        return text;
+    }
+
     init() {
         this.attachEventListeners();
         this.loadUploads(this.currentCategory);
@@ -64,7 +82,7 @@ class UploadsManager {
         } catch (error) {
             console.error('Error loading uploads:', error);
             if (loadingSpinner) loadingSpinner.style.display = 'none';
-            container.innerHTML = `<div class="error-message">載入失敗：${error.message}</div>`;
+            container.innerHTML = `<div class="error-message">${this.t('uploads.loadFailed')}：${error.message}</div>`;
         }
     }
 
@@ -82,17 +100,17 @@ class UploadsManager {
             toolbarHtml = `
                 <div class="batch-toolbar">
                     <button class="batch-toggle-btn" id="batchToggleBtn">
-                        <i class="fas fa-check-double"></i> 批量管理
+                        <i class="fas fa-check-double"></i> ${this.t('uploads.batchManage')}
                     </button>
                     <div class="batch-actions" id="batchActions" style="display:none;">
                         <label class="batch-select-all">
-                            <input type="checkbox" id="batchSelectAll"> 全選
+                            <input type="checkbox" id="batchSelectAll"> ${this.t('uploads.selectAll')}
                         </label>
-                        <span class="batch-count" id="batchCount">已選 0 項</span>
+                        <span class="batch-count" id="batchCount">${this.t('uploads.selectedItems', { count: 0 })}</span>
                         <button class="batch-delete-btn" id="batchDeleteBtn" disabled>
-                            <i class="fas fa-trash"></i> 批量刪除
+                            <i class="fas fa-trash"></i> ${this.t('uploads.batchDelete')}
                         </button>
-                        <button class="batch-cancel-btn" id="batchCancelBtn">取消</button>
+                        <button class="batch-cancel-btn" id="batchCancelBtn">${this.t('uploads.cancel')}</button>
                     </div>
                 </div>
             `;
@@ -129,7 +147,7 @@ class UploadsManager {
     /** Group uploads by child name from analysis_report_info, sorted alphabetically. */
     _groupByChild(uploads) {
         const map = new Map();
-        const UNCATEGORIZED = '未分類';
+        const UNCATEGORIZED = this.t('uploads.uncategorized');
         
         for (const u of uploads) {
             const childName = u.analysis_report_info?.child_name || UNCATEGORIZED;
@@ -235,13 +253,13 @@ class UploadsManager {
     _updateBatchCount() {
         const countEl = document.getElementById('batchCount');
         const deleteBtn = document.getElementById('batchDeleteBtn');
-        if (countEl) countEl.textContent = `已選 ${this.selectedIds.size} 項`;
+        if (countEl) countEl.textContent = this.t('uploads.selectedItems', { count: this.selectedIds.size });
         if (deleteBtn) deleteBtn.disabled = this.selectedIds.size === 0;
     }
 
     async batchDelete() {
         if (this.selectedIds.size === 0) return;
-        if (!confirm(`確定要刪除所選的 ${this.selectedIds.size} 個項目嗎？此操作無法復原。`)) return;
+        if (!confirm(this.t('uploads.confirmBatchDelete', { count: this.selectedIds.size }))) return;
 
         const token = localStorage.getItem('access_token');
         const ids = [...this.selectedIds];
@@ -260,7 +278,7 @@ class UploadsManager {
 
             if (!response.ok) {
                 const errData = await response.json().catch(() => ({}));
-                throw new Error(errData.error || '批量刪除失敗');
+                throw new Error(errData.error || this.t('uploads.batchDeleteFailed'));
             }
 
             const result = await response.json();
@@ -269,7 +287,7 @@ class UploadsManager {
             this.loadUploads(this.currentCategory);
         } catch (error) {
             console.error('Batch delete error:', error);
-            alert(`批量刪除失敗：${error.message}`);
+            alert(this.t('uploads.batchDeleteFailed') + '：' + error.message);
         }
     }
 
@@ -362,10 +380,8 @@ class UploadsManager {
         const isVideo = this.currentCategory === 'video_assess';
         const uploadDate = new Date(upload.uploaded_at || upload.created_at).toLocaleDateString('zh-TW');
 
-        // Simplified filename: use original_filename, or strip timestamp from generated names
         const displayName = this._simplifyFilename(upload.original_filename || upload.filename);
 
-        // Report buttons (video only)
         let reportButtons = '';
         if (isVideo && upload.analysis_report_info) {
             const rpt = upload.analysis_report_info;
@@ -373,39 +389,37 @@ class UploadsManager {
                 reportButtons = `
                     <div class="report-actions">
                         <button class="view-report-btn btn-sm" data-report-id="${rpt.report_id}">
-                            <i class="fas fa-file-alt"></i> 查看報告
+                            <i class="fas fa-file-alt"></i> ${this.t('uploads.viewReport')}
                         </button>
                         ${rpt.has_pdf ? `<a href="/api/video-analysis-report/${rpt.report_id}/download" class="btn-sm report-download-btn">
-                            <i class="fas fa-download"></i> 下載報告
+                            <i class="fas fa-download"></i> ${this.t('uploads.downloadReport')}
                         </a>` : ''}
                     </div>
                 `;
             } else if (rpt.status === 'processing' || rpt.status === 'pending') {
                 reportButtons = `
                     <div class="report-actions">
-                        <span class="report-processing"><i class="fas fa-spinner fa-spin"></i> 報告生成中...</span>
+                        <span class="report-processing"><i class="fas fa-spinner fa-spin"></i> ${this.t('uploads.reportGenerating')}</span>
                     </div>
                 `;
             } else if (rpt.status === 'failed') {
                 reportButtons = `
                     <div class="report-actions">
-                        <span class="report-failed"><i class="fas fa-exclamation-circle"></i> 分析失敗</span>
+                        <span class="report-failed"><i class="fas fa-exclamation-circle"></i> ${this.t('uploads.analysisFailed')}</span>
                     </div>
                 `;
             }
         }
 
-        // Batch checkbox (hidden by default)
         const checkboxHtml = isVideo
             ? `<input type="checkbox" class="batch-checkbox" data-upload-id="${upload.id}" style="display:none;">`
             : '';
+
+        const fileIcon = isVideo ? 'fa-video' : this.getFileIcon(upload.file_type || upload.filename);
         
         return `
             <div class="upload-card" data-upload-id="${upload.id}">
                 ${checkboxHtml}
-                <div class="upload-icon">
-                    <i class="fas ${isVideo ? 'fa-video' : this.getFileIcon(upload.file_type || upload.filename)}"></i>
-                </div>
                 <div class="upload-info">
                     <div class="upload-filename">${this.escapeHtml(displayName)}</div>
                     <div class="upload-meta">
@@ -415,10 +429,10 @@ class UploadsManager {
                 </div>
                 <div class="upload-actions">
                     ${upload.signed_url ? `<button class="view-upload-btn" onclick="window.open('${upload.signed_url}', '_blank')">
-                        <i class="fas fa-eye"></i> 查看
+                        <i class="fas fa-play"></i> ${this.t('uploads.viewVideo')}
                     </button>` : ''}
                     <button class="delete-upload-btn" data-upload-id="${upload.id}">
-                        <i class="fas fa-trash"></i> 刪除
+                        <i class="fas fa-trash"></i> ${this.t('uploads.delete')}
                     </button>
                 </div>
             </div>
@@ -430,7 +444,7 @@ class UploadsManager {
      *       "my_file_20260101120000.pdf" → "my_file.pdf"
      */
     _simplifyFilename(name) {
-        if (!name) return '未命名';
+        if (!name) return this.t('uploads.unnamed');
         // Remove _YYYYMMDDHHMMSSxxxxxx pattern before extension
         return name.replace(/_\d{14,}(?=\.\w+$)/, '');
     }
@@ -454,7 +468,7 @@ class UploadsManager {
     }
 
     async deleteUpload(uploadId) {
-        if (!confirm('確定要刪除此檔案嗎？此操作無法復原。')) return;
+        if (!confirm(this.t('uploads.confirmDelete'))) return;
         
         try {
             const token = localStorage.getItem('access_token');
@@ -469,12 +483,12 @@ class UploadsManager {
                 }
             });
             
-            if (!response.ok) throw new Error('刪除失敗');
+            if (!response.ok) throw new Error(this.t('uploads.deleteFailed'));
             
             this.loadUploads(this.currentCategory);
         } catch (error) {
             console.error('Error deleting upload:', error);
-            alert(`刪除失敗：${error.message}`);
+            alert(this.t('uploads.deleteFailed') + '：' + error.message);
         }
     }
 }
@@ -492,10 +506,22 @@ document.addEventListener('DOMContentLoaded', () => {
         });
         videoUploadsManager.init();
         window.videoUploadsManager = videoUploadsManager;
+        
+        window.addEventListener('languageChanged', () => {
+            if (videoUploadsManager.uploads.length > 0) {
+                videoUploadsManager.renderUploads();
+            }
+        });
         return;
     }
     
     const uploadsManager = new UploadsManager();
+    
+    window.addEventListener('languageChanged', () => {
+        if (uploadsManager.uploads.length > 0) {
+            uploadsManager.renderUploads();
+        }
+    });
     
     const avatarModal = document.getElementById('avatarModal');
     if (avatarModal) {
