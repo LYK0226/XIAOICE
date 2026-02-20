@@ -1,6 +1,6 @@
 from datetime import datetime
-from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, Response, send_file, send_from_directory
-from flask_jwt_extended import jwt_required, decode_token
+from flask import Blueprint, render_template, request, jsonify, current_app, redirect, url_for, Response, send_file, send_from_directory, make_response
+from flask_jwt_extended import jwt_required, decode_token, get_jwt_identity as _get_jwt_identity
 import os
 import json
 from . import agent
@@ -25,13 +25,17 @@ def index():
         return redirect(url_for('main.login_page'))
 
     try:
-        decode_token(token)
+        data = decode_token(token)
+        from .models import User
+        user = User.query.get(data.get('sub'))
+        if not user:
+            return redirect(url_for('main.login_page'))
     except Exception:
         response = redirect(url_for('main.login_page'))
         response.delete_cookie('access_token')
         return response
 
-    return render_template('index.html')
+    return render_template('index.html', user=user)
 
 @bp.route('/login')
 def login_page():
@@ -138,21 +142,550 @@ def video_management_page():
 
 
 @bp.route('/admin')
-def admin_dashboard():
-    """Render the admin dashboard page."""
+def admin():
+    """Render the admin dashboard page (admin-only)."""
     token = request.cookies.get('access_token')
 
     if not token:
         return redirect(url_for('main.login_page'))
 
     try:
-        decode_token(token)
+        data = decode_token(token)
+        from .models import User
+        user = User.query.get(data.get('sub'))
+        if not user or not user.is_admin():
+            return redirect(url_for('main.index'))
     except Exception:
         response = redirect(url_for('main.login_page'))
         response.delete_cookie('access_token')
         return response
 
-    return render_template('admin_dashboard.html')
+    return render_template('admin.html', user=user)
+
+
+# ---------------------------------------------------------------------------
+# RAG Admin API Endpoints
+# ---------------------------------------------------------------------------
+
+@bp.route('/admin/rag/documents', methods=['POST'])
+@jwt_required()
+def rag_upload_document():
+    """Upload a document to the global RAG knowledge base (admin only)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .auth import admin_required
+    from .models import User, RagDocument, db
+    from . import gcp_bucket as gcs
+
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+
+    if 'file' not in request.files:
+        return jsonify({'error': 'No file provided'}), 400
+
+    file = request.files['file']
+    if not file.filename:
+        return jsonify({'error': 'Empty filename'}), 400
+
+    # Validate extension
+    ext = file.filename.rsplit('.', 1)[-1].lower() if '.' in file.filename else ''
+    allowed = current_app.config.get('RAG_ALLOWED_EXTENSIONS', {'pdf', 'txt', 'md'})
+    if ext not in allowed:
+        return jsonify({'error': f'Unsupported file type: .{ext}. Allowed: {sorted(allowed)}'}), 400
+
+    try:
+        gcs_path, file_size = gcs.upload_rag_document(file, file.filename, file.content_type)
+
+        # Determine correct content type from extension if not provided
+        content_type = file.content_type
+        if not content_type or content_type == 'application/octet-stream':
+            content_type = gcs.get_content_type_from_url(file.filename)
+
+        doc = RagDocument(
+            filename=gcs_path.split('/')[-1],
+            original_filename=file.filename,
+            content_type=content_type,
+            gcs_path=gcs_path,
+            file_size=file_size,
+            status='pending',
+            uploaded_by=user_id,
+        )
+        db.session.add(doc)
+        db.session.commit()
+
+        # Process document (chunk + embed) synchronously
+        from app.rag.processor import process_document
+        success = process_document(doc.id)
+
+        # Refresh to get updated status
+        db.session.refresh(doc)
+        return jsonify({
+            'message': 'Document uploaded and processed' if success else 'Document uploaded but processing failed',
+            'document': doc.to_dict(),
+        }), 201 if success else 207
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Upload failed: {str(e)}'}), 500
+
+
+@bp.route('/admin/rag/documents', methods=['GET'])
+@jwt_required()
+def rag_list_documents():
+    """List all RAG documents (admin only)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User, RagDocument
+
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+
+    docs = RagDocument.query.order_by(RagDocument.created_at.desc()).all()
+    return jsonify({'documents': [d.to_dict() for d in docs]}), 200
+
+
+@bp.route('/admin/rag/documents/<int:doc_id>', methods=['GET'])
+@jwt_required()
+def rag_get_document(doc_id):
+    """Get a RAG document with chunk previews (admin only)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User, RagDocument
+
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+
+    doc = RagDocument.query.get(doc_id)
+    if not doc:
+        return jsonify({'error': 'Document not found'}), 404
+
+    return jsonify({'document': doc.to_dict(include_chunks=True)}), 200
+
+
+@bp.route('/admin/rag/documents/<int:doc_id>', methods=['DELETE'])
+@jwt_required()
+def rag_delete_document(doc_id):
+    """Delete a RAG document, its chunks, and GCS file (admin only)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User, RagDocument, db
+    from . import gcp_bucket as gcs
+    from app.rag.processor import delete_document_data
+
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+
+    doc = RagDocument.query.get(doc_id)
+    if not doc:
+        return jsonify({'error': 'Document not found'}), 404
+
+    gcs_path = doc.gcs_path
+    delete_document_data(doc_id)
+    gcs.delete_rag_document(gcs_path)
+
+    return jsonify({'message': 'Document deleted'}), 200
+
+
+@bp.route('/admin/rag/documents/<int:doc_id>/reprocess', methods=['POST'])
+@jwt_required()
+def rag_reprocess_document(doc_id):
+    """Re-chunk and re-embed a document (admin only)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User, RagDocument, db
+    from app.rag.processor import process_document
+
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+
+    doc = RagDocument.query.get(doc_id)
+    if not doc:
+        return jsonify({'error': 'Document not found'}), 404
+
+    success = process_document(doc.id)
+    db.session.refresh(doc)
+
+    return jsonify({
+        'message': 'Reprocessing complete' if success else 'Reprocessing failed',
+        'document': doc.to_dict(),
+    }), 200 if success else 500
+
+
+@bp.route('/admin/rag/search', methods=['POST'])
+@jwt_required()
+def rag_test_search():
+    """Test search endpoint for admins to verify retrieval quality."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User
+    from app.rag.retriever import search_knowledge
+
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+
+    data = request.get_json() or {}
+    query = data.get('query', '').strip()
+    if not query:
+        return jsonify({'error': 'Query is required'}), 400
+
+    top_k = data.get('top_k', current_app.config.get('RAG_TOP_K', 5))
+    results = search_knowledge(query, top_k=top_k, user_id=user.id)
+
+    return jsonify({'query': query, 'results': results}), 200
+
+
+# ---------------------------------------------------------------------------
+# Admin User Management API Endpoints
+# ---------------------------------------------------------------------------
+
+@bp.route('/admin/users', methods=['GET'])
+@jwt_required()
+def admin_list_users():
+    """List all users with pagination, search, and filter (admin only)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User, db
+    
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    page = request.args.get('page', 1, type=int)
+    per_page = request.args.get('per_page', 20, type=int)
+    search = request.args.get('search', '').strip()
+    role_filter = request.args.get('role', '').strip()
+    status_filter = request.args.get('status', '').strip()
+    
+    per_page = min(per_page, 100)
+    
+    query = User.query
+    
+    if search:
+        search_pattern = f'%{search}%'
+        query = query.filter(
+            db.or_(
+                User.username.ilike(search_pattern),
+                User.email.ilike(search_pattern)
+            )
+        )
+    
+    if role_filter and role_filter != 'all':
+        query = query.filter(User.role == role_filter)
+    
+    if status_filter:
+        if status_filter == 'active':
+            query = query.filter(User.is_active == True)
+        elif status_filter == 'inactive':
+            query = query.filter(User.is_active == False)
+    
+    total = query.count()
+    users = query.order_by(User.created_at.desc()).paginate(page=page, per_page=per_page, error_out=False)
+    
+    return jsonify({
+        'users': [u.to_dict() for u in users.items],
+        'total': total,
+        'page': page,
+        'per_page': per_page,
+        'pages': users.pages
+    }), 200
+
+
+@bp.route('/admin/users', methods=['POST'])
+@jwt_required()
+def admin_create_user():
+    """Create a new user (admin only)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User, db
+    
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    username = data.get('username', '').strip()
+    email = data.get('email', '').strip()
+    password = data.get('password', '').strip()
+    role = data.get('role', 'user').strip()
+    
+    if not username or not email or not password:
+        return jsonify({'error': 'Username, email, and password are required'}), 400
+    
+    if role not in ['user', 'admin', 'teacher']:
+        return jsonify({'error': 'Invalid role. Allowed: user, admin, teacher'}), 400
+    
+    if User.query.filter_by(username=username).first():
+        return jsonify({'error': 'Username already exists'}), 400
+    
+    if User.query.filter_by(email=email).first():
+        return jsonify({'error': 'Email already exists'}), 400
+    
+    try:
+        new_user = User(username=username, email=email, role=role)
+        new_user.set_password(password)
+        db.session.add(new_user)
+        db.session.commit()
+        
+        return jsonify({
+            'message': 'User created successfully',
+            'user': new_user.to_dict()
+        }), 201
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error creating user: {e}")
+        return jsonify({'error': 'Failed to create user'}), 500
+
+
+@bp.route('/admin/users/<int:target_user_id>', methods=['GET'])
+@jwt_required()
+def admin_get_user(target_user_id):
+    """Get a specific user by ID (admin only)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User
+    
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    target_user = User.query.get(target_user_id)
+    if not target_user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    return jsonify({'user': target_user.to_dict()}), 200
+
+
+@bp.route('/admin/users/<int:target_user_id>', methods=['PUT'])
+@jwt_required()
+def admin_update_user(target_user_id):
+    """Update a user's information (admin only)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User, db
+    
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    target_user = User.query.get(target_user_id)
+    if not target_user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'No data provided'}), 400
+    
+    if 'username' in data:
+        username = data['username'].strip()
+        if username and username != target_user.username:
+            if User.query.filter_by(username=username).first():
+                return jsonify({'error': 'Username already exists'}), 400
+            target_user.username = username
+    
+    if 'email' in data:
+        email = data['email'].strip()
+        if email and email != target_user.email:
+            if User.query.filter_by(email=email).first():
+                return jsonify({'error': 'Email already exists'}), 400
+            target_user.email = email
+    
+    if 'password' in data:
+        password = data['password'].strip()
+        if password:
+            target_user.set_password(password)
+    
+    if 'role' in data:
+        role = data['role'].strip()
+        if role in ['user', 'admin', 'teacher']:
+            target_user.role = role
+    
+    if 'is_active' in data:
+        target_user.is_active = bool(data['is_active'])
+    
+    try:
+        db.session.commit()
+        return jsonify({
+            'message': 'User updated successfully',
+            'user': target_user.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating user: {e}")
+        return jsonify({'error': 'Failed to update user'}), 500
+
+
+@bp.route('/admin/users/<int:target_user_id>', methods=['DELETE'])
+@jwt_required()
+def admin_delete_user(target_user_id):
+    """Delete a user (admin only). Cannot delete yourself."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User, db
+    
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    if target_user_id == user_id:
+        return jsonify({'error': 'Cannot delete your own account'}), 400
+    
+    target_user = User.query.get(target_user_id)
+    if not target_user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    try:
+        from .models import UserProfile
+        UserProfile.query.filter_by(user_id=target_user_id).delete()
+        db.session.delete(target_user)
+        db.session.commit()
+        return jsonify({'message': 'User deleted successfully'}), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error deleting user: {e}")
+        return jsonify({'error': 'Failed to delete user'}), 500
+
+
+@bp.route('/admin/users/<int:target_user_id>/role', methods=['PATCH'])
+@jwt_required()
+def admin_update_user_role(target_user_id):
+    """Update a user's role (admin only)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User, db
+    
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    target_user = User.query.get(target_user_id)
+    if not target_user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    data = request.get_json()
+    if not data or 'role' not in data:
+        return jsonify({'error': 'Role is required'}), 400
+    
+    role = data['role'].strip()
+    if role not in ['user', 'admin', 'teacher']:
+        return jsonify({'error': 'Invalid role. Allowed: user, admin, teacher'}), 400
+    
+    target_user.role = role
+    
+    try:
+        db.session.commit()
+        return jsonify({
+            'message': 'User role updated successfully',
+            'user': target_user.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error updating user role: {e}")
+        return jsonify({'error': 'Failed to update user role'}), 500
+
+
+@bp.route('/admin/users/<int:target_user_id>/status', methods=['PATCH'])
+@jwt_required()
+def admin_toggle_user_status(target_user_id):
+    """Toggle a user's active status (admin only)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User, db
+    
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    target_user = User.query.get(target_user_id)
+    if not target_user:
+        return jsonify({'error': 'User not found'}), 404
+    
+    if target_user_id == user_id:
+        return jsonify({'error': 'Cannot toggle your own status'}), 400
+    
+    target_user.is_active = not target_user.is_active
+    
+    try:
+        db.session.commit()
+        return jsonify({
+            'message': f"User {'activated' if target_user.is_active else 'deactivated'} successfully",
+            'user': target_user.to_dict()
+        }), 200
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error toggling user status: {e}")
+        return jsonify({'error': 'Failed to toggle user status'}), 500
+
+
+@bp.route('/admin/stats', methods=['GET'])
+@jwt_required()
+def admin_get_stats():
+    """Get system statistics (admin only)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User, Conversation, Message, Child, ChildDevelopmentAssessmentRecord, VideoRecord
+    
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+    
+    try:
+        total_users = User.query.count()
+        admin_users = User.query.filter_by(role='admin').count()
+        teacher_users = User.query.filter_by(role='teacher').count()
+        regular_users = User.query.filter_by(role='user').count()
+        active_users = User.query.filter_by(is_active=True).count()
+        
+        total_conversations = Conversation.query.count()
+        total_messages = Message.query.count()
+        total_children = Child.query.count()
+        total_assessments = ChildDevelopmentAssessmentRecord.query.count()
+        completed_assessments = ChildDevelopmentAssessmentRecord.query.filter_by(is_completed=True).count()
+        total_videos = VideoRecord.query.count()
+        
+        from datetime import datetime, timedelta
+        today = datetime.utcnow().date()
+        today_start = datetime.combine(today, datetime.min.time())
+        new_users_today = User.query.filter(User.created_at >= today_start).count()
+        
+        return jsonify({
+            'users': {
+                'total': total_users,
+                'admins': admin_users,
+                'teachers': teacher_users,
+                'regular': regular_users,
+                'active': active_users,
+                'new_today': new_users_today
+            },
+            'conversations': {
+                'total': total_conversations
+            },
+            'messages': {
+                'total': total_messages
+            },
+            'children': {
+                'total': total_children
+            },
+            'assessments': {
+                'total': total_assessments,
+                'completed': completed_assessments
+            },
+            'videos': {
+                'total': total_videos
+            }
+        }), 200
+    except Exception as e:
+        current_app.logger.error(f"Error getting admin stats: {e}")
+        return jsonify({'error': 'Failed to get statistics'}), 500
+
 
 @bp.route('/pose_detection/js/<path:filename>')
 def serve_pose_detection_js(filename):
@@ -244,8 +777,7 @@ def chat_stream():
 
                 vertex_config = {
                     'service_account': vertex_account.get_decrypted_credentials(),
-                    'project_id': vertex_account.project_id,
-                    'location': vertex_account.location or 'us-central1'
+                    'project_id': vertex_account.project_id
                 }
                 if not vertex_config['service_account'] or not vertex_config['project_id']:
                     return jsonify({'error': 'Vertex AI service account is missing or invalid'}), 400
@@ -283,12 +815,14 @@ def chat_stream():
                             break
                     
                     if chunk:
-                        yield f"data: {chunk}\n\n"
+                        # JSON-encode the chunk so newlines (\n) don't break SSE framing.
+                        # The client will JSON.parse() to restore the original text.
+                        yield f"data: {json.dumps(chunk)}\n\n"
             except Exception as e:
                 current_app.logger.error(f"Error in streaming endpoint: {e}")
                 import traceback
                 traceback.print_exc()
-                yield f"data: Error: {str(e)}\n\n"
+                yield f"data: {json.dumps('Error: ' + str(e))}\n\n"
 
         return Response(generate(), mimetype='text/event-stream')
 
@@ -462,7 +996,7 @@ def get_user_model():
         if user_profile.ai_model:
             ai_model = user_profile.ai_model
         else:
-            ai_model = 'gemini-2.5-flash' if user_profile.ai_provider == 'vertex_ai' else 'gemini-3-flash-preview'
+            ai_model = 'gemini-3-flash-preview' if user_profile.ai_provider == 'vertex_ai' else 'gemini-3-flash-preview'
         
         return jsonify({
             'ai_model': ai_model,
@@ -497,8 +1031,8 @@ def set_user_model():
         if 'ai_model' in data:
             ai_model = data['ai_model']
             # Define allowed models for each provider
-            ai_studio_models = ['gemini-3-flash-preview', 'gemini-3-pro-preview']
-            vertex_ai_models = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview', 'gemini-3-pro-preview']
+            ai_studio_models = ['gemini-3-flash-preview', 'gemini-3.1-pro-preview']
+            vertex_ai_models = ['gemini-3-flash-preview', 'gemini-3.1-pro-preview']
             all_allowed_models = ai_studio_models + vertex_ai_models
             
             if ai_model not in all_allowed_models:
@@ -513,11 +1047,11 @@ def set_user_model():
                 return jsonify({'error': 'Invalid provider. Allowed: ai_studio, vertex_ai'}), 400
             
             # If switching provider, ensure selected model is valid for the provider
-            ai_studio_models = ['gemini-3-flash-preview', 'gemini-3-pro-preview']
-            vertex_ai_models = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview', 'gemini-3-pro-preview']
+            ai_studio_models = ['gemini-3-flash-preview', 'gemini-3.1-pro-preview']
+            vertex_ai_models = ['gemini-3-flash-preview', 'gemini-3.1-pro-preview']
             if ai_provider == 'vertex_ai' and user_profile.ai_model not in vertex_ai_models:
                 # Set to vertex default
-                user_profile.ai_model = 'gemini-2.5-flash'
+                user_profile.ai_model = 'gemini-3-flash-preview'
             if ai_provider == 'ai_studio' and user_profile.ai_model not in ai_studio_models:
                 user_profile.ai_model = 'gemini-3-flash-preview'
 
@@ -1060,14 +1594,32 @@ def serve_file():
     if not gcs_url:
         return jsonify({'error': 'url parameter is required'}), 400
 
+    content_type = request.args.get('content_type')
+    filename = request.args.get('filename')
+
     try:
-        # Download file from GCS and get content type
-        file_data, content_type = gcp_bucket.get_file_data_and_content_type(gcs_url)
+        # If it's a relative path (e.g., "RAG/filename.bin"), construct full URL
+        if not gcs_url.startswith(('https://', 'gs://')):
+            bucket_name = current_app.config.get('GCS_BUCKET_NAME')
+            if bucket_name:
+                gcs_url = f'https://storage.googleapis.com/{bucket_name}/{gcs_url.lstrip("/")}'
+
+        # Download file from GCS
+        file_data = gcp_bucket.download_file_from_gcs(gcs_url)
+        
+        # Determine content type
+        if not content_type:
+            content_type = gcp_bucket.get_content_type_from_url(gcs_url)
         
         # Create a file-like object
         file_obj = io.BytesIO(file_data)
         file_obj.seek(0)
         
+        # Set filename using Content-Disposition header (inline to display in browser)
+        if filename:
+            response = make_response(send_file(file_obj, mimetype=content_type))
+            response.headers['Content-Disposition'] = f'inline; filename="{filename}"'
+            return response
         return send_file(file_obj, mimetype=content_type, as_attachment=False)
     except Exception as e:
         current_app.logger.error(f"Error serving file from GCS: {e}")
@@ -1075,6 +1627,44 @@ def serve_file():
         if '404' in str(e) or 'No such object' in str(e):
             return jsonify({'error': 'File not found in storage'}), 404
         return jsonify({'error': 'Failed to serve file'}), 500
+
+
+@bp.route('/view_rag_document/<int:doc_id>/<path:filename>', methods=['GET'])
+def view_rag_document(doc_id, filename):
+    """Serve a RAG document with filename in URL for proper browser display."""
+    from .models import RagDocument
+    
+    doc = RagDocument.query.get(doc_id)
+    if not doc:
+        return jsonify({'error': 'Document not found'}), 404
+    
+    try:
+        gcs_path = doc.gcs_path
+        # If it's a relative path, construct full URL
+        if not gcs_path.startswith(('https://', 'gs://')):
+            bucket_name = current_app.config.get('GCS_BUCKET_NAME')
+            if bucket_name:
+                gcs_path = f'https://storage.googleapis.com/{bucket_name}/{gcs_path.lstrip("/")}'
+
+        # Download file from GCS
+        file_data = gcp_bucket.download_file_from_gcs(gcs_path)
+        
+        # Determine content type - use extension if stored type is generic
+        content_type = doc.content_type
+        if not content_type or content_type == 'application/octet-stream':
+            content_type = gcp_bucket.get_content_type_from_url(doc.original_filename or gcs_path)
+        
+        # Create a file-like object
+        file_obj = io.BytesIO(file_data)
+        file_obj.seek(0)
+        
+        return send_file(file_obj, mimetype=content_type, as_attachment=False)
+    except Exception as e:
+        current_app.logger.error(f"Error serving RAG document from GCS: {e}")
+        if '404' in str(e) or 'No such object' in str(e):
+            return jsonify({'error': 'File not found in storage'}), 404
+        return jsonify({'error': 'Failed to serve file'}), 500
+
 
 @bp.route('/api/files', methods=['GET'])
 @jwt_required()
@@ -1717,7 +2307,6 @@ def create_vertex_account():
     # Validate required fields
     name = data.get('name', '').strip()
     service_account_json = data.get('service_account_json', '').strip()
-    location = data.get('location', 'us-central1')
     
     if not name:
         return jsonify({'error': 'Name is required'}), 400
@@ -1726,11 +2315,11 @@ def create_vertex_account():
         return jsonify({'error': 'Service account JSON is required'}), 400
     
     try:
-        # Create new vertex account
+        # Create new vertex account (location forced to 'global' for all models)
         vertex_account = VertexServiceAccount(
             user_id=user_id,
             name=name,
-            location=location
+            location='global'
         )
         
         # This will validate JSON, extract project_id and client_email, and encrypt credentials
@@ -1801,9 +2390,6 @@ def update_vertex_account(account_id):
             if not name:
                 return jsonify({'error': 'Name cannot be empty'}), 400
             account.name = name
-        
-        if 'location' in data:
-            account.location = data['location']
         
         if 'service_account_json' in data:
             service_account_json = data['service_account_json'].strip()

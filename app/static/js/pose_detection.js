@@ -182,17 +182,40 @@ function _getAuthHeaders(contentType = null) {
 async function submitPoseAssessmentRun(payload) {
 	try {
 		assessmentState.submitting = true;
-		const response = await fetch('/api/pose-assessment/runs', {
+		let response = await fetch('/api/pose-assessment/runs', {
 			method: 'POST',
 			headers: _getAuthHeaders('application/json'),
 			body: JSON.stringify(payload)
 		});
 
+		// Token expired — try refresh and retry once
 		if (response.status === 401 || response.status === 422) {
-			localStorage.removeItem('access_token');
-			localStorage.removeItem('refresh_token');
-			window.location.href = '/login';
-			return null;
+			const refreshToken = localStorage.getItem('refresh_token');
+			if (refreshToken) {
+				try {
+					const rRes = await fetch('/auth/refresh', {
+						method: 'POST',
+						headers: { 'Authorization': `Bearer ${refreshToken}`, 'Content-Type': 'application/json' }
+					});
+					if (rRes.ok) {
+						const rData = await rRes.json();
+						if (rData.access_token) {
+							localStorage.setItem('access_token', rData.access_token);
+							response = await fetch('/api/pose-assessment/runs', {
+								method: 'POST',
+								headers: _getAuthHeaders('application/json'),
+								body: JSON.stringify(payload)
+							});
+						}
+					}
+				} catch (_) { /* ignore */ }
+			}
+			if (response.status === 401 || response.status === 422) {
+				localStorage.removeItem('access_token');
+				localStorage.removeItem('refresh_token');
+				window.location.href = '/login';
+				return null;
+			}
 		}
 
 		const data = await response.json().catch(() => ({}));

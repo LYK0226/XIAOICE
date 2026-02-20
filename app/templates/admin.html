@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="zh-tw">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>管理後台 - XIAOICE</title>
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        html, body { margin: 0; padding: 0; }
+        body { background: linear-gradient(135deg, #D4C5E8 0%, #C8B8DB 50%, #B8A8D8 100%); min-height: 100vh; }
+        body.dark-theme, html.dark-theme-early body { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #1a1a2e 100%); color: #E2D7F5; }
+    </style>
+</head>
+<body class="admin-page">
+
+    <!-- Floating Decorations -->
+    <div class="floating-stars">
+        <span class="star">✦</span>
+        <span class="star">✧</span>
+        <span class="star">✦</span>
+        <span class="star">✧</span>
+        <span class="star">✦</span>
+    </div>
+
+    <div class="cloud cloud-1"></div>
+    <div class="cloud cloud-2"></div>
+    <div class="cloud cloud-3"></div>
+
+    <!-- Header -->
+    <header class="admin-header">
+        <div class="header-left">
+            <button class="back-btn" onclick="window.location.href='/'">
+                <i class="fas fa-arrow-left"></i>
+            </button>
+            <h1 class="admin-title">
+                <i class="fas fa-shield-halved"></i>
+                管理後台
+            </h1>
+        </div>
+        <div class="header-right">
+            <div class="admin-avatar">
+                <i class="fas fa-user-crown"></i>
+            </div>
+            <span class="admin-label">管理員</span>
+        </div>
+    </header>
+
+    <!-- Main Container -->
+    <div class="admin-container">
+        
+        <!-- Navigation Cards -->
+        <nav class="admin-nav">
+            <div class="nav-card active" data-section="overview">
+                <div class="nav-icon-wrap">
+                    <i class="fas fa-chart-pie"></i>
+                </div>
+                <span>總覽</span>
+            </div>
+            <div class="nav-card" data-section="users">
+                <div class="nav-icon-wrap">
+                    <i class="fas fa-users"></i>
+                </div>
+                <span>用戶管理</span>
+            </div>            
+            <div class="nav-card" data-section="knowledge-base">
+                <div class="nav-icon-wrap">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <span>知識庫</span>
+            </div>
+        </nav>
+
+        <!-- Content Area -->
+        <main class="admin-content">
+            
+            <!-- Overview Section -->
+            <section id="section-overview" class="content-section active">
+                <div class="welcome-banner">
+                    <div class="mascot">🦉</div>
+                    <div class="welcome-text">
+                        <h2>歡迎回來，管理員！</h2>
+                        <p>這裡是系統總覽，你可以查看所有運行狀態</p>
+                    </div>
+                </div>
+
+                <!-- Stats Cards -->
+                <div class="stats-grid">
+                    <div class="stat-card purple">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-number">1,250</span>
+                            <span class="stat-label">總用戶數</span>
+                        </div>
+                        <div class="stat-badge new">+15 今日</div>
+                    </div>
+                    <div class="stat-card blue">
+                        <div class="stat-icon">
+                            <i class="fas fa-file-alt"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-number">45</span>
+                            <span class="stat-label">活躍課程</span>
+                        </div>
+                        <div class="stat-badge">正常</div>
+                    </div>
+                    <div class="stat-card orange">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-circle"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-number">12</span>
+                            <span class="stat-label">待處理事項</span>
+                        </div>
+                        <div class="stat-badge warning">需關注</div>
+                    </div>
+                    <div class="stat-card green">
+                        <div class="stat-icon">
+                            <i class="fas fa-server"></i>
+                        </div>
+                        <div class="stat-info">
+                            <span class="stat-number">99.9%</span>
+                            <span class="stat-label">系統可用性</span>
+                        </div>
+                        <div class="stat-badge success">良好</div>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="quick-actions">
+                    <h3><i class="fas fa-bolt"></i> 快速操作</h3>
+                    <div class="action-grid">
+                        <button class="action-card" id="btnAddUser">
+                            <i class="fas fa-user-plus"></i>
+                            <span>新增用戶</span>
+                        </button>
+                        <button class="action-card">
+                            <i class="fas fa-file-upload"></i>
+                            <span>上傳教材</span>
+                        </button>
+                        <button class="action-card">
+                            <i class="fas fa-bullhorn"></i>
+                            <span>發布公告</span>
+                        </button>
+                        <button class="action-card" onclick="document.querySelector('[data-section=\'knowledge-base\']').click()">
+                            <i class="fas fa-search"></i>
+                            <span>測試檢索</span>
+                        </button>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Knowledge Base Section -->
+            <section id="section-knowledge-base" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-brain"></i> 知識庫管理</h2>
+                    <p>管理 AI 對話系統的知識庫文件</p>
+                </div>
+
+                <!-- Upload Area -->
+                <div class="kb-upload-area" id="kbUploadArea">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <div class="upload-text">
+                        <h3>點擊或拖放文件上傳</h3>
+                        <p>支援格式：PDF、TXT、Markdown（可批量上傳）</p>
+                    </div>
+                    <input type="file" id="kbFileInput" accept=".pdf,.txt,.md" multiple style="display:none;">
+                </div>
+
+                <!-- Document List -->
+                <div class="kb-section">
+                    <h3><i class="fas fa-folder-open"></i> 已上傳文件</h3>
+                    <table class="kb-table" id="kbDocTable">
+                        <thead>
+                            <tr>
+                                <th>文件名稱</th>
+                                <th>格式</th>
+                                <th>大小</th>
+                                <th>分段數</th>
+                                <th>狀態</th>
+                                <th>上傳日期</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="kbDocBody">
+                            <tr><td colspan="7" class="kb-empty">載入中...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Search Test -->
+                <div class="kb-section">
+                    <h3><i class="fas fa-search"></i> 檢索測試</h3>
+                    <div class="kb-search-bar">
+                        <input type="text" id="kbSearchInput" placeholder="輸入查詢以測試知識庫檢索效果...">
+                        <button id="kbSearchBtn">
+                            <i class="fas fa-search"></i> 搜尋
+                        </button>
+                    </div>
+                    <div class="kb-results" id="kbSearchResults">
+                        <div class="kb-empty">輸入查詢後點擊搜尋</div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Users Section -->
+            <section id="section-users" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-users"></i> 用戶管理</h2>
+                    <p>管理系統用戶帳戶和權限</p>
+                </div>
+
+                <div class="users-toolbar">
+                    <div class="search-box">
+                        <i class="fas fa-search"></i>
+                        <input type="text" placeholder="搜尋用戶...">
+                    </div>
+                    <div class="filter-tabs">
+                        <button class="filter-tab active">全部</button>
+                        <button class="filter-tab">管理員</button>
+                        <button class="filter-tab">教師</button>
+                        <button class="filter-tab">學生</button>
+                    </div>
+                </div>
+
+                <div class="users-table-container">
+                    <table class="users-table">
+                        <thead>
+                            <tr>
+                                <th><input type="checkbox"></th>
+                                <th>用戶名</th>
+                                <th>Email</th>
+                                <th>角色</th>
+                                <th>註冊日期</th>
+                                <th>狀態</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><input type="checkbox"></td>
+                                <td>
+                                    <div class="user-cell">
+                                        <div class="user-avatar">A</div>
+                                        <span>Admin User</span>
+                                    </div>
+                                </td>
+                                <td>admin@xiaoice.com</td>
+                                <td><span class="role-badge admin">管理員</span></td>
+                                <td>2024-01-15</td>
+                                <td><span class="status-badge active">活躍</span></td>
+                                <td>
+                                    <button class="table-btn edit"><i class="fas fa-edit"></i></button>
+                                    <button class="table-btn delete"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td><input type="checkbox"></td>
+                                <td>
+                                    <div class="user-cell">
+                                        <div class="user-avatar teacher">T</div>
+                                        <span>Teacher Lee</span>
+                                    </div>
+                                </td>
+                                <td>teacher@xiaoice.com</td>
+                                <td><span class="role-badge teacher">教師</span></td>
+                                <td>2024-03-20</td>
+                                <td><span class="status-badge active">活躍</span></td>
+                                <td>
+                                    <button class="table-btn edit"><i class="fas fa-edit"></i></button>
+                                    <button class="table-btn delete"><i class="fas fa-trash"></i></button>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <div class="pagination">
+                    <button class="page-btn"><i class="fas fa-chevron-left"></i></button>
+                    <span class="page-info">第 1 頁，共 10 頁</span>
+                    <button class="page-btn"><i class="fas fa-chevron-right"></i></button>
+                </div>
+            </section>
+
+
+
+        </main>
+    </div>
+
+    <!-- Modal: Add User -->
+    <div class="modal-overlay" id="userModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-plus"></i> 新增用戶</h2>
+                <button class="modal-close" id="btnCancel">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            
+            <div class="role-selector" id="addUserRoleSelector">
+                <button class="role-btn active" data-role="user">
+                    <i class="fas fa-user-graduate"></i> 學生
+                </button>
+                <button class="role-btn" data-role="teacher">
+                    <i class="fas fa-chalkboard-teacher"></i> 教師
+                </button>
+                <button class="role-btn" data-role="admin">
+                    <i class="fas fa-user-shield"></i> 管理員
+                </button>
+            </div>
+
+            <form id="addUserForm">
+                <div class="form-group">
+                    <label>用戶名</label>
+                    <input type="text" class="form-input" id="addUsername" placeholder="輸入用戶名" required>
+                </div>
+                <div class="form-group">
+                    <label>電郵地址</label>
+                    <input type="email" class="form-input" id="addEmail" placeholder="example@email.com" required>
+                </div>
+                <div class="form-group">
+                    <label>初始密碼</label>
+                    <input type="password" class="form-input" id="addPassword" placeholder="輸入密碼" required>
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" id="btnCancel2">取消</button>
+                    <button type="submit" class="btn-create">
+                        <i class="fas fa-plus"></i> 創建用戶
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Edit User -->
+    <div class="modal-overlay" id="editUserModal">
+        <div class="modal-box">
+            <div class="modal-header">
+                <h2><i class="fas fa-user-edit"></i> 編輯用戶</h2>
+                <button class="modal-close" id="btnEditCancel">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+
+            <form id="editUserForm">
+                <input type="hidden" id="editUserId">
+                <div class="form-group">
+                    <label>用戶名</label>
+                    <input type="text" class="form-input" id="editUsername" required>
+                </div>
+                <div class="form-group">
+                    <label>電郵地址</label>
+                    <input type="email" class="form-input" id="editEmail" required>
+                </div>
+                <div class="form-group">
+                    <label>新密碼（留空保持原密碼）</label>
+                    <input type="password" class="form-input" id="editPassword" placeholder="輸入新密碼">
+                </div>
+                <div class="form-group">
+                    <label>角色</label>
+                    <select class="form-input" id="editRole">
+                        <option value="user">學生</option>
+                        <option value="teacher">教師</option>
+                        <option value="admin">管理員</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>狀態</label>
+                    <select class="form-input" id="editStatus">
+                        <option value="active">啟用</option>
+                        <option value="inactive">停用</option>
+                    </select>
+                </div>
+
+                <div class="modal-buttons">
+                    <button type="button" class="btn-cancel" id="btnEditCancel2">取消</button>
+                    <button type="submit" class="btn-create">
+                        <i class="fas fa-save"></i> 保存更改
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Auth check - use localStorage since cookie is httponly
+        if (!localStorage.getItem('access_token')) {
+            window.location.href = '/login';
+        }
+
+        // Token getter for API calls
+        function getToken() {
+            return localStorage.getItem('access_token') || '';
+        }
+
+        // User Management State
+        let userState = {
+            page: 1,
+            perPage: 20,
+            search: '',
+            role: '',
+            status: '',
+            totalPages: 1
+        };
+
+        // Stats State
+        let statsData = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            // ===== Modal: Add User =====
+            const modal = document.getElementById('userModal');
+            const btnAddUser = document.getElementById('btnAddUser');
+            const btnCancel = document.getElementById('btnCancel');
+            const btnCancel2 = document.getElementById('btnCancel2');
+            const addUserForm = document.getElementById('addUserForm');
+
+            btnAddUser.addEventListener('click', () => {
+                modal.classList.add('active');
+                resetAddUserForm();
+            });
+            btnCancel.addEventListener('click', () => modal.classList.remove('active'));
+            btnCancel2.addEventListener('click', () => modal.classList.remove('active'));
+            modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
+
+            function resetAddUserForm() {
+                addUserForm.reset();
+                document.querySelectorAll('#addUserRoleSelector .role-btn').forEach(b => b.classList.remove('active'));
+                document.querySelector('#addUserRoleSelector .role-btn[data-role="user"]').classList.add('active');
+            }
+
+            // Role selector for add user
+            document.querySelectorAll('#addUserRoleSelector .role-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('#addUserRoleSelector .role-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                });
+            });
+
+            addUserForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const username = document.getElementById('addUsername').value.trim();
+                const email = document.getElementById('addEmail').value.trim();
+                const password = document.getElementById('addPassword').value;
+                const role = document.querySelector('#addUserRoleSelector .role-btn.active').dataset.role;
+
+                try {
+                    const res = await fetch('/admin/users', {
+                        method: 'POST',
+                        headers: {
+                            'Authorization': 'Bearer ' + getToken(),
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({ username, email, password, role })
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        alert('用戶創建成功！');
+                        modal.classList.remove('active');
+                        loadUsers();
+                    } else {
+                        alert('錯誤: ' + (data.error || '創建失敗'));
+                    }
+                } catch (err) {
+                    alert('創建失敗: ' + err.message);
+                }
+            });
+
+            // ===== Modal: Edit User =====
+            const editModal = document.getElementById('editUserModal');
+            const btnEditCancel = document.getElementById('btnEditCancel');
+            const btnEditCancel2 = document.getElementById('btnEditCancel2');
+            const editUserForm = document.getElementById('editUserForm');
+
+            btnEditCancel.addEventListener('click', () => editModal.classList.remove('active'));
+            btnEditCancel2.addEventListener('click', () => editModal.classList.remove('active'));
+            editModal.addEventListener('click', (e) => { if (e.target === editModal) editModal.classList.remove('active'); });
+
+            editUserForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const userId = document.getElementById('editUserId').value;
+                const username = document.getElementById('editUsername').value.trim();
+                const email = document.getElementById('editEmail').value.trim();
+                const password = document.getElementById('editPassword').value;
+                const role = document.getElementById('editRole').value;
+                const isActive = document.getElementById('editStatus').value === 'active';
+
+                const data = { username, email, role, is_active: isActive };
+                if (password) data.password = password;
+
+                try {
+                    const res = await fetch(`/admin/users/${userId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Authorization': 'Bearer ' + getToken(),
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(data)
+                    });
+                    const result = await res.json();
+                    if (res.ok) {
+                        alert('用戶更新成功！');
+                        editModal.classList.remove('active');
+                        loadUsers();
+                    } else {
+                        alert('錯誤: ' + (result.error || '更新失敗'));
+                    }
+                } catch (err) {
+                    alert('更新失敗: ' + err.message);
+                }
+            });
+
+            // ===== Navigation =====
+            const navCards = document.querySelectorAll('.nav-card');
+            const sections = document.querySelectorAll('.content-section');
+
+            navCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    navCards.forEach(n => n.classList.remove('active'));
+                    this.classList.add('active');
+
+                    const target = this.dataset.section;
+                    sections.forEach(s => s.classList.remove('active'));
+                    document.getElementById('section-' + target).classList.add('active');
+
+                    if (target === 'overview') loadStats();
+                    if (target === 'knowledge-base') loadKbDocuments();
+                    if (target === 'users') {
+                        loadUsers();
+                        loadStats();
+                    }
+                });
+            });
+
+            // Load stats on page load (for overview section)
+            loadStats();
+
+            // ===== Theme Toggle =====
+            document.querySelectorAll('.theme-btn').forEach(btn => {
+                btn.addEventListener('click', function() {
+                    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
+                    this.classList.add('active');
+                    const theme = this.dataset.theme;
+                    if (theme === 'dark') {
+                        document.body.classList.add('dark-theme');
+                    } else {
+                        document.body.classList.remove('dark-theme');
+                    }
+                });
+            });
+
+            // ===== User Management Functions =====
+            const usersTableBody = document.querySelector('.users-table tbody');
+            const userSearchInput = document.querySelector('.search-box input');
+            const filterTabs = document.querySelectorAll('.filter-tab');
+            const pageInfo = document.querySelector('.page-info');
+            const prevPageBtn = document.querySelector('.pagination .page-btn:first-child');
+            const nextPageBtn = document.querySelector('.pagination .page-btn:last-child');
+
+            async function loadStats() {
+                try {
+                    const res = await fetch('/admin/stats', { headers: { 'Authorization': 'Bearer ' + getToken() } });
+                    const data = await res.json();
+                    if (res.ok) {
+                        statsData = data;
+                        updateStatsDisplay();
+                    }
+                } catch (e) {
+                    console.error('Failed to load stats:', e);
+                }
+            }
+
+            function updateStatsDisplay() {
+                if (!statsData) return;
+                const statNumbers = document.querySelectorAll('.stat-number');
+                if (statNumbers[0]) statNumbers[0].textContent = statsData.users.total.toLocaleString();
+                if (statNumbers[1]) statNumbers[1].textContent = statsData.assessments.total || '0';
+                if (statNumbers[2]) statNumbers[2].textContent = statsData.videos.total || '0';
+                if (statNumbers[3]) statNumbers[3].textContent = statsData.users.new_today || '0';
+            }
+
+            async function loadUsers() {
+                usersTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">載入中...</td></tr>';
+                try {
+                    const params = new URLSearchParams({
+                        page: userState.page,
+                        per_page: userState.perPage
+                    });
+                    if (userState.search) params.append('search', userState.search);
+                    if (userState.role) params.append('role', userState.role);
+                    if (userState.status) params.append('status', userState.status);
+
+                    const res = await fetch(`/admin/users?${params}`, {
+                        headers: { 'Authorization': 'Bearer ' + getToken() }
+                    });
+                    const data = await res.json();
+
+                    if (!res.ok) {
+                        usersTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">錯誤: ${data.error || '載入失敗'}</td></tr>`;
+                        return;
+                    }
+
+                    userState.totalPages = data.pages;
+                    renderUsersTable(data.users);
+                    updatePagination();
+                } catch (e) {
+                    usersTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">錯誤: ${e.message}</td></tr>`;
+                }
+            }
+
+            function renderUsersTable(users) {
+                if (!users || users.length === 0) {
+                    usersTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">尚無用戶數據</td></tr>';
+                    return;
+                }
+
+                usersTableBody.innerHTML = users.map(u => {
+                    const roleLabel = { admin: '管理員', teacher: '教師', user: '學生' }[u.role] || u.role;
+                    const roleClass = { admin: 'admin', teacher: 'teacher', user: 'student' }[u.role] || 'student';
+                    const statusLabel = u.is_active ? '活躍' : '停用';
+                    const statusClass = u.is_active ? 'active' : 'inactive';
+                    const createdDate = u.created_at ? new Date(u.created_at).toLocaleDateString('zh-TW') : '-';
+
+                    return `
+                        <tr data-user-id="${u.id}">
+                            <td><input type="checkbox"></td>
+                            <td>
+                                <div class="user-cell">
+                                    <div class="user-avatar ${roleClass}">${u.username.charAt(0).toUpperCase()}</div>
+                                    <span>${u.username}</span>
+                                </div>
+                            </td>
+                            <td>${u.email}</td>
+                            <td><span class="role-badge ${roleClass}">${roleLabel}</span></td>
+                            <td>${createdDate}</td>
+                            <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
+                            <td>
+                                <button class="table-btn edit" onclick="openEditUser(${u.id}, '${u.username}', '${u.email}', '${u.role}', ${u.is_active})"><i class="fas fa-edit"></i></button>
+                                <button class="table-btn delete" onclick="deleteUser(${u.id})"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `;
+                }).join('');
+            }
+
+            function updatePagination() {
+                if (pageInfo) {
+                    pageInfo.textContent = `第 ${userState.page} 頁，共 ${userState.totalPages} 頁`;
+                }
+                if (prevPageBtn) {
+                    prevPageBtn.disabled = userState.page <= 1;
+                }
+                if (nextPageBtn) {
+                    nextPageBtn.disabled = userState.page >= userState.totalPages;
+                }
+            }
+
+            // User search
+            let searchTimeout;
+            userSearchInput.addEventListener('input', (e) => {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(() => {
+                    userState.search = e.target.value.trim();
+                    userState.page = 1;
+                    loadUsers();
+                }, 300);
+            });
+
+            // Filter tabs
+            filterTabs.forEach(tab => {
+                tab.addEventListener('click', function() {
+                    filterTabs.forEach(t => t.classList.remove('active'));
+                    this.classList.add('active');
+
+                    const filterText = this.textContent.trim();
+                    if (filterText === '全部') {
+                        userState.role = '';
+                    } else if (filterText === '管理員') {
+                        userState.role = 'admin';
+                    } else if (filterText === '教師') {
+                        userState.role = 'teacher';
+                    } else if (filterText === '學生') {
+                        userState.role = 'user';
+                    }
+                    userState.page = 1;
+                    loadUsers();
+                });
+            });
+
+            // Pagination buttons
+            if (prevPageBtn) {
+                prevPageBtn.addEventListener('click', () => {
+                    if (userState.page > 1) {
+                        userState.page--;
+                        loadUsers();
+                    }
+                });
+            }
+            if (nextPageBtn) {
+                nextPageBtn.addEventListener('click', () => {
+                    if (userState.page < userState.totalPages) {
+                        userState.page++;
+                        loadUsers();
+                    }
+                });
+            }
+
+            // Global functions for table buttons
+            window.openEditUser = function(id, username, email, role, isActive) {
+                document.getElementById('editUserId').value = id;
+                document.getElementById('editUsername').value = username;
+                document.getElementById('editEmail').value = email;
+                document.getElementById('editPassword').value = '';
+                document.getElementById('editRole').value = role;
+                document.getElementById('editStatus').value = isActive ? 'active' : 'inactive';
+                editModal.classList.add('active');
+            };
+
+            window.deleteUser = async function(id) {
+                if (!confirm('確定要刪除此用戶嗎？此操作無法復原。')) return;
+                try {
+                    const res = await fetch(`/admin/users/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + getToken() }
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        alert('用戶已刪除');
+                        loadUsers();
+                    } else {
+                        alert('錯誤: ' + (data.error || '刪除失敗'));
+                    }
+                } catch (e) {
+                    alert('刪除失敗: ' + e.message);
+                }
+            };
+
+            // ===== Knowledge Base Functions =====
+            const kbUploadArea = document.getElementById('kbUploadArea');
+            const kbFileInput = document.getElementById('kbFileInput');
+            const kbDocBody = document.getElementById('kbDocBody');
+            const kbSearchInput = document.getElementById('kbSearchInput');
+            const kbSearchBtn = document.getElementById('kbSearchBtn');
+            const kbSearchResults = document.getElementById('kbSearchResults');
+
+            function formatSize(bytes) {
+                if (bytes < 1024) return bytes + ' B';
+                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+                return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+            }
+
+            function formatDate(iso) {
+                if (!iso) return '-';
+                const d = new Date(iso);
+                return d.toLocaleDateString('zh-TW') + ' ' + d.toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'});
+            }
+
+            kbUploadArea.addEventListener('click', () => kbFileInput.click());
+            kbUploadArea.addEventListener('dragover', e => { e.preventDefault(); kbUploadArea.classList.add('dragover'); });
+            kbUploadArea.addEventListener('dragleave', () => kbUploadArea.classList.remove('dragover'));
+            kbUploadArea.addEventListener('drop', e => {
+                e.preventDefault();
+                kbUploadArea.classList.remove('dragover');
+                if (e.dataTransfer.files.length) uploadKbFiles(e.dataTransfer.files);
+            });
+            kbFileInput.addEventListener('change', () => { if (kbFileInput.files.length) uploadKbFiles(kbFileInput.files); });
+
+            async function uploadKbFiles(files) {
+                const fileArray = Array.from(files);
+                const total = fileArray.length;
+                let successCount = 0;
+                let failCount = 0;
+                let errors = [];
+
+                for (let i = 0; i < fileArray.length; i++) {
+                    const file = fileArray[i];
+                    kbUploadArea.innerHTML = `<div class="upload-icon spin"><i class="fas fa-spinner"></i></div><div class="upload-text"><h3>上傳中... (${i + 1}/${total})</h3><p>${file.name}</p></div>`;
+                    
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    try {
+                        const res = await fetch('/admin/rag/documents', {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + getToken() },
+                            body: fd,
+                        });
+                        const data = await res.json();
+                        if (res.ok || res.status === 207) {
+                            successCount++;
+                        } else {
+                            failCount++;
+                            errors.push(`${file.name}: ${data.error || '上傳失敗'}`);
+                        }
+                    } catch (e) {
+                        failCount++;
+                        errors.push(`${file.name}: ${e.message}`);
+                    }
+                }
+
+                let message = `上傳完成：成功 ${successCount} 個`;
+                if (failCount > 0) {
+                    message += `，失敗 ${failCount} 個`;
+                }
+                if (errors.length > 0 && errors.length <= 3) {
+                    message += '\n' + errors.join('\n');
+                } else if (errors.length > 3) {
+                    message += '\n' + errors.slice(0, 3).join('\n') + `\n...及其他 ${errors.length - 3} 個錯誤`;
+                }
+                alert(message);
+
+                kbUploadArea.innerHTML = '<div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div><div class="upload-text"><h3>點擊或拖放文件上傳</h3><p>支援格式：PDF、TXT、Markdown（可批量上傳）</p></div><input type="file" id="kbFileInput" accept=".pdf,.txt,.md" multiple style="display:none;">';
+                document.getElementById('kbFileInput').addEventListener('change', () => { if (kbFileInput.files.length) uploadKbFiles(kbFileInput.files); });
+                loadKbDocuments();
+            }
+
+            async function loadKbDocuments() {
+                try {
+                    const res = await fetch('/admin/rag/documents', { headers: { 'Authorization': 'Bearer ' + getToken() } });
+                    const data = await res.json();
+                    if (!res.ok) { kbDocBody.innerHTML = '<tr><td colspan="7" class="kb-empty">載入失敗</td></tr>'; return; }
+
+                    const docs = data.documents || [];
+                    if (docs.length === 0) {
+                        kbDocBody.innerHTML = '<tr><td colspan="7" class="kb-empty">尚無文件。上傳文件以建立知識庫。</td></tr>';
+                        return;
+                    }
+                    kbDocBody.innerHTML = docs.map(d => `
+                        <tr>
+                            <td><a href="/view_rag_document/${d.id}/${encodeURIComponent(d.original_filename)}" target="_blank" class="kb-doc-link" title="${d.original_filename}">${d.original_filename.length > 30 ? d.original_filename.slice(0,27)+'...' : d.original_filename}</a></td>
+                            <td>${d.content_type.split('/').pop().toUpperCase()}</td>
+                            <td>${formatSize(d.file_size)}</td>
+                            <td>${d.chunk_count || 0}</td>
+                            <td><span class="kb-status ${d.status}">${d.status}</span></td>
+                            <td>${formatDate(d.created_at)}</td>
+                            <td>
+                                <button class="kb-btn kb-btn-reprocess" onclick="reprocessDoc(${d.id})"><i class="fas fa-redo"></i></button>
+                                <button class="kb-btn kb-btn-delete" onclick="deleteDoc(${d.id})"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>
+                    `).join('');
+                } catch (e) {
+                    kbDocBody.innerHTML = '<tr><td colspan="7" class="kb-empty">錯誤: ' + e.message + '</td></tr>';
+                }
+            }
+
+            window.deleteDoc = async function(id) {
+                if (!confirm('確定刪除此文件及所有相關資料？')) return;
+                try {
+                    await fetch(`/admin/rag/documents/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + getToken() } });
+                    loadKbDocuments();
+                } catch (e) { alert('刪除失敗: ' + e.message); }
+            };
+
+            window.reprocessDoc = async function(id) {
+                if (!confirm('重新分段並嵌入此文件？')) return;
+                try {
+                    const res = await fetch(`/admin/rag/documents/${id}/reprocess`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + getToken() } });
+                    const data = await res.json();
+                    alert(data.message || '完成');
+                    loadKbDocuments();
+                } catch (e) { alert('重新處理失敗: ' + e.message); }
+            };
+
+            kbSearchBtn.addEventListener('click', searchKb);
+            kbSearchInput.addEventListener('keydown', e => { if (e.key === 'Enter') searchKb(); });
+
+            async function searchKb() {
+                const query = kbSearchInput.value.trim();
+                if (!query) return;
+                kbSearchResults.innerHTML = '<div class="kb-empty">搜尋中...</div>';
+                try {
+                    const res = await fetch('/admin/rag/search', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ query }),
+                    });
+                    const data = await res.json();
+                    if (!res.ok) { kbSearchResults.innerHTML = '<div class="kb-empty">錯誤: ' + (data.error || '搜尋失敗') + '</div>'; return; }
+
+                    const results = data.results || [];
+                    if (results.length === 0) {
+                        kbSearchResults.innerHTML = '<div class="kb-empty">未找到相關結果</div>';
+                        return;
+                    }
+                    kbSearchResults.innerHTML = results.map((r, i) => `
+                        <div class="kb-result-item">
+                            <div class="kb-result-meta">
+                                <i class="fas fa-file-alt"></i> #${i+1} | ${r.document_name}${r.page_number ? ' p.' + r.page_number : ''}${r.heading ? ' | ' + r.heading : ''} | 相關度: ${(r.similarity * 100).toFixed(0)}%
+                            </div>
+                            <div class="kb-result-content">${r.content.length > 500 ? r.content.slice(0,500)+'...' : r.content}</div>
+                        </div>
+                    `).join('');
+                } catch (e) {
+                    kbSearchResults.innerHTML = '<div class="kb-empty">錯誤: ' + e.message + '</div>';
+                }
+            }
+        });
+    </script>
+</body>
+</html>

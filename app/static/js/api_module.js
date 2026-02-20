@@ -25,14 +25,75 @@ class ChatAPI {
         return headers;
     }
 
-    _handleAuthFailure(response) {
+    /**
+     * Attempt to refresh the access token using the stored refresh token.
+     * Returns true if refresh succeeded, false otherwise.
+     */
+    async _tryRefreshToken() {
+        const refreshToken = localStorage.getItem('refresh_token');
+        if (!refreshToken) return false;
+
+        try {
+            const res = await fetch('/auth/refresh', {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${refreshToken}`,
+                    'Content-Type': 'application/json'
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                if (data.access_token) {
+                    localStorage.setItem('access_token', data.access_token);
+                    return true;
+                }
+            }
+        } catch (e) {
+            console.warn('Token refresh failed:', e);
+        }
+        return false;
+    }
+
+    async _handleAuthFailure(response) {
         if (response && (response.status === 401 || response.status === 422)) {
+            // Try to refresh first
+            const refreshed = await this._tryRefreshToken();
+            if (refreshed) return true; // caller should retry the request
+
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
             if (typeof window !== 'undefined' && window.location && window.location.pathname !== '/login') {
                 window.location.href = '/login';
             }
         }
+        return false;
+    }
+
+    /**
+     * Fetch wrapper that auto-refreshes the access token on 401 and retries once.
+     * Usage: const response = await this._authFetch(url, options);
+     */
+    async _authFetch(url, options = {}) {
+        // Inject auth headers
+        options.headers = { ...this._getAuthHeaders(), ...options.headers };
+        let response = await fetch(url, options);
+
+        if (response.status === 401 || response.status === 422) {
+            const refreshed = await this._tryRefreshToken();
+            if (refreshed) {
+                // Update auth header with new token and retry
+                options.headers = { ...this._getAuthHeaders(), ...options.headers };
+                response = await fetch(url, options);
+            }
+            if (response.status === 401 || response.status === 422) {
+                localStorage.removeItem('access_token');
+                localStorage.removeItem('refresh_token');
+                if (typeof window !== 'undefined' && window.location && window.location.pathname !== '/login') {
+                    window.location.href = '/login';
+                }
+            }
+        }
+        return response;
     }
 
     /**
@@ -47,7 +108,7 @@ class ChatAPI {
      * @param {function} onError - 錯誤時的回調函數
      * @returns {Promise} - 可取消的 Promise
      */
-    async streamChatMessage(userMessage, imageFile = null, imageUrl = null, imageMimeType = null, currentLanguage = 'zh-TW', history = null, onChunk, onComplete, onError) {
+    async streamChatMessage(userMessage, imageFile = null, imageUrl = null, imageMimeType = null, currentLanguage = 'zh-TW', history = null, onChunk, onComplete, onError, conversationId = null) {
         const formData = new FormData();
         formData.append('message', userMessage);
         
@@ -65,17 +126,45 @@ class ChatAPI {
             formData.append('history', JSON.stringify(history));
         }
 
+        // Send conversation_id so the backend uses per-conversation ADK sessions
+        if (conversationId) {
+            formData.append('conversation_id', conversationId);
+        }
+
         // Get access token from localStorage
         const headers = this._getAuthHeaders();
 
+        // Create AbortController for cancellation support
+        this._currentAbortController = new AbortController();
+
         try {
-            const response = await fetch('/chat/stream', {
+            let response = await fetch('/chat/stream', {
                 method: 'POST',
                 headers: headers,
-                body: formData
+                body: formData,
+                signal: this._currentAbortController.signal
             });
 
-            this._handleAuthFailure(response);
+            // If access token expired, try refresh and retry once
+            if (response.status === 401 || response.status === 422) {
+                const refreshed = await this._tryRefreshToken();
+                if (refreshed) {
+                    response = await fetch('/chat/stream', {
+                        method: 'POST',
+                        headers: this._getAuthHeaders(),
+                        body: formData,
+                        signal: this._currentAbortController.signal
+                    });
+                }
+                if (response.status === 401 || response.status === 422) {
+                    localStorage.removeItem('access_token');
+                    localStorage.removeItem('refresh_token');
+                    if (typeof window !== 'undefined' && window.location && window.location.pathname !== '/login') {
+                        window.location.href = '/login';
+                    }
+                    return;
+                }
+            }
 
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -101,9 +190,14 @@ class ChatAPI {
                     
                     for (const line of lines) {
                         if (line.startsWith('data: ')) {
-                            const data = line.slice(6); // Remove 'data: '
-                            if (data.trim()) {
-                                onChunk(data);
+                            const raw = line.slice(6); // Remove 'data: '
+                            if (raw.trim()) {
+                                // Server JSON-encodes chunks to preserve newlines in SSE.
+                                try {
+                                    onChunk(JSON.parse(raw));
+                                } catch (_) {
+                                    onChunk(raw); // fallback for non-JSON data
+                                }
                             }
                         }
                     }
@@ -115,9 +209,13 @@ class ChatAPI {
                 const lines = buffer.split('\n');
                 for (const line of lines) {
                     if (line.startsWith('data: ')) {
-                        const data = line.slice(6);
-                        if (data.trim()) {
-                            onChunk(data);
+                        const raw = line.slice(6);
+                        if (raw.trim()) {
+                            try {
+                                onChunk(JSON.parse(raw));
+                            } catch (_) {
+                                onChunk(raw);
+                            }
                         }
                     }
                 }
@@ -128,6 +226,12 @@ class ChatAPI {
             }
 
         } catch (error) {
+            // If aborted by user, call onComplete (not onError) — the partial response is kept
+            if (error.name === 'AbortError') {
+                if (onComplete) onComplete();
+                return;
+            }
+
             console.error('Streaming API Error:', error);
             
             if (onError) {
@@ -141,16 +245,25 @@ class ChatAPI {
                 
                 throw new Error(errorMessages[currentLanguage] || errorMessages['zh-TW']);
             }
+        } finally {
+            this._currentAbortController = null;
+        }
+    }
+
+    /**
+     * Abort the current streaming request (if any).
+     */
+    abortStream() {
+        if (this._currentAbortController) {
+            this._currentAbortController.abort();
+            this._currentAbortController = null;
         }
     }
 
     async fetchConversations() {
-        const response = await fetch(this.endpoints.conversations, {
-            method: 'GET',
-            headers: this._getAuthHeaders()
+        const response = await this._authFetch(this.endpoints.conversations, {
+            method: 'GET'
         });
-
-        this._handleAuthFailure(response);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -166,13 +279,11 @@ class ChatAPI {
             payload.title = title.trim();
         }
 
-        const response = await fetch(this.endpoints.conversations, {
+        const response = await this._authFetch(this.endpoints.conversations, {
             method: 'POST',
-            headers: this._getAuthHeaders('application/json'),
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
-
-        this._handleAuthFailure(response);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -203,15 +314,10 @@ class ChatAPI {
                 formData.append('files', file);
             });
             
-            const headers = this._getAuthHeaders(); // Don't set Content-Type for FormData
-            
-            const response = await fetch(this.endpoints.messages, {
+            const response = await this._authFetch(this.endpoints.messages, {
                 method: 'POST',
-                headers: headers,
                 body: formData
             });
-            
-            this._handleAuthFailure(response);
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -236,13 +342,11 @@ class ChatAPI {
                 payload.temp_id = tempId;
             }
             
-            const response = await fetch(this.endpoints.messages, {
+            const response = await this._authFetch(this.endpoints.messages, {
                 method: 'POST',
-                headers: this._getAuthHeaders('application/json'),
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            
-            this._handleAuthFailure(response);
             
             if (!response.ok) {
                 const errorData = await response.json().catch(() => ({}));
@@ -254,12 +358,9 @@ class ChatAPI {
     }
 
     async fetchConversationMessages(conversationId) {
-        const response = await fetch(`${this.endpoints.conversations}/${conversationId}/messages`, {
-            method: 'GET',
-            headers: this._getAuthHeaders()
+        const response = await this._authFetch(`${this.endpoints.conversations}/${conversationId}/messages`, {
+            method: 'GET'
         });
-
-        this._handleAuthFailure(response);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -270,13 +371,11 @@ class ChatAPI {
     }
 
     async updateConversation(conversationId, updates) {
-        const response = await fetch(`${this.endpoints.conversations}/${conversationId}`, {
+        const response = await this._authFetch(`${this.endpoints.conversations}/${conversationId}`, {
             method: 'PATCH',
-            headers: this._getAuthHeaders('application/json'),
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(updates)
         });
-
-        this._handleAuthFailure(response);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
@@ -287,12 +386,9 @@ class ChatAPI {
     }
 
     async deleteConversation(conversationId) {
-        const response = await fetch(`${this.endpoints.conversations}/${conversationId}`, {
-            method: 'DELETE',
-            headers: this._getAuthHeaders()
+        const response = await this._authFetch(`${this.endpoints.conversations}/${conversationId}`, {
+            method: 'DELETE'
         });
-
-        this._handleAuthFailure(response);
 
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));

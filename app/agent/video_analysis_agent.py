@@ -46,6 +46,47 @@ from app.agent.prompts import (
 logger = logging.getLogger(__name__)
 
 # ---------------------------------------------------------------------------
+# Thread-local storage: allows run_video_analysis() to propagate the current
+# user's numeric ID to the RAG helper functions (which are ADK FunctionTools
+# and cannot accept extra arguments directly).
+# ---------------------------------------------------------------------------
+_tl = threading.local()
+
+
+def _get_tl_user_id() -> Optional[int]:
+    """Return the user_id set by run_video_analysis for this thread, or None."""
+    return getattr(_tl, 'user_id', None)
+
+
+def _get_tl_flask_app():
+    """Return the Flask app instance stored by run_video_analysis, or None."""
+    return getattr(_tl, 'flask_app', None)
+
+
+def _rag_search(query: str, top_k: int = 3):
+    """
+    Helper: call search_knowledge inside an app context if available.
+    Returns list of result dicts, or empty list on failure.
+    """
+    from app.rag.retriever import search_knowledge  # noqa: F401
+    uid = _get_tl_user_id()
+    # Resolve Flask app: prefer thread-local, then current_app, then get_app()
+    flask_app = _get_tl_flask_app()
+    if flask_app is None:
+        try:
+            from flask import current_app as _ca
+            flask_app = _ca._get_current_object()
+        except RuntimeError:
+            pass
+    if flask_app is None:
+        from app import get_app as _get_app
+        flask_app = _get_app()
+    if flask_app is not None:
+        with flask_app.app_context():
+            return search_knowledge(query, top_k=top_k, user_id=uid)
+    return search_knowledge(query, top_k=top_k, user_id=uid)
+
+# ---------------------------------------------------------------------------
 # Note: DEVELOPMENTAL_STANDARDS and related functions are now imported from
 # app.agent.knowledge_base module for centralized RAG knowledge management.
 # ---------------------------------------------------------------------------
@@ -80,6 +121,9 @@ def get_age_standards(age_months: float) -> str:
     Retrieves age-appropriate developmental milestones for a child.
     This is the RAG knowledge retrieval tool.
 
+    Searches the knowledge base for relevant developmental standards,
+    falling back to built-in milestone data if RAG is unavailable.
+
     Args:
         age_months: The child's age in months.
 
@@ -87,8 +131,45 @@ def get_age_standards(age_months: float) -> str:
         JSON string of developmental standards for the age bracket.
     """
     bracket = _get_age_bracket(age_months)
-    standards = DEVELOPMENTAL_STANDARDS.get(bracket, {})
-    return json.dumps(standards, ensure_ascii=False, indent=2)
+    fallback_standards = DEVELOPMENTAL_STANDARDS.get(bracket, {})
+
+    # Try RAG retrieval first
+    try:
+        from app.rag.retriever import format_context
+        queries = [
+            f"developmental milestones for children aged {bracket} months",
+            f"gross motor fine motor language social development {bracket} months",
+        ]
+        all_results = []
+        for q in queries:
+            results = _rag_search(q, top_k=3)
+            all_results.extend(results)
+
+        if all_results:
+            # Deduplicate by chunk_id
+            seen = set()
+            unique = []
+            for r in all_results:
+                if r['chunk_id'] not in seen:
+                    seen.add(r['chunk_id'])
+                    unique.append(r)
+            unique.sort(key=lambda x: x['similarity'], reverse=True)
+
+            rag_context = format_context(unique[:5], max_chars=4000)
+            combined = {
+                "age_bracket": fallback_standards.get("age_range", bracket + " months"),
+                "builtin_milestones": fallback_standards,
+                "knowledge_base_references": rag_context,
+                "source": "RAG + built-in",
+            }
+            return json.dumps(combined, ensure_ascii=False, indent=2)
+    except Exception as exc:
+        logger.warning("RAG retrieval failed in get_age_standards: %s", exc)
+
+    # Fallback to built-in standards
+    result = dict(fallback_standards)
+    result["source"] = "built-in"
+    return json.dumps(result, ensure_ascii=False, indent=2)
 
 
 def assess_motor_development(observations: str, age_months: float) -> str:
@@ -117,6 +198,23 @@ def assess_motor_development(observations: str, age_months: float) -> str:
             "Provide a brief rationale for each."
         ),
     }
+
+    # Enrich with RAG context if available
+    try:
+        from app.rag.retriever import format_context
+        rag_results = _rag_search(
+            f"motor development assessment criteria children {bracket} months gross motor fine motor",
+            top_k=3,
+        )
+        if rag_results:
+            result["knowledge_base_context"] = format_context(rag_results, max_chars=2000)
+            result["citations"] = [
+                {"source": r["document_name"], "page": r.get("page_number"), "relevance": r["similarity"]}
+                for r in rag_results
+            ]
+    except Exception as exc:
+        logger.warning("RAG enrichment failed in assess_motor_development: %s", exc)
+
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 
@@ -145,6 +243,23 @@ def assess_language_development(observations: str, age_months: float) -> str:
             "Provide a brief rationale for each."
         ),
     }
+
+    # Enrich with RAG context if available
+    try:
+        from app.rag.retriever import format_context
+        rag_results = _rag_search(
+            f"language speech communication development assessment criteria children {bracket} months",
+            top_k=3,
+        )
+        if rag_results:
+            result["knowledge_base_context"] = format_context(rag_results, max_chars=2000)
+            result["citations"] = [
+                {"source": r["document_name"], "page": r.get("page_number"), "relevance": r["similarity"]}
+                for r in rag_results
+            ]
+    except Exception as exc:
+        logger.warning("RAG enrichment failed in assess_language_development: %s", exc)
+
     return json.dumps(result, ensure_ascii=False, indent=2)
 
 # ---------------------------------------------------------------------------
@@ -305,6 +420,18 @@ def run_video_analysis(
         Dict with keys: transcription_result, motor_analysis_result,
         language_analysis_result, final_report, success, error
     """
+    # Set thread-local user_id and Flask app so RAG FunctionTools can use
+    # the user's API key and push an app context when called from ADK threads.
+    try:
+        _tl.user_id = int(user_id)
+    except (ValueError, TypeError):
+        _tl.user_id = None
+    try:
+        from flask import current_app as _ca
+        _tl.flask_app = _ca._get_current_object()
+    except RuntimeError:
+        _tl.flask_app = None
+
     if provider == "vertex_ai":
         return _run_vertex_analysis(
             video_gcs_url=video_gcs_url,

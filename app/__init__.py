@@ -17,6 +17,17 @@ from flask_socketio import SocketIO
 # Create the SocketIO server instance; CORS is allowed for development
 socketio = SocketIO(cors_allowed_origins='*')
 
+# Module-level holder for the created app; set by create_app() so that
+# background threads (e.g. ADK agent tools) can push an app context even
+# when no Flask request context is active.
+_app_instance = None
+
+
+def get_app():
+    """Return the current Flask app instance (or None if not yet created)."""
+    return _app_instance
+
+
 def create_app():
     """Create and configure an instance of the Flask application."""
     app = Flask(__name__)
@@ -69,9 +80,20 @@ def create_app():
     if app.config.get('CREATE_DB_ON_STARTUP'):
         try:
             with app.app_context():
+                # Ensure pgvector extension exists (required for RAG vector columns)
+                if 'postgresql' in app.config.get('SQLALCHEMY_DATABASE_URI', ''):
+                    try:
+                        db.session.execute(db.text('CREATE EXTENSION IF NOT EXISTS vector'))
+                        db.session.commit()
+                    except Exception:
+                        db.session.rollback()
                 db.create_all()
         except Exception:
             # If create_all fails, don't crash the app startup; log is available when running
             pass
+
+    # Store reference so background threads can push an app context
+    global _app_instance
+    _app_instance = app
 
     return app

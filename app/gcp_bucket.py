@@ -1,9 +1,14 @@
 import os
 from google.cloud import storage
+from google.api_core.exceptions import NotFound
 import tempfile
 from datetime import datetime, timedelta
 from werkzeug.utils import secure_filename
 import uuid
+import logging
+
+
+logger = logging.getLogger(__name__)
 
 def get_gcs_client():
     credentials_path = os.environ.get('GOOGLE_APPLICATION_CREDENTIALS') or os.environ.get('GCS_CREDENTIALS_PATH')
@@ -12,18 +17,18 @@ def get_gcs_client():
     return storage.Client()
 
 def build_storage_key(category, user_id, original_filename):
-    """Build standardized GCS object key: {category}/{user_id}/{uuid}_{timestamp}.{ext}"""
+    """Build standardized GCS object key: {user_id}/{category}/{original_filename}_{timestamp}.{ext}"""
     secure_name = secure_filename(original_filename)
     if '.' in secure_name:
-        _, ext = secure_name.rsplit('.', 1)
+        name_part, ext = secure_name.rsplit('.', 1)
     else:
+        name_part = secure_name
         ext = 'bin'
     
-    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-    unique_id = str(uuid.uuid4())[:8]
-    unique_filename = f"{unique_id}_{timestamp}.{ext}"
+    timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+    unique_filename = f"{name_part}_{timestamp}.{ext}"
     
-    return f"{category}/{user_id}/{unique_filename}"
+    return f"{user_id}/{category}/{unique_filename}"
 
 def upload_file_to_gcs(file_obj, filename, bucket_name=None):
     """
@@ -112,6 +117,10 @@ def get_content_type_from_url(url):
     url_lower = url.lower()
     if url_lower.endswith('.pdf'):
         return 'application/pdf'
+    elif url_lower.endswith('.txt'):
+        return 'text/plain'
+    elif url_lower.endswith('.md'):
+        return 'text/markdown'
     elif url_lower.endswith(('.jpg', '.jpeg')):
         return 'image/jpeg'
     elif url_lower.endswith('.png'):
@@ -201,9 +210,12 @@ def upload_files_to_gcs(files, user_id=None, conversation_id=None, message_id=No
             if user_id:
                 storage_key = build_storage_key(category, user_id, filename)
             else:
-                timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-                unique_id = str(uuid.uuid4())[:8]
-                storage_key = f"{unique_id}_{timestamp}.{file_type}"
+                timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+                if '.' in filename:
+                    name_part, _ = filename.rsplit('.', 1)
+                else:
+                    name_part = filename
+                storage_key = f"{name_part}_{timestamp}.{file_type}"
             
             gcs_url = upload_file_to_gcs(file, storage_key)
 
@@ -245,9 +257,12 @@ def upload_image_to_gcs(image_file, filename=None, user_id=None, conversation_id
     if user_id:
         storage_key = build_storage_key(category, user_id, filename)
     else:
-        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-        unique_id = str(uuid.uuid4())[:8]
-        storage_key = f"{unique_id}_{timestamp}.{file_type}"
+        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S')
+        if '.' in filename:
+            name_part, _ = filename.rsplit('.', 1)
+        else:
+            name_part = filename
+        storage_key = f"{name_part}_{timestamp}.{file_type}"
     
     gcs_url = upload_file_to_gcs(image_file, storage_key)
 
@@ -289,3 +304,82 @@ def generate_signed_url(storage_key, bucket_name=None, expiration_minutes=60):
     )
     
     return signed_url
+
+
+# ---------------------------------------------------------------------------
+# RAG document storage helpers
+# ---------------------------------------------------------------------------
+
+def upload_rag_document(file_obj, original_filename, content_type=None):
+    """
+    Upload a document to the RAG folder in GCS.
+
+    Args:
+        file_obj:           File-like object (from request.files).
+        original_filename:  Original filename for extension preservation.
+        content_type:       MIME type override.
+
+    Returns:
+        tuple: (gcs_path, file_size)  where gcs_path is the GCS object key
+               (e.g. "RAG/original_filename_20260216120000.pdf").
+    """
+    from flask import current_app
+    import os as _os
+
+    rag_folder = current_app.config.get("RAG_GCS_FOLDER", "RAG") if current_app else _os.environ.get("RAG_GCS_FOLDER", "RAG")
+    bucket_name = _os.environ.get("GCS_BUCKET_NAME") or (current_app.config.get("GCS_BUCKET_NAME") if current_app else None)
+    if not bucket_name:
+        raise ValueError("GCS_BUCKET_NAME not configured")
+
+    # Measure file size
+    file_obj.seek(0, 2)
+    file_size = file_obj.tell()
+    file_obj.seek(0)
+
+    # Build GCS key: original_filename + timestamp suffix
+    fname = secure_filename(original_filename)
+    ts = datetime.utcnow().strftime("%Y%m%d%H%M%S")
+    
+    # Split filename and extension
+    if "." in fname:
+        name_part, ext = fname.rsplit(".", 1)
+        gcs_path = f"{rag_folder}/{name_part}_{ts}.{ext}"
+    else:
+        gcs_path = f"{rag_folder}/{fname}_{ts}"
+
+    # Upload
+    client = get_gcs_client()
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(gcs_path)
+    ct = content_type or getattr(file_obj, "content_type", None) or "application/octet-stream"
+    blob.upload_from_file(file_obj, content_type=ct)
+
+    return gcs_path, file_size
+
+
+def delete_rag_document(gcs_path):
+    """
+    Delete a RAG document from GCS by its object path.
+
+    Args:
+        gcs_path: The GCS object key (e.g. "RAG/a1b2c3d4_2026.pdf").
+
+    Returns:
+        bool: True if deleted, False on error.
+    """
+    try:
+        bucket_name = os.environ.get("GCS_BUCKET_NAME")
+        if not bucket_name:
+            raise ValueError("GCS_BUCKET_NAME not configured")
+        client = get_gcs_client()
+        bucket = client.bucket(bucket_name)
+        blob = bucket.blob(gcs_path)
+        blob.delete()
+        return True
+    except NotFound:
+        # Idempotent delete: if object is already gone, treat as success.
+        logger.info("RAG object already missing in GCS, skipping delete: %s", gcs_path)
+        return True
+    except Exception as e:
+        logger.error("Error deleting RAG document from GCS (%s): %s", gcs_path, e)
+        return False

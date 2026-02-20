@@ -52,10 +52,7 @@ def upload_video():
         if ext == '' or ext not in allowed_exts:
             return jsonify({'error': f'不支援的影片格式。允許的格式: {", ".join(sorted(allowed_exts)).upper()}'}), 400
 
-        timestamp = datetime.utcnow().strftime('%Y%m%d%H%M%S%f')
-        unique_filename = f"{name_without_ext}_{timestamp}.{ext}"
-
-        storage_key = gcp_bucket.build_storage_key('video_assess', user_id, unique_filename)
+        storage_key = gcp_bucket.build_storage_key('video_assess', user_id, secure_name)
         gcs_url = gcp_bucket.upload_file_to_gcs(video_file, storage_key)
 
         # Ensure stream is at end after upload; reset for safety
@@ -66,7 +63,7 @@ def upload_video():
 
         video_record = VideoRecord(
             user_id=user_id,
-            filename=unique_filename,
+            filename=secure_name,
             original_filename=video_file.filename,
             file_path=gcs_url,
             storage_key=storage_key,
@@ -102,8 +99,7 @@ def upload_video():
             if vertex_account:
                 vertex_config = {
                     'service_account': vertex_account.get_decrypted_credentials(),
-                    'project_id': vertex_account.project_id,
-                    'location': vertex_account.location or user_profile.vertex_location or 'us-central1'
+                    'project_id': vertex_account.project_id
                 }
             provider_for_request = 'vertex_ai'
         mime_type = video_file.content_type or gcp_bucket.get_content_type_from_url(gcs_url)
@@ -167,7 +163,7 @@ def upload_video():
         thread.start()
 
         # Provide an authenticated playback URL; server will redirect to GCS
-        video_url = f"/api/video-file/{unique_filename}"
+        video_url = f"/api/video-file/{secure_name}"
 
         return jsonify({
             'success': True,
@@ -263,8 +259,7 @@ def analyze_video(video_id):
             if vertex_account:
                 vertex_config = {
                     'service_account': vertex_account.get_decrypted_credentials(),
-                    'project_id': vertex_account.project_id,
-                    'location': vertex_account.location or user_profile.vertex_location or 'us-central1'
+                    'project_id': vertex_account.project_id
                 }
             provider_for_request = 'vertex_ai'
 
@@ -739,8 +734,7 @@ def start_child_analysis(video_id):
             if vertex_account:
                 vertex_config = {
                     'service_account': vertex_account.get_decrypted_credentials(),
-                    'project_id': vertex_account.project_id,
-                    'location': vertex_account.location or user_profile.vertex_location or 'us-central1',
+                    'project_id': vertex_account.project_id
                 }
 
         mime_type = gcp_bucket.get_content_type_from_url(video.file_path)

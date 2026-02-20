@@ -161,8 +161,11 @@ async function loadConversations() {
         conversationsCache = sortConversations(data.conversations || []);
         renderConversationList(conversationsCache);
 
-        if (conversationsCache.length && !activeConversationId) {
-            await openConversation(conversationsCache[0].id, { force: true });
+        // Show welcome screen only if no conversation is currently active (Gemini-style).
+        // When called after creating a new conversation, activeConversationId is already set,
+        // so we leave the current chat view intact.
+        if (!activeConversationId) {
+            renderWelcomeMessage();
         }
     } catch (error) {
         console.error('Failed to load conversations', error);
@@ -196,6 +199,9 @@ async function openConversation(conversationId, options = {}) {
             renderWelcomeMessage();
             return;
         }
+
+        // Hide welcome screen — actual messages are being loaded
+        hideWelcomeScreen();
 
         messages.forEach((message) => {
             const isUser = message.sender === 'user';
@@ -295,12 +301,12 @@ async function deleteConversationById(conversationId) {
                 return;
             }
 
+            // When the deleted conversation was active, return to the welcome screen
+            // rather than auto-jumping to another conversation (Gemini-style).
             if (wasActive) {
                 activeConversationId = null;
-                const nextConversation = conversationsCache[0];
-                if (nextConversation) {
-                    await openConversation(nextConversation.id, { force: true });
-                }
+                conversationHistory = [];
+                renderWelcomeMessage();
             }
         } catch (error) {
             console.error('Failed to delete conversation', error);

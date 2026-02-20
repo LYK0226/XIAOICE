@@ -269,6 +269,84 @@ body.dark-theme #messages {
     background: #1F1B24;
 }
 
+/* ── Welcome screen (Gemini-style) ── */
+#welcome-screen {
+    display: none;
+    flex: 1;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 20px 40px;
+    background: #FDF9FF;
+    text-align: center;
+}
+
+body.dark-theme #welcome-screen {
+    background: #1F1B24;
+}
+
+#chat-container.welcome-mode #messages {
+    display: none;
+}
+
+#chat-container.welcome-mode #welcome-screen {
+    display: flex;
+}
+
+.welcome-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    animation: welcomeFadeIn 0.5s ease;
+}
+
+@keyframes welcomeFadeIn {
+    from { opacity: 0; transform: translateY(-20px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.welcome-avatar-circle {
+    width: 88px;
+    height: 88px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #A89BC5 0%, #7C5CBF 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 28px rgba(124, 92, 191, 0.35);
+    margin-bottom: 8px;
+}
+
+.welcome-avatar-circle i {
+    font-size: 40px;
+    color: white;
+}
+
+.welcome-title {
+    font-size: 32px;
+    font-weight: 800;
+    color: #4A3B5C;
+    margin: 0;
+    letter-spacing: -0.5px;
+}
+
+body.dark-theme .welcome-title {
+    color: #E2D7F5;
+}
+
+.welcome-subtitle {
+    font-size: 16px;
+    color: #718096;
+    max-width: 500px;
+    line-height: 1.65;
+    margin: 4px 0 0;
+}
+
+body.dark-theme .welcome-subtitle {
+    color: #a0aec0;
+}
+
 /* User message container */
 .user-message-container {
     align-self: flex-end;
@@ -777,6 +855,23 @@ body.dark-theme #messageInput {
     transform: translateY(0) scale(0.95);
 }
 
+/* Send button transforms to stop button while AI is streaming */
+#sendButton.stop-mode {
+    background: linear-gradient(135deg, #f97316 0%, #dc2626 100%);
+    box-shadow: 0 4px 10px rgba(220, 38, 38, 0.35);
+    transform: none;
+}
+
+#sendButton.stop-mode:hover {
+    background: linear-gradient(135deg, #ea580c 0%, #b91c1c 100%);
+    transform: translateY(-2px) scale(1.05);
+    box-shadow: 0 6px 15px rgba(220, 38, 38, 0.5);
+}
+
+#sendButton.stop-mode:active {
+    transform: translateY(0) scale(0.95);
+}
+
 .pose-page-btn {
     width: 44px;
     height: 44px;
@@ -1266,5 +1361,59 @@ body.dark-theme .webcam-content {
     font-size: 16px;
 }
 
+/* ===== Markdown inside bot messages ===== */
+.bot-message-container .message-content ol,
+.bot-message-container .message-content ul {
+    margin: 6px 0 6px 1.4em;
+    padding: 0;
+    line-height: 1.7;
+}
+
+.bot-message-container .message-content li {
+    margin-bottom: 3px;
+}
+
+.bot-message-container .message-content h2,
+.bot-message-container .message-content h3,
+.bot-message-container .message-content h4 {
+    margin: 10px 0 4px;
+    line-height: 1.3;
+}
+
+.bot-message-container .message-content h2 { font-size: 1.15em; }
+.bot-message-container .message-content h3 { font-size: 1.05em; }
+.bot-message-container .message-content h4 { font-size: 1em; }
+
+.bot-message-container .message-content code {
+    background: rgba(168, 155, 197, 0.15);
+    padding: 1px 5px;
+    border-radius: 4px;
+    font-size: 0.9em;
+    font-family: 'Consolas', 'Monaco', monospace;
+}
+
+.bot-message-container .message-content pre {
+    background: rgba(168, 155, 197, 0.1);
+    padding: 10px 14px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin: 8px 0;
+}
+
+.bot-message-container .message-content pre code {
+    background: none;
+    padding: 0;
+}
+
+body.dark-theme .bot-message-container .message-content code {
+    background: rgba(168, 155, 197, 0.25);
+}
+
+body.dark-theme .bot-message-container .message-content pre {
+    background: rgba(0, 0, 0, 0.3);
+}
+
 /* Settings styles moved to settings.css */
+
+/* .stop-generating-btn — removed; stop is now integrated into #sendButton.stop-mode */
 

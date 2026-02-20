@@ -1,10 +1,33 @@
 from flask import Blueprint, request, jsonify, current_app
 from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
 from .models import db, User, UserProfile
+from functools import wraps
 import re
 from datetime import datetime
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
+
+
+def admin_required(fn):
+    """
+    Decorator that requires the current user to have role='admin'.
+    Must be used AFTER @jwt_required().
+
+    Usage:
+        @bp.route('/admin/action')
+        @jwt_required()
+        @admin_required
+        def admin_action():
+            ...
+    """
+    @wraps(fn)
+    def wrapper(*args, **kwargs):
+        user_id = get_jwt_identity()
+        user = User.query.get(user_id)
+        if not user or not user.is_admin():
+            return jsonify({'error': 'Admin access required'}), 403
+        return fn(*args, **kwargs)
+    return wrapper
 
 def validate_email(email):
     """Validate email format."""
@@ -132,6 +155,32 @@ def login():
         
     except Exception as e:
         return jsonify({'error': f'Login failed: {str(e)}'}), 500
+
+@auth_bp.route('/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh():
+    """Issue a new access token using a valid refresh token."""
+    try:
+        user_id = get_jwt_identity()
+        new_access_token = create_access_token(identity=str(user_id))
+
+        response = jsonify({
+            'access_token': new_access_token
+        })
+
+        secure_cookie = current_app.config.get('SESSION_COOKIE_SECURE', False)
+        response.set_cookie(
+            'access_token',
+            new_access_token,
+            max_age=24 * 60 * 60,  # 1 day
+            httponly=True,
+            secure=secure_cookie,
+            samesite='Lax'
+        )
+
+        return response, 200
+    except Exception as e:
+        return jsonify({'error': f'Token refresh failed: {str(e)}'}), 500
 
 @auth_bp.route('/logout', methods=['POST'])
 @jwt_required(optional=True)

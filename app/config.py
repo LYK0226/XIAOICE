@@ -1,5 +1,6 @@
 
 import os
+from datetime import timedelta
 
 class Config:
     """Set Flask configuration variables from .env file."""
@@ -36,6 +37,8 @@ class Config:
 
     # JWT Configuration
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'jwt_default_secret_key')
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=1)    # Access token valid for 1 day
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)  # Refresh token valid for 30 days
 
     # JWT token handling (support both Authorization header and secure cookies)
     JWT_TOKEN_LOCATION = ['headers', 'cookies', 'query_string']
@@ -47,6 +50,16 @@ class Config:
     JWT_COOKIE_SAMESITE = os.environ.get('JWT_COOKIE_SAMESITE', 'Lax')
     # Disable CSRF protection for cookie-based JWTs since we pair them with Authorization headers
     JWT_COOKIE_CSRF_PROTECT = os.environ.get('JWT_COOKIE_CSRF_PROTECT', 'false').lower() == 'true'
+
+    # RAG Configuration
+    RAG_EMBEDDING_MODEL = os.environ.get('RAG_EMBEDDING_MODEL', 'gemini-embedding-001')
+    RAG_EMBEDDING_DIMENSION = int(os.environ.get('RAG_EMBEDDING_DIMENSION', '768'))
+    RAG_TOP_K = int(os.environ.get('RAG_TOP_K', '5'))
+    RAG_MIN_SIMILARITY = float(os.environ.get('RAG_MIN_SIMILARITY', '0.3'))
+    RAG_GCS_FOLDER = os.environ.get('RAG_GCS_FOLDER', 'RAG')
+    RAG_MAX_CHUNK_CHARS = int(os.environ.get('RAG_MAX_CHUNK_CHARS', '2000'))
+    RAG_MIN_CHUNK_CHARS = int(os.environ.get('RAG_MIN_CHUNK_CHARS', '100'))
+    RAG_ALLOWED_EXTENSIONS = {'pdf', 'txt', 'md'}
 
     # Pose Detection Configuration
     POSE_DETECTION_ENABLED = os.environ.get('POSE_DETECTION_ENABLED', 'true').lower() == 'true'

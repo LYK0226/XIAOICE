@@ -1,3 +1,9 @@
+# Monkey-patch standard lib for eventlet compatibility.
+# This makes queue.Queue, threading.Lock, time.sleep, etc. cooperative
+# so the SSE streaming generator doesn't block other HTTP requests.
+import eventlet
+eventlet.monkey_patch(thread=False)  # thread=False: keep real OS threads for asyncio
+
 from app import create_app, socketio
 
 app = create_app()

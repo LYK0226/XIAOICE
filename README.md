@@ -45,19 +45,32 @@ flask db init
 flask db migrate 
 flask db upgrade
 
-# API 設定
-
-# 取得您的加密金鑰 (填入 .env -> ENCRYPTION_KEY="your_32_byte_encryption_key_here")
-python3 -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
-
-設定 -> 高級 ->填入你的 API Key
-
-# 測試 API 連接（可選但建議）
-python test_api.py
-
 # 啟動應用
 python run.py
 flask --debug run --host=0.0.0.0
+```
+
+### 測試
+
+```bash
+# 運行所有測試
+pytest
+
+# 運行單一測試文件
+pytest test/test_rag.py -v
+
+# 運行單一測試
+pytest test/test_rag.py::TestRagEndpoints::test_list_documents_requires_admin -v
+
+# API 連接測試
+python test_api.py
+```
+
+### 賦予管理員權限
+
+```sql
+-- 將用戶設為管理員（需要知道用戶 email）
+UPDATE users SET role = 'admin' WHERE email = '用戶郵箱';
 ```
 
 ### Docker 伺服器
@@ -93,26 +106,6 @@ The pose detection feature enables real-time human pose tracking and action reco
 
 📖 **For detailed instructions, troubleshooting, and tips, see the [Pose Detection User Guide](document/POSE_DETECTION_USER_GUIDE.md)**
 
-### Configuration
-
-Pose detection settings can be configured in your `.env` file:
-
-```bash
-# Enable/disable pose detection feature
-POSE_DETECTION_ENABLED=true
-
-# Model complexity: 0=lite (fastest), 1=full (balanced), 2=heavy (most accurate)
-POSE_MODEL_COMPLEXITY=1
-
-# Detection confidence thresholds (0.0-1.0)
-POSE_MIN_DETECTION_CONFIDENCE=0.5
-POSE_MIN_TRACKING_CONFIDENCE=0.5
-
-# Resource limits
-POSE_MAX_CONCURRENT_SESSIONS=50
-POSE_FRAME_SIZE_LIMIT_MB=5
-```
-
 ### Performance Tips
 - Use `POSE_MODEL_COMPLEXITY=0` for faster processing on lower-end hardware
 - Increase confidence thresholds for more accurate but stricter detection
@@ -128,27 +121,6 @@ POSE_FRAME_SIZE_LIMIT_MB=5
 - ✅ No data storage - frames are immediately discarded
 - ✅ Secure WebSocket connections
 - ✅ No third-party data sharing
-
-### 查看資料庫資料
-
-```bash
-python view_database.py
-
-#查看所有用戶
-python view_database.py users
-
-#查看所有個人資料
-python view_database.py profiles
-
-#資料庫統計資訊
-python view_database.py stats
-
-#搜尋用戶
-python view_database.py search "ryan"
-
-#刪除用戶（謹慎使用！
-python view_database.py delete 5
-```
 
 ## Key Dependencies
 
