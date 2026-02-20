@@ -29,7 +29,18 @@ import asyncio
 import logging
 import json
 import tempfile
+import warnings
 from typing import AsyncIterator, Optional, List, Dict, Any, Generator
+
+# Suppress the harmless Google GenAI warning that fires when a streaming response
+# contains function_call parts alongside text (e.g. model thinking tokens).
+# The text content is still returned correctly; this is purely cosmetic noise.
+warnings.filterwarnings(
+    'ignore',
+    message=r'.*there are non-text parts in the response.*'
+)
+# Also silence it at the logging level (google.genai emits via logger, not warnings.warn)
+logging.getLogger('google_genai.types').setLevel(logging.ERROR)
 
 from google.adk.agents import Agent
 from google.adk.runners import Runner
@@ -609,7 +620,7 @@ def _generate_vertex_streaming_response(
     
     service_account_json = vertex_config.get('service_account')
     project_id = vertex_config.get('project_id')
-    location = vertex_config.get('location', 'us-central1')
+    location = 'global'
     
     if not service_account_json or not project_id:
         yield "Error: Vertex AI service account and project ID are required."
@@ -867,7 +878,8 @@ def generate_streaming_response(
         # ADK's genai Client auto-detects the backend from these env vars.
         service_account_json = vertex_config.get('service_account')
         project_id = vertex_config.get('project_id')
-        location = vertex_config.get('location', 'us-central1')
+        # Always use 'global' endpoint for best availability and Gemini 3+ compatibility.
+        location = 'global'
 
         if not service_account_json or not project_id:
             yield "Error: Vertex AI service account and project ID are required."
@@ -1006,8 +1018,6 @@ def generate_streaming_response(
                 
                 async def stream_chunks():
                     """Async function to stream chunks into the queue."""
-                    # No retry — if Pro fails, fallback to Flash immediately
-                    is_pro_model = 'pro' in (model_name or '').lower()
 
                     async def _try_stream(target_runner, uid, sid, content):
                         """Attempt streaming once. Raises on failure."""
@@ -1033,42 +1043,15 @@ def generate_streaming_response(
                         await _try_stream(runner, effective_uid, session_id, user_content)
                     except Exception as primary_err:
                         primary_str = str(primary_err)
-                        is_model_unavailable = any(kw in primary_str for kw in (
-                            "503", "UNAVAILABLE", "high demand",
-                            "RESOURCE_EXHAUSTED", "overloaded",
-                        ))
-                        # --- Automatic fallback: Pro → Flash ---
-                        if is_pro_model and is_model_unavailable:
-                            fallback_model = (model_name or '').replace('pro', 'flash')
-                            logger.warning(
-                                "Model %s unavailable — falling back to %s",
-                                model_name, fallback_model,
-                            )
-                            # Notify user about the fallback, with blank line before AI response
-                            chunk_queue.put(
-                                f"⚠️ {model_name} is currently experiencing high demand on Google's servers. "
-                                f"Automatically switching to **{fallback_model}** for this response.\n\n*\n\n"
-                            )
-                            try:
-                                fb_runner = _agent_manager.get_or_create_runner(
-                                    effective_uid, api_key, fallback_model
-                                )
-                                fb_session = _agent_manager.get_session_id(effective_uid, conversation_id)
-                                await _agent_manager.ensure_session_exists_async(effective_uid, fb_session)
-                                await _try_stream(fb_runner, effective_uid, fb_session, user_content)
-                            except Exception as fb_err:
-                                logger.error("Fallback model %s also failed: %s", fallback_model, fb_err)
-                                exception_holder[0] = primary_err  # Report original error
-                        else:
-                            # Not a Pro model or not an availability error — report as-is
-                            runner_key = f"{effective_uid}_{model_name}"
-                            _agent_manager._runners.pop(runner_key, None)
-                            _agent_manager._agents.pop(runner_key, None)
-                            logger.error(
-                                "ADK stream failed (%s): %s",
-                                type(primary_err).__name__, primary_str[:300],
-                            )
-                            exception_holder[0] = primary_err
+                        # Clear cached runner/agent so stale state doesn't persist
+                        runner_key = f"{effective_uid}_{model_name}"
+                        _agent_manager._runners.pop(runner_key, None)
+                        _agent_manager._agents.pop(runner_key, None)
+                        logger.error(
+                            "ADK stream failed (%s): %s",
+                            type(primary_err).__name__, primary_str[:300],
+                        )
+                        exception_holder[0] = primary_err
                     finally:
                         chunk_queue.put(None)
                 
@@ -1084,9 +1067,20 @@ def generate_streaming_response(
         thread = threading.Thread(target=run_in_thread, daemon=True)
         thread.start()
         
-        # Yield chunks as they arrive from the queue
+        # Yield chunks as they arrive from the queue.
+        # Use non-blocking reads so eventlet's green-thread hub can schedule
+        # other requests (sidebar, rename, delete, etc.) concurrently.
         while True:
-            chunk = chunk_queue.get()
+            try:
+                chunk = chunk_queue.get(timeout=0.05)
+            except queue.Empty:
+                # Yield control to the eventlet hub so other requests can proceed
+                try:
+                    import eventlet
+                    eventlet.sleep(0)
+                except ImportError:
+                    pass
+                continue
             
             # Check if we're done (None signals completion)
             if chunk is None:

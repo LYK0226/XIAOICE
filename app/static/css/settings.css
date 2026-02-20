@@ -63,7 +63,7 @@ html[data-i18n-ready="true"] body {
 /* Ensure modal maintains proper positioning */
 #avatarModal.modal {
     position: fixed !important;
-    z-index: 10001 !important;
+    z-index: 10000;
 }
 
 .modal-content {

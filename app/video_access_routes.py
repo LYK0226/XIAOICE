@@ -99,8 +99,7 @@ def upload_video():
             if vertex_account:
                 vertex_config = {
                     'service_account': vertex_account.get_decrypted_credentials(),
-                    'project_id': vertex_account.project_id,
-                    'location': vertex_account.location or user_profile.vertex_location or 'us-central1'
+                    'project_id': vertex_account.project_id
                 }
             provider_for_request = 'vertex_ai'
         mime_type = video_file.content_type or gcp_bucket.get_content_type_from_url(gcs_url)
@@ -260,8 +259,7 @@ def analyze_video(video_id):
             if vertex_account:
                 vertex_config = {
                     'service_account': vertex_account.get_decrypted_credentials(),
-                    'project_id': vertex_account.project_id,
-                    'location': vertex_account.location or user_profile.vertex_location or 'us-central1'
+                    'project_id': vertex_account.project_id
                 }
             provider_for_request = 'vertex_ai'
 
@@ -736,8 +734,7 @@ def start_child_analysis(video_id):
             if vertex_account:
                 vertex_config = {
                     'service_account': vertex_account.get_decrypted_credentials(),
-                    'project_id': vertex_account.project_id,
-                    'location': vertex_account.location or user_profile.vertex_location or 'us-central1',
+                    'project_id': vertex_account.project_id
                 }
 
         mime_type = gcp_bucket.get_content_type_from_url(video.file_path)

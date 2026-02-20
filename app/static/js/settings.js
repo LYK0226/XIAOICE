@@ -1520,21 +1520,18 @@ const advancedConfigState = {
     selectedApiKeyId: null,
     vertexAccounts: [],
     selectedVertexAccountId: null,
-    vertexProjectId: null,
-    vertexLocation: null
+    vertexProjectId: null
 };
 
 // Model options by provider
 const modelOptions = {
     'ai_studio': [
         { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
-        { value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro' }
+        { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro' }
     ],
     'vertex_ai': [
-        { value: 'gemini-2.5-flash', label: 'Gemini 2.5 Flash' },
-        { value: 'gemini-2.5-pro', label: 'Gemini 2.5 Pro' },
-        //{ value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
-        //{ value: 'gemini-3-pro-preview', label: 'Gemini 3 Pro' }
+        { value: 'gemini-3-flash-preview', label: 'Gemini 3 Flash' },
+        { value: 'gemini-3.1-pro-preview', label: 'Gemini 3.1 Pro' }
     ]
 };
 
@@ -1764,11 +1761,9 @@ async function applyProviderSelection(selectedProvider, options = {}) {
 
 function syncAdvancedConfigStateFromInputs() {
     const providerSelect = document.getElementById('aiProviderSelect');
-    const locationSelect = document.getElementById('vertexLocation');
 
     advancedConfigState.provider = providerSelect ? providerSelect.value : advancedConfigState.provider;
     advancedConfigState.model = summaryModelSelect ? summaryModelSelect.value : advancedConfigState.model;
-    advancedConfigState.vertexLocation = locationSelect ? locationSelect.value : advancedConfigState.vertexLocation;
 }
 
 function updateAdvancedSummary() {
@@ -1813,16 +1808,14 @@ function updateAdvancedSummary() {
     if (advancedConfigState.provider === 'vertex_ai') {
         const selectedAccount = (advancedConfigState.vertexAccounts || []).find(account => account.id === advancedConfigState.selectedVertexAccountId);
         if (selectedAccount) {
-            const locationText = selectedAccount.location ? ` (${selectedAccount.location})` : '';
             items.push({
                 label: t['settings.advanced.summary.vertex'] || 'Vertex AI',
-                value: `${selectedAccount.name} - ${selectedAccount.project_id}${locationText}`
+                value: `${selectedAccount.name} - ${selectedAccount.project_id}`
             });
         } else if (advancedConfigState.vertexProjectId) {
-            const locationText = advancedConfigState.vertexLocation ? ` (${advancedConfigState.vertexLocation})` : '';
             items.push({
                 label: t['settings.advanced.summary.vertex'] || 'Vertex AI',
-                value: `${advancedConfigState.vertexProjectId}${locationText}`
+                value: `${advancedConfigState.vertexProjectId}`
             });
         }
     }
@@ -2097,7 +2090,6 @@ async function activateVertexAccount(accountId) {
             const account = result.account || {};
             advancedConfigState.selectedVertexAccountId = accountId;
             advancedConfigState.vertexProjectId = account.project_id || null;
-            advancedConfigState.vertexLocation = account.location || null;
             updateSummaryApiKeyOptions(advancedConfigState.apiKeys, advancedConfigState.selectedApiKeyId);
             updateAdvancedSummary();
         } else {
@@ -2628,12 +2620,10 @@ async function saveAiStudioConfig() {
 // Save Vertex AI configuration
 async function saveVertexAiConfig() {
     const nameInput = document.getElementById('configVertexName');
-    const locationInput = document.getElementById('configVertexLocation');
     const serviceAccountInput = document.getElementById('configVertexServiceAccount');
     const t = getSettingsTranslations();
     
     const name = nameInput.value.trim();
-    const location = locationInput.value;
     const serviceAccount = serviceAccountInput.value.trim();
     
     if (!name || !serviceAccount) {
@@ -2653,7 +2643,6 @@ async function saveVertexAiConfig() {
             },
             body: JSON.stringify({
                 name: name,
-                location: location,
                 service_account_json: serviceAccount
             })
         });
@@ -2688,9 +2677,7 @@ function resetAddConfigForm() {
     
     // Vertex AI fields
     const vertexName = document.getElementById('configVertexName');
-    const vertexLocation = document.getElementById('configVertexLocation');
     if (vertexName) vertexName.value = '';
-    if (vertexLocation) vertexLocation.selectedIndex = 0;
     
     if (configVertexServiceAccount) configVertexServiceAccount.value = '';
     if (configVertexServiceAccountFile) configVertexServiceAccountFile.value = '';
@@ -2759,17 +2746,8 @@ async function loadUserModel() {
             advancedConfigState.model = data.ai_model || (summaryModelSelect ? summaryModelSelect.value : null);
             advancedConfigState.selectedVertexAccountId = data.selected_vertex_account_id || null;
             advancedConfigState.vertexProjectId = data.vertex_account ? data.vertex_account.project_id : null;
-            advancedConfigState.vertexLocation = data.vertex_account ? data.vertex_account.location : null;
             updateAuthModeVisibility();
             updateAdvancedSummary();
-            
-            // Load Vertex configuration if applicable
-            if (data.ai_provider === 'vertex_ai') {
-                const locationSelect = document.getElementById('vertexLocation');
-                if (locationSelect && data.vertex_account && data.vertex_account.location) {
-                    locationSelect.value = data.vertex_account.location;
-                }
-            }
 
             updateSummaryApiKeyOptions(advancedConfigState.apiKeys, advancedConfigState.selectedApiKeyId);
             if (typeof renderApiKeys === 'function') {
@@ -2908,7 +2886,6 @@ const saveVertexConfigBtn = document.getElementById('saveVertexConfigBtn');
 if (saveVertexConfigBtn) {
     saveVertexConfigBtn.addEventListener('click', async () => {
         const name = document.getElementById('vertexAccountName')?.value.trim();
-        const location = document.getElementById('vertexLocation').value;
         const serviceAccount = document.getElementById('vertexServiceAccount').value.trim();
         
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
@@ -2970,7 +2947,6 @@ if (saveVertexConfigBtn) {
                 },
                 body: JSON.stringify({
                     name: name,
-                    location: location,
                     service_account_json: serviceAccount
                 })
             });
@@ -2984,7 +2960,6 @@ if (saveVertexConfigBtn) {
                 showCustomAlert(successMessages[langToUse] || successMessages['en']);
 
                 advancedConfigState.vertexProjectId = projectId;
-                advancedConfigState.vertexLocation = location;
                 updateAdvancedSummary();
                 loadVertexAccounts();
                 

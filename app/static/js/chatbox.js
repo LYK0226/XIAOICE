@@ -175,7 +175,8 @@ async function loadTranslations() {
                 chatbox: "Chatbox",
                 placeholder: "Type your question here...",
                 welcomeMsg: "Hello! I am your assistant.",
-                errorMsg: "An error occurred."
+                errorMsg: "An error occurred.",
+                stoppedMsg: "You stopped this response"
             };
         }
     });
@@ -279,6 +280,10 @@ async function updateUILanguage(lang) {
         }
     }
     
+    // Update welcome subtitle if visible
+    const subtitle = document.getElementById('welcomeSubtitleText');
+    if (subtitle && t.welcomeMsg) subtitle.textContent = t.welcomeMsg;
+
     // Save language preference to localStorage
     localStorage.setItem('preferredLanguage', lang);
     
@@ -299,17 +304,13 @@ async function updateUILanguage(lang) {
 }
 
 function renderWelcomeMessage() {
-    const t = translations[currentLanguage];
-    messagesDiv.innerHTML = `
-        <div class="bot-message-container">
-            <div class="avatar bot-avatar">
-                <i class="fas fa-robot"></i>
-            </div>
-            <div class="message-content">
-                <p>${t.welcomeMsg}</p>
-            </div>
-        </div>
-    `;
+    const t = translations[currentLanguage] || {};
+    messagesDiv.innerHTML = '';
+    conversationHistory = [];
+    // Update welcome subtitle text for current language
+    const subtitle = document.getElementById('welcomeSubtitleText');
+    if (subtitle) subtitle.textContent = t.welcomeMsg || subtitle.textContent;
+    showWelcomeScreen();
 }
 
 // Function to create a message element
@@ -600,21 +601,140 @@ window.addEventListener('DOMContentLoaded', async () => {
             window.chatSocket = socket;
         }
     }
+    
+    // Socket.io initialized above. Conversations will be loaded via sidebar.js.
+    // Do NOT call showWelcomeScreen() here — let loadConversations() manage initial state
+    // to avoid a flash when the user has existing conversations.
 });
+
+// ── Typewriter effect ──
+// Buffers text from SSE chunks and renders it at a smooth, constant speed
+// regardless of how large each chunk is (fixes "all-at-once" appearance
+// when the model sends big chunks).
+let _twTarget = null;
+let _twFull = '';
+let _twLen = 0;
+let _twRunning = false;
+let _twOnDone = null; // callback invoked once all chars are rendered normally
+const TW_CHARS_PER_FRAME = 1; // ≈ 60 chars/sec at 60 fps — natural typewriter pace
+
+function _twTick() {
+    if (!_twRunning || !_twTarget) return;
+    if (_twLen < _twFull.length) {
+        _twLen = Math.min(_twLen + TW_CHARS_PER_FRAME, _twFull.length);
+        _twTarget.innerHTML = renderMarkdown(_twFull.slice(0, _twLen));
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+    if (!_twRunning) return; // typewriterFlush() was called mid-animation
+    // If done callback set and all chars rendered, finalise cleanly
+    if (_twOnDone && _twLen >= _twFull.length) {
+        // Final markdown render to close any open tags
+        _twTarget.innerHTML = renderMarkdown(_twFull);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+        const cb = _twOnDone;
+        _twOnDone = null;
+        _twRunning = false;
+        _twTarget = null;
+        _twFull = '';
+        _twLen = 0;
+        cb(); // fire post-streaming cleanup
+        return;
+    }
+    requestAnimationFrame(_twTick);
+}
+
+function typewriterStart(el) {
+    _twTarget = el;
+    _twFull = '';
+    _twLen = 0;
+    _twOnDone = null;
+    _twRunning = true;
+    requestAnimationFrame(_twTick);
+}
+
+function typewriterAppend(text) {
+    _twFull += text;
+}
+
+/**
+ * typewriterDone(cb) — call when streaming finishes *normally*.
+ * Lets the rAF loop play out all buffered chars, then runs cb().
+ */
+function typewriterDone(cb) {
+    _twOnDone = cb || (() => {});
+    // If loop stopped early (e.g., all text already rendered before this call)
+    // kick it back into motion so it can reach the _twOnDone check.
+    if (!_twRunning && _twTarget) {
+        _twRunning = true;
+        requestAnimationFrame(_twTick);
+    }
+}
+
+/**
+ * typewriterFlush() — immediate hard stop (errors / user abort).
+ * Renders all buffered text at once, no animation.
+ */
+function typewriterFlush() {
+    _twRunning = false;
+    if (_twTarget && _twFull) {
+        _twTarget.innerHTML = renderMarkdown(_twFull);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+    _twOnDone = null;
+    _twTarget = null;
+    _twFull = '';
+    _twLen = 0;
+}
+
+// ── Welcome screen helpers ──
+function showWelcomeScreen() {
+    const chatContainer = document.getElementById('chat-container');
+    if (chatContainer) chatContainer.classList.add('welcome-mode');
+}
+
+function hideWelcomeScreen() {
+    const chatContainer = document.getElementById('chat-container');
+    if (chatContainer) chatContainer.classList.remove('welcome-mode');
+}
+
+// ── Streaming state ──
+let isStreaming = false;
+let streamWasStopped = false; // true when user manually clicks stop
+
+function showStopButton() {
+    const t = translations[currentLanguage] || {};
+    sendButton.innerHTML = '<i class="fas fa-stop-circle"></i>';
+    sendButton.classList.add('stop-mode');
+    sendButton.title = t.stopGenerating || 'Stop Generating';
+}
+
+function hideStopButton() {
+    sendButton.innerHTML = '<i class="fas fa-paper-plane"></i>';
+    sendButton.classList.remove('stop-mode');
+    sendButton.title = 'Send message';
+}
 
 // Function to send a message
 async function sendMessage() {
-    // Use the new function that handles files
     await sendMessageWithFiles();
 }
 
-// Attach event listener to send button
-sendButton.addEventListener('click', sendMessage);
+// Attach event listener to send button — dual mode: send or stop
+sendButton.addEventListener('click', () => {
+    if (isStreaming) {
+        streamWasStopped = true;
+        chatAPI.abortStream();
+        isStreaming = false;
+        hideStopButton();
+    } else {
+        sendMessage();
+    }
+});
 
 // Allow sending messages with Enter key
 messageInput.addEventListener('keypress', (event) => {
     if (event.key === 'Enter') {
-        sendMessage();
+        if (!isStreaming) sendMessage();
     }
 });
 
@@ -1016,6 +1136,11 @@ async function sendMessageWithFiles() {
         return;
     }
 
+    // Hide welcome screen as soon as user sends first message
+    hideWelcomeScreen();
+
+    streamWasStopped = false; // reset stopped flag for this new message
+
     const attachmentsSnapshot = [...selectedFiles];
     
     // Generate unique temp_id for optimistic UI
@@ -1089,6 +1214,11 @@ async function sendMessageWithFiles() {
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
         
         let fullResponse = '';
+
+        // Mark streaming state — prevent double-send
+        isStreaming = true;
+        showStopButton();
+        typewriterStart(botMessageContent);
         
         if (mediaFile) {
             // For images/videos, use the uploaded URL
@@ -1108,22 +1238,23 @@ async function sendMessageWithFiles() {
                 conversationHistory,
                 (chunk) => {
                     pendingText += chunk;
-                    botMessageContent.innerHTML = renderMarkdown(pendingText);
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    typewriterAppend(chunk); // typewriter renders gradually
                 },
                 () => {
                     fullResponse = pendingText;
-                    // Final render to ensure complete markdown
-                    botMessageContent.innerHTML = renderMarkdown(fullResponse);
-                    botMessageElement.classList.remove('typing-indicator');
-                    const speakBtn = document.createElement('button');
-                    speakBtn.className = 'speak-btn';
-                    speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-                    speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
-                    speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
-                    botMessageElement.querySelector('.message-content').appendChild(speakBtn);
+                    // Let animation play out, THEN clean up UI
+                    typewriterDone(() => {
+                        botMessageElement.classList.remove('typing-indicator');
+                        const speakBtn = document.createElement('button');
+                        speakBtn.className = 'speak-btn';
+                        speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                        speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
+                        speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
+                        botMessageElement.querySelector('.message-content').appendChild(speakBtn);
+                    });
                 },
                 (error) => {
+                    typewriterFlush(); // stop animation immediately on error
                     console.error('Streaming error:', error);
                     botMessageElement.classList.remove('typing-indicator');
                     botMessageContent.textContent = t.errorMsg || '抱歉，發生了錯誤。請稍後再試。';
@@ -1150,22 +1281,23 @@ async function sendMessageWithFiles() {
                 conversationHistory,
                 (chunk) => {
                     pendingText += chunk;
-                    botMessageContent.innerHTML = renderMarkdown(pendingText);
-                    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+                    typewriterAppend(chunk); // typewriter renders gradually
                 },
                 () => {
                     fullResponse = pendingText;
-                    // Final render to ensure complete markdown
-                    botMessageContent.innerHTML = renderMarkdown(fullResponse);
-                    botMessageElement.classList.remove('typing-indicator');
-                    const speakBtn = document.createElement('button');
-                    speakBtn.className = 'speak-btn';
-                    speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
-                    speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
-                    speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
-                    botMessageElement.querySelector('.message-content').appendChild(speakBtn);
+                    // Let animation play out, THEN clean up UI
+                    typewriterDone(() => {
+                        botMessageElement.classList.remove('typing-indicator');
+                        const speakBtn = document.createElement('button');
+                        speakBtn.className = 'speak-btn';
+                        speakBtn.innerHTML = '<i class="fas fa-volume-up"></i>';
+                        speakBtn.title = translations[currentLanguage].readMessage || '朗讀訊息';
+                        speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
+                        botMessageElement.querySelector('.message-content').appendChild(speakBtn);
+                    });
                 },
                 (error) => {
+                    typewriterFlush(); // stop animation immediately on error
                     console.error('Streaming error:', error);
                     botMessageElement.classList.remove('typing-indicator');
                     botMessageContent.textContent = t.errorMsg || '抱歉，發生了錯誤。請稍後再試。';
@@ -1183,7 +1315,12 @@ async function sendMessageWithFiles() {
         
         // Ensure fullResponse has content
         if (!fullResponse.trim()) {
-            fullResponse = t.errorMsg || '抱歉，發生了錯誤。請稍後再試。';
+            typewriterFlush(); // stop any lingering animation
+            if (streamWasStopped) {
+                fullResponse = t.stoppedMsg || '你已停止了這則回應';
+            } else {
+                fullResponse = t.errorMsg || '抱歉，發生了錯誤。請稍後再試。';
+            }
             botMessageContent.textContent = fullResponse;
         }
         
@@ -1203,6 +1340,9 @@ async function sendMessageWithFiles() {
         const botMessage = createMessage(errorMsg, false);
         messagesDiv.appendChild(botMessage);
         messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    } finally {
+        isStreaming = false;
+        hideStopButton();
     }
 }
 

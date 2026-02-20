@@ -156,6 +156,32 @@ def login():
     except Exception as e:
         return jsonify({'error': f'Login failed: {str(e)}'}), 500
 
+@auth_bp.route('/refresh', methods=['POST'])
+@jwt_required(refresh=True)
+def refresh():
+    """Issue a new access token using a valid refresh token."""
+    try:
+        user_id = get_jwt_identity()
+        new_access_token = create_access_token(identity=str(user_id))
+
+        response = jsonify({
+            'access_token': new_access_token
+        })
+
+        secure_cookie = current_app.config.get('SESSION_COOKIE_SECURE', False)
+        response.set_cookie(
+            'access_token',
+            new_access_token,
+            max_age=24 * 60 * 60,  # 1 day
+            httponly=True,
+            secure=secure_cookie,
+            samesite='Lax'
+        )
+
+        return response, 200
+    except Exception as e:
+        return jsonify({'error': f'Token refresh failed: {str(e)}'}), 500
+
 @auth_bp.route('/logout', methods=['POST'])
 @jwt_required(optional=True)
 def logout():

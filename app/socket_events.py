@@ -221,8 +221,7 @@ def handle_send_message(data):
             if ai_provider == 'vertex_ai':
                 vertex_config = {
                     'service_account': user_profile.get_decrypted_vertex_service_account(),
-                    'project_id': user_profile.vertex_project_id,
-                    'location': user_profile.vertex_location or 'us-central1'
+                    'project_id': user_profile.vertex_project_id
                 }
                 provider_for_request = 'vertex_ai'
             else:

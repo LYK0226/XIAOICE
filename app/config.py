@@ -1,5 +1,6 @@
 
 import os
+from datetime import timedelta
 
 class Config:
     """Set Flask configuration variables from .env file."""
@@ -36,6 +37,8 @@ class Config:
 
     # JWT Configuration
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY', 'jwt_default_secret_key')
+    JWT_ACCESS_TOKEN_EXPIRES = timedelta(days=1)    # Access token valid for 1 day
+    JWT_REFRESH_TOKEN_EXPIRES = timedelta(days=30)  # Refresh token valid for 30 days
 
     # JWT token handling (support both Authorization header and secure cookies)
     JWT_TOKEN_LOCATION = ['headers', 'cookies', 'query_string']

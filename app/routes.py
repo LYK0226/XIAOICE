@@ -777,8 +777,7 @@ def chat_stream():
 
                 vertex_config = {
                     'service_account': vertex_account.get_decrypted_credentials(),
-                    'project_id': vertex_account.project_id,
-                    'location': vertex_account.location or 'us-central1'
+                    'project_id': vertex_account.project_id
                 }
                 if not vertex_config['service_account'] or not vertex_config['project_id']:
                     return jsonify({'error': 'Vertex AI service account is missing or invalid'}), 400
@@ -997,7 +996,7 @@ def get_user_model():
         if user_profile.ai_model:
             ai_model = user_profile.ai_model
         else:
-            ai_model = 'gemini-2.5-flash' if user_profile.ai_provider == 'vertex_ai' else 'gemini-3-flash-preview'
+            ai_model = 'gemini-3-flash-preview' if user_profile.ai_provider == 'vertex_ai' else 'gemini-3-flash-preview'
         
         return jsonify({
             'ai_model': ai_model,
@@ -1032,8 +1031,8 @@ def set_user_model():
         if 'ai_model' in data:
             ai_model = data['ai_model']
             # Define allowed models for each provider
-            ai_studio_models = ['gemini-3-flash-preview', 'gemini-3-pro-preview']
-            vertex_ai_models = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview', 'gemini-3-pro-preview']
+            ai_studio_models = ['gemini-3-flash-preview', 'gemini-3.1-pro-preview']
+            vertex_ai_models = ['gemini-3-flash-preview', 'gemini-3.1-pro-preview']
             all_allowed_models = ai_studio_models + vertex_ai_models
             
             if ai_model not in all_allowed_models:
@@ -1048,11 +1047,11 @@ def set_user_model():
                 return jsonify({'error': 'Invalid provider. Allowed: ai_studio, vertex_ai'}), 400
             
             # If switching provider, ensure selected model is valid for the provider
-            ai_studio_models = ['gemini-3-flash-preview', 'gemini-3-pro-preview']
-            vertex_ai_models = ['gemini-2.5-flash', 'gemini-2.5-pro', 'gemini-3-flash-preview', 'gemini-3-pro-preview']
+            ai_studio_models = ['gemini-3-flash-preview', 'gemini-3.1-pro-preview']
+            vertex_ai_models = ['gemini-3-flash-preview', 'gemini-3.1-pro-preview']
             if ai_provider == 'vertex_ai' and user_profile.ai_model not in vertex_ai_models:
                 # Set to vertex default
-                user_profile.ai_model = 'gemini-2.5-flash'
+                user_profile.ai_model = 'gemini-3-flash-preview'
             if ai_provider == 'ai_studio' and user_profile.ai_model not in ai_studio_models:
                 user_profile.ai_model = 'gemini-3-flash-preview'
 
@@ -2308,7 +2307,6 @@ def create_vertex_account():
     # Validate required fields
     name = data.get('name', '').strip()
     service_account_json = data.get('service_account_json', '').strip()
-    location = data.get('location', 'us-central1')
     
     if not name:
         return jsonify({'error': 'Name is required'}), 400
@@ -2317,11 +2315,11 @@ def create_vertex_account():
         return jsonify({'error': 'Service account JSON is required'}), 400
     
     try:
-        # Create new vertex account
+        # Create new vertex account (location forced to 'global' for all models)
         vertex_account = VertexServiceAccount(
             user_id=user_id,
             name=name,
-            location=location
+            location='global'
         )
         
         # This will validate JSON, extract project_id and client_email, and encrypt credentials
@@ -2392,9 +2390,6 @@ def update_vertex_account(account_id):
             if not name:
                 return jsonify({'error': 'Name cannot be empty'}), 400
             account.name = name
-        
-        if 'location' in data:
-            account.location = data['location']
         
         if 'service_account_json' in data:
             service_account_json = data['service_account_json'].strip()
