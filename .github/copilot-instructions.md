@@ -11,7 +11,37 @@
 5. Before completing a task, the askQuestions tool must be used to prompt the user for feedback.
 
 Brief: concise, repo-specific guidance so an AI agent can be productive quickly.
+## Project Guidelines
 
+### Code style
+- Python: follow PEP8; add type hints where helpful. See examples in `app/routes.py`, `app/models.py`, `app/agent/chat_agent.py`.
+- JavaScript: vanilla ES modules, `PascalCase` for classes, `camelCase` for functions — see `app/pose_detection/*` and `app/static/js/chatbox.js`.
+- Tests: use `pytest/` and mock external services (GCS). Example tests live in `test/`.
+- Docstrings: keep public docstrings short (one line) and include parameter/return types when non-obvious.
+
+### Architecture (what to edit)
+- App factory: `app/__init__.py` (blueprints + SocketIO).
+- ADK multi-agent coordinator & specialists: `app/agent/chat_agent.py` (streaming handled via SSE `/chat/stream` and Socket.IO in `app/socket_events.py`).
+- Data models & storage: `app/models.py`, `app/gcp_bucket.py`.
+
+### Build & test
+- Setup: `python -m venv .venv && source .venv/bin/activate && pip install -r requirements.txt`
+- Run dev server: `python run.py`
+- Tests: `pytest` (run single test with `pytest path::Class::test -v`)
+- DB migrations: `flask db migrate -m "msg" && flask db upgrade`
+
+### Project conventions & constraints
+- Per-user encrypted API keys (Fernet). Use `ENCRYPTION_KEY` env var; do not decrypt globally.
+- Session IDs: `conv_{user_id}_{conversation_id}`.
+- Upload limit: 500MB (enforced in `app/agent/chat_agent.py`).
+- Do NOT commit secrets or set global Google API keys.
+- Preserve streaming prefix-stripping logic in `app/routes.py` and `app/socket_events.py`.
+
+### Integration & security
+- GCS: `app/gcp_bucket.py` — set `GCS_BUCKET_NAME` and `GCS_CREDENTIALS_PATH`.
+- Authentication: JWT flows in `app/auth.py`; validate and sanitize user input and uploads.
+
+(See 'Where to look' below for quick file references.)
 Core architecture (where to look)
 - Flask app factory: `app/__init__.py` (create_app, SocketIO config).
 - Multi-agent AI: `app/agent/chat_agent.py` (coordinator + pdf/media specialists).

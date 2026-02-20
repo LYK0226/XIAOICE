@@ -49,6 +49,15 @@ flask db upgrade
 python run.py
 flask --debug run --host=0.0.0.0
 ```
+### 賦予管理員權限
+
+```bash
+# 建立管理員帳號
+python create_admin.py
+
+username = 'admin@gmail.com'
+password = 'admin'
+```
 
 ### 測試
 
@@ -64,13 +73,6 @@ pytest test/test_rag.py::TestRagEndpoints::test_list_documents_requires_admin -v
 
 # API 連接測試
 python test_api.py
-```
-
-### 賦予管理員權限
-
-```sql
--- 將用戶設為管理員（需要知道用戶 email）
-UPDATE users SET role = 'admin' WHERE email = '用戶郵箱';
 ```
 
 ### Docker 伺服器
@@ -148,69 +150,68 @@ The pose detection feature enables real-time human pose tracking and action reco
 ```
 XIAOICE/
 ├── .devcontainer/                   # Docker 開發環境配置
-│ ├── docker-compose.yml            # Docker Compose 配置
-│ └── pgadmin_servers.xml           # PgAdmin 伺服器配置
-├── .vscode/                        # VS Code 設定
-├── app/                            # Flask 應用程式
-│ ├── __init__.py                   # Flask 應用初始化
-│ ├── auth.py                       # 認證相關功能
-│ ├── config.py                     # 應用配置
-│ ├── gcp_bucket.py                 # Google Cloud Storage 整合
-│ ├── models.py                     # 資料庫模型
-│ ├── routes.py                     # 路由定義
-│ ├── socket_events.py              # WebSocket event handlers
-│ ├── agent/                        # Multi-agent AI system
-│ │   ├── chat_agent.py            # ADK agent manager and coordinators
-│ │   └── __init__.py
-│ ├── pose_detection/              # Pose detection modules (frontend JS)
-│ │   ├── movement_analyzers.js   # Body part movement analyzers
-│ │   ├── movement_descriptor.js  # Natural language descriptions
-│ │   ├── movement_detector.js    # Movement detection logic
-│ │   ├── pose_detector_3d.js     # 3D pose detection
-│ │   ├── pose_error_handler.js   # Error handling
-│ │   └── pose_renderer.js        # Canvas rendering
-│ ├── static/                       # 靜態資源目錄
-│ │ ├── css/
-│ │ │ ├── chatbox.css              # 主聊天頁面專用樣式
-│ │ │ ├── sidebar.css              # 側邊欄專用樣式
-│ │ │ ├── settings.css             # 設定頁面專用樣式
-│ │ │ ├── login_signup.css         # 登入註冊頁面專用樣式
-│ │ │ ├── forget_password.css      # 忘記密碼頁面專用樣式
-│ │ │ └── pose_detection.css       # 姿勢檢測介面樣式
-│ │ ├── js/
-│ │ │ ├── api_module.js            # API 互動模組
-│ │ │ ├── chatbox.js               # 主要聊天邏輯
-│ │ │ ├── sidebar.js               # 側邊欄對話管理功能
-│ │ │ ├── settings.js              # 設定頁面互動模組
-│ │ │ ├── login_signup.js          # 登入註冊頁面互動模組
-│ │ │ ├── forget_password.js       # 忘記密碼頁面互動模組
-│ │ │ ├── pose_detection.js        # 姿勢檢測 UI 模組
-│ │ │ ├── pose_renderer.js         # Canvas 渲染器
-│ │ │ └── socket_module.js         # WebSocket 連接管理
-│ │ └── upload/                    # 上傳檔案目錄
-│ └── templates/                   # HTML 模板
-│     ├── index.html               # 主聊天頁面
-│     ├── login_signup.html        # 登入註冊頁面
-│     ├── setting.html             # 設定頁面
-│     └── forget_password.html     # 忘記密碼頁面
-├── instance/                       # 應用實例資料
-├── migrations/                     # 資料庫遷移檔案
-│ ├── alembic.ini                  # Alembic 配置
-│ ├── env.py                       # 遷移環境
-│ ├── README                       # 遷移說明
-│ ├── script.py.mako               # 遷移腳本模板
-│ └── versions/                    # 遷移版本
-├── test/                          # 測試目錄
-│ ├── check_api_keys.py            # API key 驗證工具
-│ ├── test_3d_pose_module_initialization.py  # 3D 姿勢模組初始化測試
-│ ├── test_api.py                  # API 連接測試
-│ └── test_multi_agent.py          # Multi-agent 系統測試
-├── .env                           # 環境變數配置
-├── .gitignore                     # Git 忽略文件
-├── README.md                      # 本文件
-├── requirements.txt               # Python 依賴
-├── run.py                         # 應用啟動腳本
-└── view_database.py               # 資料庫查看工具
+│   ├── docker-compose.yml
+│   └── pgadmin_servers.xml
+├── .vscode/                          # VS Code workspace settings
+├── app/                              # Flask 應用程式與 AI agent
+│   ├── __init__.py                   # create_app()、Blueprint 與 SocketIO 初始化
+│   ├── adk.py                        # ADK 連線 / session helpers
+│   ├── AGENTS.md                     # agent 設計與協調說明
+│   ├── auth.py                       # JWT 驗證、登入/註冊邏輯
+│   ├── child_assessment.py           # 兒童評估流程與分數計算
+│   ├── config.py                     # 環境與設定常數
+│   ├── gcp_bucket.py                 # GCS 上傳/下載/刪除 API 封裝
+│   ├── models.py                     # ORM：User, Conversation, Message, FileUpload
+│   ├── report_generator.py           # 產生影片／評估報表 (PDF/JSON)
+│   ├── routes.py                     # SSE `/chat/stream`、上傳、會話管理等 HTTP endpoints
+│   ├── socket_events.py              # Socket.IO connect/streaming handlers (JWT on connect)
+│   ├── video_access_routes.py        # 受控影片存取 URL / 權限檢查
+│   ├── video_cleanup.py              # 背景清理工作 (過期檔案、暫存)
+│   ├── video_processor.py            # 影片上傳後的分析 pipeline / 存儲流程
+│   ├── agent/                        # Multi-agent AI system (ADK coordinator + specialists)
+│   │   ├── __init__.py
+│   │   ├── AGENTS.md
+│   │   ├── chat_agent.py             # 協調器：管理會話上下文、streaming、模型選擇
+│   │   ├── knowledge_base.py        # RAG 支援、文件處理與檢索邏輯
+│   │   ├── prompts.py                # 內建 prompt 與 system instructions
+│   │   ├── video_analysis_agent.py   # 影片/多媒體專用 agent
+│   │   └── instructions/             # agent prompts 與片段
+│   ├── pose_detection/               # 姿勢檢測：前端 JS + 後端評估
+│   │   ├── pose_assessment.py        # 後端評分/規則引擎（把姿勢資料轉成評估分數）
+│   │   ├── action_detector.js        # 動作分類器
+│   │   ├── movement_analyzers.js    # 各部位動作分析邏輯
+│   │   ├── movement_descriptor.js   # 自然語言描述生成器
+│   │   ├── movement_detector.js     # 偵測動作事件
+│   │   ├── multi_person_detector.js # 多人追蹤/選取
+│   │   ├── multi_person_selector.js # 人物選擇 UI 邏輯
+│   │   ├── pose_detector_3d.js      # MediaPipe client-side 3D 偵測
+│   │   ├── pose_error_handler.js    # 偵測錯誤處理
+│   │   └── pose_renderer.js         # Canvas 渲染與 overlay
+│   ├── rag/                          # RAG / embeddings 工具
+│   │   ├── chunker.py               # 文件分段
+│   │   ├── embeddings.py            # 向量化/embedding wrapper
+│   │   ├── processor.py             # 文本處理 pipeline
+│   │   └── retriever.py             # 相似度檢索
+│   ├── static/                       # 靜態資源 (UI、JS、CSS)
+│   │   ├── css/                      # 視覺樣式
+│   │   ├── data/                     # emojis.json、i18n 資源
+│   │   ├── i18n/                     # 翻譯檔
+│   │   ├── js/                       # `chatbox.js`（主 UI），`pose_detection.js`（前端檢測 UI）
+│   │   └── upload/                   # 前端上傳暫存
+│   └── templates/                    # Jinja 模板 (chat, auth, settings, assessments)
+├── videos_quesyions/                 # 教學與評估用影片目錄
+├── docs/                             # 使用手冊、架構與部署說明
+├── migrations/                       # Alembic migration 檔案
+│   └── versions/                      # schema 版本歷史
+├── test/                             # pytest 測試 (單元與整合測試)
+├── create_admin.py                   # 建立管理員使用的簡易腳本
+├── run.py                            # 本地開發伺服器啟動指令
+├── test_vertex_account.py            # 範例 / 驗證帳號測試工具
+├── requirements.txt                  # Python 相依套件
+├── package-lock.json                 # Node 前端依賴鎖檔
+├── README.md                         # 本檔案
+├── .env.example / .env               # 環境變數範本與 (本地) .env
+└── view_database.py                  # DB 查詢 / 檢視小工具
 ```
 
 # Install opencode and the plugin
