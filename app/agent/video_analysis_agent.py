@@ -34,9 +34,6 @@ from google.adk.sessions import InMemorySessionService
 from google.genai import types
 
 from app import gcp_bucket
-from app.agent.knowledge_base import (
-    DEVELOPMENTAL_STANDARDS,
-)
 from app.agent.prompts import (
     TRANSCRIPTION_AGENT_INSTRUCTION,
     MOTOR_ANALYSIS_AGENT_INSTRUCTION,
@@ -45,6 +42,8 @@ from app.agent.prompts import (
 )
 logger = logging.getLogger(__name__)
 
+# ---------------------------------------------------------------------------
+# Developmental milestone data (previously in knowledge_base.py)
 # ---------------------------------------------------------------------------
 # Thread-local storage: allows run_video_analysis() to propagate the current
 # user's numeric ID to the RAG helper functions (which are ADK FunctionTools
@@ -86,11 +85,6 @@ def _rag_search(query: str, top_k: int = 3):
             return search_knowledge(query, top_k=top_k, user_id=uid)
     return search_knowledge(query, top_k=top_k, user_id=uid)
 
-# ---------------------------------------------------------------------------
-# Note: DEVELOPMENTAL_STANDARDS and related functions are now imported from
-# app.agent.knowledge_base module for centralized RAG knowledge management.
-# ---------------------------------------------------------------------------
-
 
 def _get_age_bracket(age_months: float) -> str:
     """Map age in months to a bracket key."""
@@ -121,19 +115,16 @@ def get_age_standards(age_months: float) -> str:
     Retrieves age-appropriate developmental milestones for a child.
     This is the RAG knowledge retrieval tool.
 
-    Searches the knowledge base for relevant developmental standards,
-    falling back to built-in milestone data if RAG is unavailable.
+    Searches the RAG knowledge base for developmental standards relevant to the child's age.
 
     Args:
         age_months: The child's age in months.
 
     Returns:
-        JSON string of developmental standards for the age bracket.
+        JSON string of developmental standards retrieved from the knowledge base.
     """
     bracket = _get_age_bracket(age_months)
-    fallback_standards = DEVELOPMENTAL_STANDARDS.get(bracket, {})
 
-    # Try RAG retrieval first
     try:
         from app.rag.retriever import format_context
         queries = [
@@ -156,20 +147,17 @@ def get_age_standards(age_months: float) -> str:
             unique.sort(key=lambda x: x['similarity'], reverse=True)
 
             rag_context = format_context(unique[:5], max_chars=4000)
-            combined = {
-                "age_bracket": fallback_standards.get("age_range", bracket + " months"),
-                "builtin_milestones": fallback_standards,
+            result = {
+                "age_bracket": bracket + " months",
                 "knowledge_base_references": rag_context,
-                "source": "RAG + built-in",
+                "source": "RAG",
             }
-            return json.dumps(combined, ensure_ascii=False, indent=2)
+            return json.dumps(result, ensure_ascii=False, indent=2)
     except Exception as exc:
         logger.warning("RAG retrieval failed in get_age_standards: %s", exc)
 
-    # Fallback to built-in standards
-    result = dict(fallback_standards)
-    result["source"] = "built-in"
-    return json.dumps(result, ensure_ascii=False, indent=2)
+    # RAG unavailable — return empty shell so the agent can still proceed
+    return json.dumps({"age_bracket": bracket + " months", "source": "RAG unavailable"}, ensure_ascii=False)
 
 
 def assess_motor_development(observations: str, age_months: float) -> str:
@@ -185,21 +173,18 @@ def assess_motor_development(observations: str, age_months: float) -> str:
         JSON string with assessment structure: areas assessed, status per area, concerns.
     """
     bracket = _get_age_bracket(age_months)
-    standards = DEVELOPMENTAL_STANDARDS.get(bracket, {})
 
     result = {
-        "age_bracket": standards.get("age_range", "unknown"),
-        "gross_motor_standards": standards.get("gross_motor", []),
-        "fine_motor_standards": standards.get("fine_motor", []),
+        "age_bracket": bracket + " months",
         "observations_received": observations[:500],
         "instruction": (
-            "Compare the observations against the standards above. "
-            "For each milestone, indicate PASS / CONCERN / UNABLE_TO_ASSESS. "
-            "Provide a brief rationale for each."
+            "Use the knowledge_base_context below to identify age-appropriate gross and fine "
+            "motor milestones for this child. For each milestone, indicate PASS / CONCERN / "
+            "UNABLE_TO_ASSESS and provide a brief rationale."
         ),
     }
 
-    # Enrich with RAG context if available
+    # Retrieve RAG context
     try:
         from app.rag.retriever import format_context
         rag_results = _rag_search(
@@ -213,7 +198,7 @@ def assess_motor_development(observations: str, age_months: float) -> str:
                 for r in rag_results
             ]
     except Exception as exc:
-        logger.warning("RAG enrichment failed in assess_motor_development: %s", exc)
+        logger.warning("RAG retrieval failed in assess_motor_development: %s", exc)
 
     return json.dumps(result, ensure_ascii=False, indent=2)
 
@@ -230,21 +215,18 @@ def assess_language_development(observations: str, age_months: float) -> str:
         JSON string with assessment structure.
     """
     bracket = _get_age_bracket(age_months)
-    standards = DEVELOPMENTAL_STANDARDS.get(bracket, {})
 
     result = {
-        "age_bracket": standards.get("age_range", "unknown"),
-        "language_standards": standards.get("language", []),
-        "social_standards": standards.get("social", []),
+        "age_bracket": bracket + " months",
         "observations_received": observations[:500],
         "instruction": (
-            "Compare the observations against the language and social standards above. "
-            "For each milestone, indicate PASS / CONCERN / UNABLE_TO_ASSESS. "
-            "Provide a brief rationale for each."
+            "Use the knowledge_base_context below to identify age-appropriate language and social "
+            "milestones for this child. For each milestone, indicate PASS / CONCERN / "
+            "UNABLE_TO_ASSESS and provide a brief rationale."
         ),
     }
 
-    # Enrich with RAG context if available
+    # Retrieve RAG context
     try:
         from app.rag.retriever import format_context
         rag_results = _rag_search(
@@ -258,7 +240,7 @@ def assess_language_development(observations: str, age_months: float) -> str:
                 for r in rag_results
             ]
     except Exception as exc:
-        logger.warning("RAG enrichment failed in assess_language_development: %s", exc)
+        logger.warning("RAG retrieval failed in assess_language_development: %s", exc)
 
     return json.dumps(result, ensure_ascii=False, indent=2)
 
@@ -470,16 +452,14 @@ def run_video_analysis(
 
         # Build the initial user message with video + context
         age_bracket = _get_age_bracket(child_age_months)
-        standards = DEVELOPMENTAL_STANDARDS.get(age_bracket, {})
 
         initial_message = (
             f"請分析以下兒童發展影片。\n\n"
             f"兒童資料：\n"
             f"- 姓名：{child_name}\n"
             f"- 年齡：{child_age_months:.1f} 個月\n"
-            f"- 年齡段：{standards.get('age_range', 'unknown')}\n\n"
-            f"該年齡段的發展標準（供參考）：\n{json.dumps(standards, ensure_ascii=False, indent=2)}\n\n"
-            f"請依照你的指令進行分析。"
+            f"- 年齡段：{age_bracket} 個月\n\n"
+            f"請使用 get_age_standards 工具取得該年齡段的發展標準，然後依照你的指令進行分析。"
         )
 
         content_parts = [
@@ -621,7 +601,6 @@ def _run_vertex_analysis(
 
         file_data = gcp_bucket.download_file_from_gcs(video_gcs_url)
         age_bracket = _get_age_bracket(child_age_months)
-        standards = DEVELOPMENTAL_STANDARDS.get(age_bracket, {})
 
         prompt = (
             f"你是一位兒童發展專家。請分析以下影片中的兒童，評估其身體發展（粗大動作、精細動作）"
@@ -629,8 +608,8 @@ def _run_vertex_analysis(
             f"兒童資料：\n"
             f"- 姓名：{child_name}\n"
             f"- 年齡：{child_age_months:.1f} 個月\n"
-            f"- 年齡段：{standards.get('age_range', 'unknown')}\n\n"
-            f"該年齡段的發展標準：\n{json.dumps(standards, ensure_ascii=False, indent=2)}\n\n"
+            f"- 年齡段：{age_bracket} 個月\n\n"
+            f"請根據你對該年齡段發展標準的知識進行評估。\n\n"
             f"請以 JSON 格式輸出完整報告，包含以下欄位：\n"
             f"report_title, child_name, child_age_months, analysis_date, executive_summary,\n"
             f"motor_development (status, findings, strengths, concerns, recommendations),\n"
