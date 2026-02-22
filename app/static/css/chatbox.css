@@ -475,6 +475,7 @@ body.dark-theme .bot-message {
     background: transparent;
     border-top: none;
     transition: all 0.3s ease;
+    position: relative; /* needed for popup menus */
 }
 
 .input-toolbar {
@@ -514,8 +515,314 @@ body.dark-theme .toolbar-btn {
     box-shadow: 0 12px 25px rgba(168, 155, 197, 0.3);
 }
 
+/* ── Model toggle (Flash / Pro) ── */
+.model-toggle {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(124, 58, 237, 0.06);
+    border: 1.5px solid rgba(124, 58, 237, 0.18);
+    border-radius: 20px;
+    padding: 3px;
+    gap: 1px;
+    margin-left: auto;
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.04);
+}
+
+body.dark-theme .model-toggle {
+    background: rgba(124, 58, 237, 0.1);
+    border-color: rgba(168, 85, 247, 0.25);
+}
+
+.model-btn {
+    background: transparent;
+    border: none;
+    border-radius: 16px;
+    padding: 4px 11px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.2px;
+    color: #9381b5;
+    cursor: pointer;
+    transition: background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    white-space: nowrap;
+    user-select: none;
+}
+
+body.dark-theme .model-btn {
+    color: #a78bfa;
+}
+
+.model-btn .model-icon {
+    font-size: 12px;
+    line-height: 1;
+}
+
+.model-btn.active {
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+}
+
+.model-btn:not(.active):hover {
+    background: rgba(124, 58, 237, 0.1);
+    color: #7c3aed;
+}
+
+body.dark-theme .model-btn:not(.active):hover {
+    background: rgba(168, 85, 247, 0.15);
+    color: #c4b5fd;
+}
+
+/* ── Plus button & popup menu ── */
+.input-action-btn.plus-btn {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: none;
+    background: rgba(124, 58, 237, 0.08);
+    color: #7c3aed;
+    font-size: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.18s ease, transform 0.18s ease;
+    margin-right: 4px;
+}
+
+body.dark-theme .input-action-btn.plus-btn {
+    background: rgba(124, 58, 237, 0.15);
+    color: #a78bfa;
+}
+
+/* ── Button + popup wrapper (keeps popup anchored to its button) ── */
+.btn-popup-wrapper {
+    position: relative;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+}
+
+.input-action-btn.plus-btn:hover {
+    background: rgba(124, 58, 237, 0.18);
+    transform: rotate(45deg);
+}
+
+.input-action-btn.plus-btn.open {
+    background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+    color: #fff;
+    transform: rotate(45deg);
+    box-shadow: 0 2px 8px rgba(124, 58, 237, 0.4);
+}
+
+.plus-menu {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: 0;
+    background: #fff;
+    border: 1px solid rgba(124, 58, 237, 0.15);
+    border-radius: 16px;
+    padding: 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    box-shadow: 0 8px 32px rgba(124, 58, 237, 0.18), 0 2px 8px rgba(0,0,0,0.08);
+    z-index: 200;
+    min-width: 148px;
+    animation: popupFadeIn 0.15s ease;
+}
+
+body.dark-theme .plus-menu {
+    background: #2a2438;
+    border-color: rgba(124, 58, 237, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.plus-menu-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+    color: #3d3450;
+    font-size: 13px;
+    font-weight: 500;
+    text-align: left;
+    transition: background 0.15s ease;
+    width: 100%;
+}
+
+body.dark-theme .plus-menu-item {
+    color: #d4c8f0;
+}
+
+.plus-menu-item:hover {
+    background: rgba(124, 58, 237, 0.08);
+    color: #7c3aed;
+}
+
+body.dark-theme .plus-menu-item:hover {
+    background: rgba(124, 58, 237, 0.18);
+    color: #c4b5fd;
+}
+
+.pmi-icon {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(124, 58, 237, 0.08);
+    border-radius: 8px;
+    font-size: 13px;
+    color: #7c3aed;
+    flex-shrink: 0;
+}
+
+body.dark-theme .pmi-icon {
+    background: rgba(124, 58, 237, 0.2);
+    color: #a78bfa;
+}
+
+/* ── Input model selector button ── */
+.input-model-btn {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 13px;
+    border: 1.5px solid rgba(124, 58, 237, 0.22);
+    border-radius: 16px;
+    background: rgba(124, 58, 237, 0.06);
+    color: #7c3aed;
+    font-size: 12.5px;
+    font-weight: 700;
+    cursor: pointer;
+    letter-spacing: 0.2px;
+    transition: background 0.18s ease, border-color 0.18s ease;
+    white-space: nowrap;
+    user-select: none;
+}
+
+body.dark-theme .input-model-btn {
+    border-color: rgba(124, 58, 237, 0.35);
+    background: rgba(124, 58, 237, 0.12);
+    color: #a78bfa;
+}
+
+.input-model-btn:hover {
+    background: rgba(124, 58, 237, 0.12);
+    border-color: rgba(124, 58, 237, 0.4);
+}
+
+.input-model-btn .fa-chevron-up {
+    font-size: 9px;
+    transition: transform 0.2s ease;
+}
+
+.input-model-btn.open .fa-chevron-up {
+    transform: rotate(180deg);
+}
+
+/* ── Model dropdown popup ── */
+.model-dropdown {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    right: 0;
+    background: #fff;
+    border: 1px solid rgba(124, 58, 237, 0.15);
+    border-radius: 16px;
+    padding: 6px;
+    min-width: 190px;
+    box-shadow: 0 8px 32px rgba(124, 58, 237, 0.18), 0 2px 8px rgba(0,0,0,0.08);
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    animation: popupFadeIn 0.15s ease;
+}
+
+body.dark-theme .model-dropdown {
+    background: #2a2438;
+    border-color: rgba(124, 58, 237, 0.3);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+.model-dropdown-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 9px 12px;
+    border: none;
+    border-radius: 10px;
+    background: transparent;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.15s ease;
+    width: 100%;
+}
+
+.model-dropdown-item:hover {
+    background: rgba(124, 58, 237, 0.08);
+}
+
+body.dark-theme .model-dropdown-item:hover {
+    background: rgba(124, 58, 237, 0.18);
+}
+
+.model-dropdown-item.active {
+    background: rgba(124, 58, 237, 0.1);
+}
+
+.mdi-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    width: 32px;
+    text-align: center;
+}
+
+.mdi-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.mdi-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #3d3450;
+    line-height: 1.2;
+}
+
+body.dark-theme .mdi-name {
+    color: #e2d9f3;
+}
+
+.mdi-desc {
+    font-size: 11px;
+    color: #9381b5;
+    line-height: 1.2;
+}
+
+body.dark-theme .mdi-desc {
+    color: #a78bfa;
+}
+
+@keyframes popupFadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
 .input-wrapper {
     display: flex;
+    gap: 14px;
     align-items: center;
     background: #FFFFFF;
     border: 3px solid rgba(168, 155, 197, 0.4);
@@ -544,14 +851,22 @@ body.dark-theme .input-wrapper {
     font-size: 15px;
     outline: none;
     resize: none;
-    max-height: 150px;
+    overflow-y: hidden;
+    min-height: 24px;
+    max-height: 140px;
+    line-height: 1.55;
+    display: block;
     color: #4A3B5C;
     font-weight: 700;
+    font-family: inherit;
 }
 
 body.dark-theme #messageInput {
     color: #E2D7F5;
 }
+
+/* hide scrollbar track while keeping scrollability */
+#messageInput::-webkit-scrollbar { display: none; }
 
 #sendButton {
     background: #10B981;
@@ -816,16 +1131,27 @@ body.dark-theme .input-wrapper:focus-within {
 #messageInput {
     flex: 1;
     border: none;
-    padding: 12px 0;
+    padding: 10px 0;
     font-size: 15px;
     outline: none;
     background: transparent;
     color: #1a202c;
+    resize: none;
+    overflow-y: hidden;
+    min-height: 24px;
+    max-height: 140px;
+    line-height: 1.55;
+    display: block;
+    font-family: inherit;
 }
 
 body.dark-theme #messageInput {
     color: #f7fafc;
 }
+
+/* hide scrollbar track while keeping scrollability */
+#messageInput::-webkit-scrollbar { display: none; }
+#messageInput { scrollbar-width: none; }
 
 #messageInput::placeholder {
     color: #a0aec0;

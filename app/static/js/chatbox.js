@@ -284,6 +284,22 @@ async function updateUILanguage(lang) {
     const subtitle = document.getElementById('welcomeSubtitleText');
     if (subtitle && t.welcomeMsg) subtitle.textContent = t.welcomeMsg;
 
+    // Update plus menu item labels
+    const plusMenuBtn = document.getElementById('plusMenuBtn');
+    if (plusMenuBtn && t['toolbar.more']) plusMenuBtn.title = t['toolbar.more'];
+    const uploadLabel = document.querySelector('#fileUploadBtn .pmi-label');
+    if (uploadLabel && t['toolbar.uploadFile']) uploadLabel.textContent = t['toolbar.uploadFile'];
+    const voiceLabel = document.querySelector('#voiceInputBtn .pmi-label');
+    if (voiceLabel && t['toolbar.voice']) voiceLabel.textContent = t['toolbar.voice'];
+    const cameraLabel = document.querySelector('#webcamBtn .pmi-label');
+    if (cameraLabel && t['toolbar.camera']) cameraLabel.textContent = t['toolbar.camera'];
+
+    // Update model dropdown descriptions
+    const flashDesc = document.querySelector('.model-dropdown-item[data-model="gemini-3-flash-preview"] .mdi-desc');
+    if (flashDesc && t['model.flash.desc']) flashDesc.textContent = t['model.flash.desc'];
+    const proDesc = document.querySelector('.model-dropdown-item[data-model="gemini-3.1-pro-preview"] .mdi-desc');
+    if (proDesc && t['model.pro.desc']) proDesc.textContent = t['model.pro.desc'];
+
     // Save language preference to localStorage
     localStorage.setItem('preferredLanguage', lang);
     
@@ -605,6 +621,9 @@ window.addEventListener('DOMContentLoaded', async () => {
     // Socket.io initialized above. Conversations will be loaded via sidebar.js.
     // Do NOT call showWelcomeScreen() here — let loadConversations() manage initial state
     // to avoid a flash when the user has existing conversations.
+
+    // Load the user's saved model preference and reflect it in the toggle
+    loadCurrentModel();
 });
 
 // ── Typewriter effect ──
@@ -686,6 +705,130 @@ function typewriterFlush() {
     _twLen = 0;
 }
 
+// ── Model toggle (Fast / Pro) ──
+const MODEL_FAST = 'gemini-3-flash-preview';
+const MODEL_PRO  = 'gemini-3.1-pro-preview';
+
+function _setModelToggleUI(model) {
+    // Update the in-input model button label
+    const label = document.getElementById('inputModelLabel');
+    if (label) {
+        label.textContent = model === MODEL_PRO ? 'Pro' : 'Flash';
+    }
+    // Update dropdown item active state
+    document.querySelectorAll('.model-dropdown-item').forEach(item => {
+        item.classList.toggle('active', item.dataset.model === model);
+    });
+    // Legacy: also update old toolbar toggle if still present
+    document.getElementById('modelFastBtn')?.classList.toggle('active', model !== MODEL_PRO);
+    document.getElementById('modelProBtn')?.classList.toggle('active',  model === MODEL_PRO);
+}
+
+async function loadCurrentModel() {
+    try {
+        const token = localStorage.getItem('access_token');
+        const res = await fetch('/api/user/model', {
+            headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            _setModelToggleUI(data.ai_model || MODEL_FAST);
+        }
+    } catch (e) {
+        console.warn('Could not load model preference:', e);
+        _setModelToggleUI(MODEL_FAST); // default to Flash
+    }
+}
+
+async function switchModel(model) {
+    try {
+        const token = localStorage.getItem('access_token');
+        const res = await fetch('/api/user/model', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ ai_model: model }),
+        });
+        if (res.ok) {
+            _setModelToggleUI(model);
+            // Sync settings panel select if it exists
+            const settingsSelect = document.getElementById('summaryModelSelect');
+            if (settingsSelect) settingsSelect.value = model;
+        } else {
+            console.error('Failed to save model preference');
+        }
+    } catch (e) {
+        console.error('Model switch error:', e);
+    }
+}
+
+// Expose for settings.js two-way sync
+window.updateChatModelToggle = _setModelToggleUI;
+
+// ── Plus menu (file / voice / camera) ──
+(function () {
+    const plusMenuBtn  = document.getElementById('plusMenuBtn');
+    const plusMenu     = document.getElementById('plusMenu');
+    if (!plusMenuBtn || !plusMenu) return;
+
+    function togglePlusMenu(open) {
+        plusMenu.style.display  = open ? 'flex' : 'none';
+        plusMenuBtn.classList.toggle('open', open);
+    }
+
+    plusMenuBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Close model dropdown if open
+        const md = document.getElementById('modelDropdown');
+        if (md) { md.style.display = 'none'; document.getElementById('inputModelBtn')?.classList.remove('open'); }
+        togglePlusMenu(plusMenu.style.display === 'none' || plusMenu.style.display === '');
+    });
+
+    // Close when clicking a menu item or outside
+    plusMenu.addEventListener('click', () => togglePlusMenu(false));
+    document.addEventListener('click', (e) => {
+        if (!plusMenu.contains(e.target) && e.target !== plusMenuBtn) {
+            togglePlusMenu(false);
+        }
+    });
+})();
+
+// ── Model dropdown (in-input pill) ──
+(function () {
+    const inputModelBtn  = document.getElementById('inputModelBtn');
+    const modelDropdown  = document.getElementById('modelDropdown');
+    if (!inputModelBtn || !modelDropdown) return;
+
+    function toggleModelDropdown(open) {
+        modelDropdown.style.display = open ? 'flex' : 'none';
+        inputModelBtn.classList.toggle('open', open);
+    }
+
+    inputModelBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        // Close plus menu if open
+        const pm = document.getElementById('plusMenu');
+        if (pm) { pm.style.display = 'none'; document.getElementById('plusMenuBtn')?.classList.remove('open'); }
+        toggleModelDropdown(modelDropdown.style.display === 'none' || modelDropdown.style.display === '');
+    });
+
+    modelDropdown.addEventListener('click', (e) => {
+        const item = e.target.closest('.model-dropdown-item');
+        if (item) {
+            switchModel(item.dataset.model);
+            toggleModelDropdown(false);
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!modelDropdown.contains(e.target) && e.target !== inputModelBtn) {
+            toggleModelDropdown(false);
+        }
+    });
+})();
+
 // ── Welcome screen helpers ──
 function showWelcomeScreen() {
     const chatContainer = document.getElementById('chat-container');
@@ -731,11 +874,20 @@ sendButton.addEventListener('click', () => {
     }
 });
 
-// Allow sending messages with Enter key
-messageInput.addEventListener('keypress', (event) => {
-    if (event.key === 'Enter') {
+// Allow sending messages with Enter key (Shift+Enter inserts newline)
+messageInput.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter' && !event.shiftKey) {
+        event.preventDefault();
         if (!isStreaming) sendMessage();
     }
+});
+
+// Auto-grow textarea as user types
+messageInput.addEventListener('input', function () {
+    this.style.height = 'auto';
+    const newH = Math.min(this.scrollHeight, 140);
+    this.style.height = newH + 'px';
+    this.style.overflowY = this.scrollHeight > 140 ? 'auto' : 'hidden';
 });
 
 // Settings button functionality
@@ -886,8 +1038,8 @@ function updateFilePreview() {
 // EMOJI PICKER FUNCTIONALITY
 // ============================================
 
-// Toggle emoji picker
-emojiBtn.addEventListener('click', (e) => {
+// Toggle emoji picker (button removed from UI but guard remains for safety)
+emojiBtn?.addEventListener('click', (e) => {
     e.stopPropagation();
     const isVisible = emojiPicker.style.display === 'block';
     emojiPicker.style.display = isVisible ? 'none' : 'block';
@@ -975,6 +1127,9 @@ if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
     recognition.onresult = (event) => {
         const transcript = event.results[0][0].transcript;
         messageInput.value = transcript;
+        messageInput.style.height = 'auto';
+        messageInput.style.height = Math.min(messageInput.scrollHeight, 140) + 'px';
+        messageInput.style.overflowY = messageInput.scrollHeight > 140 ? 'auto' : 'hidden';
         messageInput.focus();
     };
     
@@ -1155,6 +1310,8 @@ async function sendMessageWithFiles() {
     messagesDiv.appendChild(userMessageElement);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
     messageInput.value = '';
+    messageInput.style.height = 'auto';
+    messageInput.style.overflowY = 'hidden';
 
     conversationHistory.push({
         role: 'user',
