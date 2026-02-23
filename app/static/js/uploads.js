@@ -44,19 +44,24 @@ class UploadsManager {
         });
     }
 
-    async loadUploads(category) {
+    async loadUploads(category, { silent = false } = {}) {
         this.currentCategory = category;
-        this.selectedIds.clear();
-        this.batchMode = false;
+        if (!silent) {
+            this.selectedIds.clear();
+            this.batchMode = false;
+        }
         const container = document.querySelector(this.containerSelector);
         const emptyState = document.querySelector(this.emptySelector);
         const loadingSpinner = document.querySelector(this.loadingSelector);
         
         if (!container) return;
         
-        if (loadingSpinner) loadingSpinner.style.display = 'block';
-        if (emptyState) emptyState.style.display = 'none';
-        container.innerHTML = '';
+        // Only show loading state on non-silent (initial) loads
+        if (!silent) {
+            if (loadingSpinner) loadingSpinner.style.display = 'block';
+            if (emptyState) emptyState.style.display = 'none';
+            container.innerHTML = '';
+        }
         
         try {
             const token = localStorage.getItem('access_token');
@@ -75,14 +80,18 @@ class UploadsManager {
             
             if (this.uploads.length === 0) {
                 if (emptyState) emptyState.style.display = 'flex';
+                container.innerHTML = '';
                 return;
             }
             
+            if (emptyState) emptyState.style.display = 'none';
             this.renderUploads();
         } catch (error) {
             console.error('Error loading uploads:', error);
             if (loadingSpinner) loadingSpinner.style.display = 'none';
-            container.innerHTML = `<div class="error-message">${this.t('uploads.loadFailed')}：${error.message}</div>`;
+            if (!silent) {
+                container.innerHTML = `<div class="error-message">${this.t('uploads.loadFailed')}：${error.message}</div>`;
+            }
         }
     }
 

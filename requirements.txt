@@ -20,3 +20,4 @@ eventlet==0.37.0
 pytest==9.0.1
 hypothesis==6.148.7
 mediapipe==0.10.32
+weasyprint>=62.0

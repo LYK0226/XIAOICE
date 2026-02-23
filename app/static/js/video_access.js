@@ -121,6 +121,7 @@
     function closeResultModal() {
         const modal = $('analysisResultModal');
         if (modal) modal.style.display = 'none';
+        clearAnalysisAnimation();
         // Restore default footer with 確定 button
         const footer = document.querySelector('.analysis-result-modal__footer');
         if (footer) {
@@ -305,7 +306,10 @@
                 }
 
                 // Start AI child-development analysis
-                openResultModal(`<div class="analysis-animation"><div class="analysis-animation__circle" aria-hidden="true"></div><p>${escapeHtml(t('analysisStarting'))}</p></div>`);
+                showAnalysisAnimation(t('analysisStarting'), t('analysisHint'));
+
+                // Immediately refresh upload list so the new video appears
+                if (window.videoUploadsManager) window.videoUploadsManager.loadUploads('video_assess');
 
                 const analyzeRes = await authedFetch(`/api/video/${videoId}/child-analyze`, {
                     method: 'POST',
@@ -412,6 +416,140 @@
     }
 
     // ---------------------------------------------------------------
+    //  Analysis animation state management (prevent DOM re-creation)
+    // ---------------------------------------------------------------
+    let _analysisAnimationActive = false;
+
+    function showAnalysisAnimation(text, hint) {
+        const modal = $('analysisResultModal');
+        const body = $('analysisResultBody');
+        if (!body || !modal) return;
+
+        if (_analysisAnimationActive) {
+            // Only update text, don't recreate the spinner element
+            const msgEl = body.querySelector('.analysis-animation__message');
+            const hintEl = body.querySelector('.analysis-animation__hint');
+            if (msgEl) msgEl.textContent = text;
+            if (hintEl) hintEl.textContent = hint || '';
+            return;
+        }
+
+        _analysisAnimationActive = true;
+        const animationMarkup = `
+            <div class="analysis-animation">
+                <div class="analysis-animation__circle" aria-hidden="true"></div>
+                <p class="analysis-animation__message">${escapeHtml(text)}</p>
+                <span class="analysis-animation__hint">${escapeHtml(hint || '')}</span>
+                <button type="button" class="analysis-animation__minimize-btn" id="minimizeAnalysisBtn">
+                    <i class="fas fa-eye-slash"></i> ${escapeHtml(t('analysisMinimize'))}
+                </button>
+            </div>
+        `;
+        body.innerHTML = animationMarkup;
+        modal.style.display = 'block';
+
+        // Bind minimize button
+        const minBtn = document.getElementById('minimizeAnalysisBtn');
+        if (minBtn) {
+            minBtn.addEventListener('click', () => {
+                _minimizeAnalysis();
+            });
+        }
+    }
+
+    function clearAnalysisAnimation() {
+        _analysisAnimationActive = false;
+    }
+
+    // ---------------------------------------------------------------
+    //  Background analysis tracking & toast notifications
+    // ---------------------------------------------------------------
+    let _backgroundPolls = {}; // reportId -> { active, videoId }
+    let _bgRefreshInterval = null;
+
+    function _minimizeAnalysis() {
+        // Close the modal but keep polling in background
+        const modal = $('analysisResultModal');
+        if (modal) modal.style.display = 'none';
+        clearAnalysisAnimation();
+
+        // Start periodic refresh of upload list so user sees "processing" status
+        _startBackgroundUploadRefresh();
+
+        // Refresh uploads list immediately (silent = no flicker)
+        if (window.videoUploadsManager) {
+            window.videoUploadsManager.loadUploads('video_assess', { silent: true });
+        }
+    }
+
+    function _startBackgroundUploadRefresh() {
+        if (_bgRefreshInterval) return; // Already running
+        _bgRefreshInterval = setInterval(() => {
+            // Check if any polls are still active
+            const anyActive = Object.values(_backgroundPolls).some(p => p.active);
+            if (!anyActive) {
+                _stopBackgroundUploadRefresh();
+                return;
+            }
+            // Refresh the uploads list silently (no loading spinner / flicker)
+            if (window.videoUploadsManager) {
+                window.videoUploadsManager.loadUploads('video_assess', { silent: true });
+            }
+        }, 5000); // Refresh every 5s
+    }
+
+    function _stopBackgroundUploadRefresh() {
+        if (_bgRefreshInterval) {
+            clearInterval(_bgRefreshInterval);
+            _bgRefreshInterval = null;
+        }
+    }
+
+    function showToast({ title, message, icon = '✅', isError = false, onClick = null, duration = 8000 }) {
+        // Remove existing toast if any
+        const existing = document.querySelector('.analysis-toast');
+        if (existing) existing.remove();
+
+        const toast = document.createElement('div');
+        toast.className = `analysis-toast${isError ? ' analysis-toast--error' : ''}`;
+        toast.innerHTML = `
+            <span class="analysis-toast__icon">${icon}</span>
+            <div class="analysis-toast__content">
+                <div class="analysis-toast__title">${escapeHtml(title)}</div>
+                <div class="analysis-toast__message">${escapeHtml(message)}</div>
+            </div>
+            <button class="analysis-toast__close" aria-label="Close">&times;</button>
+        `;
+
+        const closeBtn = toast.querySelector('.analysis-toast__close');
+        closeBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
+            _dismissToast(toast);
+        });
+
+        if (onClick) {
+            toast.addEventListener('click', onClick);
+            toast.style.cursor = 'pointer';
+        }
+
+        document.body.appendChild(toast);
+
+        if (duration > 0) {
+            setTimeout(() => _dismissToast(toast), duration);
+        }
+
+        return toast;
+    }
+
+    function _dismissToast(toast) {
+        if (!toast || !toast.parentNode) return;
+        toast.classList.add('analysis-toast--hiding');
+        setTimeout(() => {
+            if (toast.parentNode) toast.parentNode.removeChild(toast);
+        }, 350);
+    }
+
+    // ---------------------------------------------------------------
     //  Poll for analysis report completion
     // ---------------------------------------------------------------
     async function pollForReport(reportId, { timeoutMs = 600000, intervalMs = 3000, videoId = null } = {}) {
@@ -421,12 +559,26 @@
             processing: t('reportStatusProcessing')
         };
 
+        // Track this poll for background mode
+        _backgroundPolls[reportId] = { active: true, videoId };
+
         while (Date.now() - start < timeoutMs) {
+            // Check if poll was cancelled
+            if (!_backgroundPolls[reportId]?.active) return;
+
             const res = await authedFetch(`/api/video-analysis-report/${reportId}`);
             const payload = await res.json().catch(() => ({}));
 
             if (!res.ok) {
-                openResultModal(`<p style="color:#b00020;">❌ ${escapeHtml(payload?.error || t('reportQueryFailed'))}</p>`);
+                clearAnalysisAnimation();
+                delete _backgroundPolls[reportId];
+                const modal = $('analysisResultModal');
+                const isVisible = modal && modal.style.display !== 'none';
+                if (isVisible) {
+                    openResultModal(`<p style="color:#b00020;">❌ ${escapeHtml(payload?.error || t('reportQueryFailed'))}</p>`);
+                } else {
+                    showToast({ title: t('analysisStartFailed'), message: payload?.error || t('reportQueryFailed'), icon: '❌', isError: true });
+                }
                 return;
             }
 
@@ -434,29 +586,73 @@
             const status = (report?.status || '').toLowerCase();
 
             if (status === 'completed') {
-                showReportResult(report, videoId);
+                clearAnalysisAnimation();
+                delete _backgroundPolls[reportId];
+                _stopBackgroundUploadRefresh();
+                // Always refresh uploads list when analysis completes (silent = no flicker)
+                if (window.videoUploadsManager) window.videoUploadsManager.loadUploads('video_assess', { silent: true });
+                const modal = $('analysisResultModal');
+                const isVisible = modal && modal.style.display !== 'none';
+                if (isVisible) {
+                    showReportResult(report, videoId);
+                } else {
+                    // Show toast notification for background completion
+                    showToast({
+                        title: t('analysisCompleteTitle'),
+                        message: t('analysisCompleteMessage', { name: report?.child_name || '' }),
+                        icon: '🎉',
+                        duration: 0, // persist until clicked
+                        onClick: () => {
+                            const existing = document.querySelector('.analysis-toast');
+                            if (existing) existing.remove();
+                            showReportResult(report, videoId);
+                            const m = $('analysisResultModal');
+                            if (m) m.style.display = 'block';
+                        }
+                    });
+                    // Also refresh uploads list
+                    if (window.videoUploadsManager) window.videoUploadsManager.loadUploads('video_assess');
+                }
                 return;
             }
 
             if (status === 'failed') {
-                openResultModal(`<p style="color:#b00020;">❌ ${escapeHtml(t('reportFailed', { error: report?.error_message || t('reportDiscardFailedGeneric') }))}</p>`);
+                clearAnalysisAnimation();
+                delete _backgroundPolls[reportId];
+                _stopBackgroundUploadRefresh();
+                if (window.videoUploadsManager) window.videoUploadsManager.loadUploads('video_assess', { silent: true });
+                const modal = $('analysisResultModal');
+                const isVisible = modal && modal.style.display !== 'none';
+                if (isVisible) {
+                    openResultModal(`<p style="color:#b00020;">❌ ${escapeHtml(t('reportFailed', { error: report?.error_message || t('reportDiscardFailedGeneric') }))}</p>`);
+                } else {
+                    showToast({ title: t('analysisStartFailed'), message: report?.error_message || t('reportDiscardFailedGeneric'), icon: '❌', isError: true });
+                }
                 return;
             }
 
-            // Still processing – update animation
+            // Still processing – update animation (only if modal visible)
             const msg = statusMessages[status] || t('reportProcessing');
-            openResultModal(`
-                <div class="analysis-animation">
-                    <div class="analysis-animation__circle" aria-hidden="true"></div>
-                    <p>${escapeHtml(msg)}</p>
-                    <span class="analysis-animation__hint">${escapeHtml(t('reportHint'))}</span>
-                </div>
-            `);
+            const modal = $('analysisResultModal');
+            const isVisible = modal && modal.style.display !== 'none';
+            if (isVisible) {
+                showAnalysisAnimation(msg, t('reportHint'));
+            }
 
             await sleep(intervalMs);
         }
 
-        openResultModal(`<p style="color:#b00020;">${escapeHtml(t('reportTimeout'))}</p>`);
+        clearAnalysisAnimation();
+        delete _backgroundPolls[reportId];
+        _stopBackgroundUploadRefresh();
+        if (window.videoUploadsManager) window.videoUploadsManager.loadUploads('video_assess', { silent: true });
+        const modal = $('analysisResultModal');
+        const isVisible = modal && modal.style.display !== 'none';
+        if (isVisible) {
+            openResultModal(`<p style="color:#b00020;">${escapeHtml(t('reportTimeout'))}</p>`);
+        } else {
+            showToast({ title: t('reportTimeout'), message: '', icon: '⏰', isError: true });
+        }
     }
 
     // ---------------------------------------------------------------
