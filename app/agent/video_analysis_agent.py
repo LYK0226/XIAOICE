@@ -426,7 +426,7 @@ def run_video_analysis(
 
     # --- AI Studio (ADK) path ---
     MAX_RETRIES = 5
-    RETRY_BACKOFF_BASE = 30  # seconds
+    RETRY_BACKOFF_BASE = 10  # seconds
 
     def _is_retryable(exc: Exception) -> bool:
         """Check if an exception is a transient API error worth retrying."""
@@ -584,7 +584,7 @@ def _run_vertex_analysis(
         return {"success": False, "error": "Vertex AI service account / project required"}
 
     MAX_RETRIES = 5
-    RETRY_BACKOFF_BASE = 30  # seconds
+    RETRY_BACKOFF_BASE = 10  # seconds
     last_error: Optional[Exception] = None
 
     try:

@@ -55,7 +55,8 @@ def _build_html_report(report_data: Dict[str, Any], child_name: str, child_age_m
 <title>兒童發展影片分析報告 – {child_name}</title>
 <style>
   @page {{ size: A4; margin: 2cm; }}
-  body {{ font-family: "Noto Sans TC", "Microsoft JhengHei", "PingFang TC", sans-serif;
+  body {{ font-family: "Noto Sans CJK TC", "Noto Sans TC", "Microsoft JhengHei", "PingFang TC",
+         "Hiragino Sans GB", "WenQuanYi Micro Hei", "Source Han Sans TC", sans-serif;
          font-size: 11pt; color: #333; line-height: 1.6; }}
   h1 {{ color: #2c5282; border-bottom: 3px solid #2c5282; padding-bottom: 8px; font-size: 20pt; }}
   h2 {{ color: #2d3748; border-bottom: 1px solid #e2e8f0; padding-bottom: 4px; margin-top: 24px; font-size: 14pt; }}
@@ -156,22 +157,44 @@ def generate_and_upload_pdf(
         html_content = _build_html_report(report_data, child_name, child_age_months)
         pdf_bytes = None
 
-        # Try weasyprint first (produces real PDF)
+        # Try weasyprint first (produces real PDF with CJK support)
         try:
             from weasyprint import HTML as WeasyprintHTML
             pdf_bytes = WeasyprintHTML(string=html_content).write_pdf()
-            logger.info("PDF generated with weasyprint")
+            logger.info("PDF generated with weasyprint (%d bytes)", len(pdf_bytes))
         except ImportError:
-            logger.warning("weasyprint not installed; falling back to HTML file")
+            logger.warning("weasyprint not installed; trying xhtml2pdf fallback")
         except Exception as e:
-            logger.warning(f"weasyprint failed: {e}; falling back to HTML file")
+            logger.warning("weasyprint failed: %s; trying xhtml2pdf fallback", e)
 
+        # Second attempt: xhtml2pdf (pure-Python, no system deps)
+        if not pdf_bytes:
+            try:
+                from xhtml2pdf import pisa
+                result_io = io.BytesIO()
+                pisa_status = pisa.CreatePDF(
+                    io.StringIO(html_content),
+                    dest=result_io,
+                    encoding='utf-8',
+                )
+                if not pisa_status.err:
+                    pdf_bytes = result_io.getvalue()
+                    logger.info("PDF generated with xhtml2pdf (%d bytes)", len(pdf_bytes))
+                else:
+                    logger.warning("xhtml2pdf returned errors")
+            except ImportError:
+                logger.warning("xhtml2pdf not installed either")
+            except Exception as e:
+                logger.warning("xhtml2pdf failed: %s", e)
+
+        # Always generate as PDF — only use HTML as last resort
         if pdf_bytes:
             filename = f"report_{report_id}.pdf"
             content_type = "application/pdf"
             file_data = pdf_bytes
         else:
-            # Fallback: save as HTML (still viewable / downloadable)
+            # Last fallback: save as HTML (still viewable / downloadable)
+            logger.warning("All PDF generators failed; uploading HTML fallback")
             filename = f"report_{report_id}.html"
             content_type = "text/html"
             file_data = html_content.encode("utf-8")
