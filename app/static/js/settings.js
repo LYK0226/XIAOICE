@@ -1881,7 +1881,12 @@ if (summaryModelSelect) {
         updateAdvancedSummary();
 
         const success = await persistModelSelection(selectedModel);
-        if (!success) {
+        if (success) {
+            // Sync the chatbox model toggle if it's on the same page
+            if (typeof window.updateChatModelToggle === 'function') {
+                window.updateChatModelToggle(selectedModel);
+            }
+        } else {
             const errorMessages = {
                 'zh-TW': '保存失敗',
                 'en': 'Save failed',
@@ -2740,6 +2745,10 @@ async function loadUserModel() {
             
             if (summaryModelSelect) {
                 summaryModelSelect.value = data.ai_model || summaryModelSelect.value;
+                // Sync chatbox model toggle
+                if (data.ai_model && typeof window.updateChatModelToggle === 'function') {
+                    window.updateChatModelToggle(data.ai_model);
+                }
             }
 
             advancedConfigState.provider = activeProvider;

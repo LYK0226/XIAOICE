@@ -88,15 +88,55 @@
             </div>
             
             <div id="input-container">
-                <div class="input-toolbar">
-                    <button type="button" class="toolbar-btn" id="fileUploadBtn" title="附加文件/圖像"><i class="fas fa-paperclip"></i></button>
-                    <button type="button" class="toolbar-btn" id="emojiBtn" title="表情符號"><i class="fas fa-smile"></i></button>
-                    <button type="button" class="toolbar-btn" id="voiceInputBtn" title="語音輸入"><i class="fas fa-microphone"></i></button>
-                    <button type="button" class="toolbar-btn" id="webcamBtn" title="攝影機"><i class="fas fa-camera"></i></button>
-                </div>
                 <div class="input-wrapper">
-                    <input type="text" id="messageInput" placeholder="在這裡輸入您的問題...">
+                    <!-- Plus button + its popup (wrapped so popup is always above button) -->
+                    <div class="btn-popup-wrapper">
+                        <div id="plusMenu" class="plus-menu" style="display:none;">
+                            <button type="button" class="plus-menu-item" id="fileUploadBtn">
+                                <span class="pmi-icon"><i class="fas fa-paperclip"></i></span>
+                                <span class="pmi-label">上載文件</span>
+                            </button>
+                            <button type="button" class="plus-menu-item" id="voiceInputBtn">
+                                <span class="pmi-icon"><i class="fas fa-microphone"></i></span>
+                                <span class="pmi-label">語音輸入</span>
+                            </button>
+                            <button type="button" class="plus-menu-item" id="webcamBtn">
+                                <span class="pmi-icon"><i class="fas fa-camera"></i></span>
+                                <span class="pmi-label">攝影機</span>
+                            </button>
+                        </div>
+                        <button type="button" id="plusMenuBtn" class="input-action-btn plus-btn" title="更多選項">
+                            <i class="fas fa-plus"></i>
+                        </button>
+                    </div>
+
+                    <textarea id="messageInput" rows="1" placeholder="在這裡輸入您的問題..."></textarea>
                     <input type="file" id="fileInput" accept="image/*,video/*,application/pdf" multiple style="display: none;">
+
+                    <!-- Model selector + its popup (wrapped so popup is always above button) -->
+                    <div class="btn-popup-wrapper">
+                        <div id="modelDropdown" class="model-dropdown" style="display:none;">
+                            <button type="button" class="model-dropdown-item" data-model="gemini-3-flash-preview">
+                                <span class="mdi-icon">⚡</span>
+                                <div class="mdi-info">
+                                    <span class="mdi-name">Flash</span>
+                                    <span class="mdi-desc">快速回應・日常對話</span>
+                                </div>
+                            </button>
+                            <button type="button" class="model-dropdown-item" data-model="gemini-3.1-pro-preview">
+                                <span class="mdi-icon">💎</span>
+                                <div class="mdi-info">
+                                    <span class="mdi-name">Pro</span>
+                                    <span class="mdi-desc">強大精準・深度分析</span>
+                                </div>
+                            </button>
+                        </div>
+                        <button type="button" id="inputModelBtn" class="input-model-btn" title="切換 AI 模型">
+                            <span id="inputModelLabel">Flash</span>
+                            <i class="fas fa-chevron-up" id="inputModelChevron"></i>
+                        </button>
+                    </div>
+
                     <button type="button" id="sendButton" title="Send message"><i class="fas fa-paper-plane"></i></button>
                     <button type="button" id="poseDetectionPageBtn" class="pose-page-btn" title="姿態分析" onclick="window.location.href='/pose_detection'"><i class="fas fa-running"></i></button>
                 </div>
@@ -104,7 +144,7 @@
                 <!-- File Preview Container -->
                 <div id="filePreviewContainer" class="file-preview-container" style="display: none;"></div>
                 
-                <!-- Emoji Picker -->
+                <!-- Emoji Picker (kept for potential use) -->
                 <div id="emojiPicker" class="emoji-picker" style="display: none;">
                     <div class="emoji-header">
                         <span class="emoji-tab active" data-category="smileys">😊</span>

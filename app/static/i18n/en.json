@@ -381,5 +381,11 @@
   "video.reportCompleted": "Analysis completed",
   "video.reportStatusTypical": "✅ Typical",
   "video.reportStatusConcern": "⚠️ Needs attention",
-  "video.reportStatusNeedsAttention": "🔴 Needs review"
+  "video.reportStatusNeedsAttention": "🔴 Needs review",
+  "toolbar.more": "More options",
+  "toolbar.uploadFile": "Upload File",
+  "toolbar.voice": "Voice Input",
+  "toolbar.camera": "Camera",
+  "model.flash.desc": "Fast responses · Daily chat",
+  "model.pro.desc": "Powerful & precise · Deep analysis"
 }

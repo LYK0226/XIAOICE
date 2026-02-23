@@ -383,5 +383,11 @@
   "video.reportCompleted": "分析已完成",
   "video.reportStatusTypical": "✅ 正常",
   "video.reportStatusConcern": "⚠️ 需要关注",
-  "video.reportStatusNeedsAttention": "🔴 需要注意"
+  "video.reportStatusNeedsAttention": "🔴 需要注意",
+  "toolbar.more": "更多选项",
+  "toolbar.uploadFile": "上传文件",
+  "toolbar.voice": "语音输入",
+  "toolbar.camera": "摄像机",
+  "model.flash.desc": "快速响应・日常对话",
+  "model.pro.desc": "强大精准・深度分析"
 }

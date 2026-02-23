@@ -383,5 +383,11 @@
   "video.reportCompleted": "分析完了",
   "video.reportStatusTypical": "✅ 正常",
   "video.reportStatusConcern": "⚠️ 要注意",
-  "video.reportStatusNeedsAttention": "🔴 要確認"
+  "video.reportStatusNeedsAttention": "🔴 要確認",
+  "toolbar.more": "その他のオプション",
+  "toolbar.uploadFile": "ファイルアップロード",
+  "toolbar.voice": "音声入力",
+  "toolbar.camera": "カメラ",
+  "model.flash.desc": "高速応答・日常会話",
+  "model.pro.desc": "高精度・深度分析"
 }
