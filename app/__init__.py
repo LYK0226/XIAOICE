@@ -80,13 +80,6 @@ def create_app():
     if app.config.get('CREATE_DB_ON_STARTUP'):
         try:
             with app.app_context():
-                # Ensure pgvector extension exists (required for RAG vector columns)
-                if 'postgresql' in app.config.get('SQLALCHEMY_DATABASE_URI', ''):
-                    try:
-                        db.session.execute(db.text('CREATE EXTENSION IF NOT EXISTS vector'))
-                        db.session.commit()
-                    except Exception:
-                        db.session.rollback()
                 db.create_all()
         except Exception:
             # If create_all fails, don't crash the app startup; log is available when running

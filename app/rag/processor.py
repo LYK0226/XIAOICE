@@ -1,27 +1,30 @@
 """
 Document processing pipeline for RAG.
 
-Orchestrates:
-  file download from GCS → chunking → embedding → DB storage
+Orchestrates: upload to GCS → import into Vertex AI RAG Engine.
+Chunking and embedding are handled by the RAG Engine with Document AI
+layout parsing.
 """
 
 import logging
+import os
 from typing import Optional
 
-from app.rag.chunker import chunk_document
-from app.rag.embeddings import generate_embeddings
+from app.rag.rag_engine import import_file_to_rag, delete_rag_file
 
 logger = logging.getLogger(__name__)
 
 
 def process_document(document_id: int) -> bool:
     """
-    Process a RAG document end-to-end:
-      1. Download file bytes from GCS
-      2. Chunk the document semantically
-      3. Generate embeddings for each chunk
-      4. Store chunks + embeddings in rag_chunks table
-      5. Update document status to 'ready'
+    Process a RAG document by importing it into the Vertex AI RAG Engine.
+
+    The file must already exist in GCS (uploaded by the route handler).
+    This function:
+      1. Constructs a ``gs://`` URI from the document's ``gcs_path``
+      2. Calls ``import_file_to_rag()`` which imports via Document AI layout parser
+      3. Stores the returned ``rag_file_name`` on the DB row
+      4. Sets status to ``ready``
 
     Args:
         document_id: Primary key of the RagDocument row.
@@ -29,8 +32,7 @@ def process_document(document_id: int) -> bool:
     Returns:
         True on success, False on failure.
     """
-    from app.models import db, RagDocument, RagChunk
-    from app import gcp_bucket
+    from app.models import db, RagDocument
 
     doc = RagDocument.query.get(document_id)
     if not doc:
@@ -41,68 +43,47 @@ def process_document(document_id: int) -> bool:
         doc.status = "processing"
         db.session.commit()
 
-        # 1. Download from GCS
-        logger.info("Downloading document %d from GCS: %s", document_id, doc.gcs_path)
-        file_bytes = _download_from_gcs(doc.gcs_path)
+        # Build GCS URI
+        bucket_name = os.environ.get("GCS_BUCKET_NAME")
+        if not bucket_name:
+            from flask import current_app
+            bucket_name = current_app.config.get("GCS_BUCKET_NAME")
+        if not bucket_name:
+            raise ValueError("GCS_BUCKET_NAME not configured")
 
-        # 2. Chunk
-        logger.info("Chunking document %d (%s, %s)", document_id, doc.content_type, doc.original_filename)
-        chunks = chunk_document(file_bytes, doc.content_type, doc.original_filename)
-        if not chunks:
-            raise ValueError("Document produced no chunks — it may be empty or unreadable")
+        gcs_uri = f"gs://{bucket_name}/{doc.gcs_path}"
+        logger.info("Importing document %d into RAG Engine: %s", document_id, gcs_uri)
 
-        logger.info("Document %d produced %d chunks", document_id, len(chunks))
-
-        # 3. Generate embeddings
-        texts = [c.content for c in chunks]
-        logger.info("Generating embeddings for %d chunks…", len(texts))
-        uploader_api_key = _get_uploader_api_key(doc.uploaded_by)
-        embeddings = generate_embeddings(
-            texts,
-            task_type="RETRIEVAL_DOCUMENT",
-            api_key=uploader_api_key,
-        )
-
-        if len(embeddings) != len(chunks):
-            raise ValueError(
-                f"Embedding count mismatch: {len(embeddings)} embeddings for {len(chunks)} chunks"
+        # Resolve corpus name
+        corpus_name = None
+        try:
+            from flask import current_app
+            corpus_name = current_app.config.get("RAG_CORPUS_NAME")
+        except RuntimeError:
+            pass
+        if not corpus_name:
+            corpus_name = os.environ.get(
+                "RAG_CORPUS_NAME",
+                "projects/fyp-project-4f3b7/locations/us-west1/ragCorpora/3458764513820540928",
             )
 
-        # 4. Delete existing chunks (in case of reprocessing)
-        RagChunk.query.filter_by(document_id=document_id).delete()
+        # Import into RAG Engine
+        rag_file_name = import_file_to_rag(gcs_uri, corpus_name=corpus_name)
 
-        # 5. Insert new chunks
-        for idx, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
-            db_chunk = RagChunk(
-                document_id=document_id,
-                chunk_index=idx,
-                content=chunk.content,
-                heading=chunk.heading,
-                page_number=chunk.page_number,
-                char_start=chunk.char_start,
-                char_end=chunk.char_end,
-                embedding=embedding,
-                token_count=_estimate_tokens(chunk.content),
-            )
-            db.session.add(db_chunk)
-
-        # 6. Update document status
+        # Update document record
+        doc.rag_file_name = rag_file_name
+        doc.rag_corpus_name = corpus_name
         doc.status = "ready"
-        doc.chunk_count = len(chunks)
         db.session.commit()
 
-        logger.info("Document %d processed successfully: %d chunks stored", document_id, len(chunks))
+        logger.info(
+            "Document %d imported successfully: rag_file=%s",
+            document_id, rag_file_name,
+        )
         return True
 
     except Exception as exc:
-        exc_text = str(exc)
-        if (
-            "Failed to initialize embedding client" in exc_text
-            or "Embedding generation failed after trying models" in exc_text
-        ):
-            logger.error("Failed to process document %d: %s", document_id, exc)
-        else:
-            logger.exception("Failed to process document %d: %s", document_id, exc)
+        logger.exception("Failed to process document %d: %s", document_id, exc)
         try:
             doc.status = "error"
             doc.metadata_ = doc.metadata_ or {}
@@ -115,7 +96,12 @@ def process_document(document_id: int) -> bool:
 
 def delete_document_data(document_id: int) -> bool:
     """
-    Delete a document and all its chunks from the database.
+    Delete a document from the RAG Engine (Weaviate) and the database.
+
+    This removes:
+      - The RAG file + all associated chunks from Weaviate (via RAG Engine API)
+      - The ``RagDocument`` row from PostgreSQL
+
     GCS file deletion should be handled by the caller.
 
     Args:
@@ -124,93 +110,36 @@ def delete_document_data(document_id: int) -> bool:
     Returns:
         True on success, False on failure.
     """
-    from app.models import db, RagDocument, RagChunk
+    from app.models import db, RagDocument
+
+    doc = RagDocument.query.get(document_id)
+    if not doc:
+        logger.warning("RagDocument %d not found for deletion", document_id)
+        return True  # idempotent
 
     try:
-        RagChunk.query.filter_by(document_id=document_id).delete()
-        RagDocument.query.filter_by(id=document_id).delete()
+        # Build GCS URI for Weaviate cleanup
+        gcs_uri = ""
+        if doc.gcs_path:
+            bucket_name = os.environ.get("GCS_BUCKET_NAME", "")
+            if not bucket_name:
+                try:
+                    from flask import current_app
+                    bucket_name = current_app.config.get("GCS_BUCKET_NAME", "")
+                except RuntimeError:
+                    pass
+            if bucket_name:
+                gcs_uri = f"gs://{bucket_name}/{doc.gcs_path}"
+
+        # Delete from RAG Engine (Vertex AI) + Weaviate (direct cleanup)
+        delete_rag_file(doc.rag_file_name or "", gcs_uri=gcs_uri)
+
+        # Delete DB row
+        db.session.delete(doc)
         db.session.commit()
-        logger.info("Deleted document %d and all chunks", document_id)
+        logger.info("Deleted document %d and RAG file %s", document_id, doc.rag_file_name)
         return True
     except Exception as exc:
         logger.exception("Failed to delete document %d: %s", document_id, exc)
         db.session.rollback()
         return False
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _download_from_gcs(gcs_path: str) -> bytes:
-    """Download file from GCS using the configured bucket."""
-    import os
-    from google.cloud import storage
-
-    bucket_name = os.environ.get("GCS_BUCKET_NAME")
-    if not bucket_name:
-        from flask import current_app
-        bucket_name = current_app.config.get("GCS_BUCKET_NAME")
-
-    if not bucket_name:
-        raise ValueError("GCS_BUCKET_NAME not configured")
-
-    credentials_path = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS") or os.environ.get("GCS_CREDENTIALS_PATH")
-    if credentials_path:
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
-
-    client = storage.Client()
-    bucket = client.bucket(bucket_name)
-    blob = bucket.blob(gcs_path)
-    return blob.download_as_bytes()
-
-
-def _estimate_tokens(text: str) -> int:
-    """
-    Rough token-count estimate.
-    For CJK-heavy text: ~1.5 chars per token.
-    For Latin text: ~4 chars per token.
-    We use a blended heuristic.
-    """
-    cjk_count = sum(1 for c in text if '\u4e00' <= c <= '\u9fff' or '\u3400' <= c <= '\u4dbf')
-    latin_count = len(text) - cjk_count
-    return int(cjk_count / 1.5 + latin_count / 4)
-
-
-def _get_uploader_api_key(user_id: Optional[int]) -> Optional[str]:
-    """
-    Resolve uploader's AI Studio API key for RAG embedding.
-
-    Priority:
-      1) UserProfile.selected_api_key_id if active and provider == ai_studio
-      2) Most recently updated active ai_studio key for the user
-
-    Returns:
-      Decrypted API key string, or None if unavailable.
-    """
-    if not user_id:
-        return None
-
-    from app.models import UserProfile, UserApiKey
-
-    profile = UserProfile.query.filter_by(user_id=user_id).first()
-    if profile and profile.selected_api_key and profile.selected_api_key.is_active:
-        if profile.selected_api_key.provider == "ai_studio":
-            selected_key = profile.selected_api_key.get_decrypted_key()
-            if selected_key:
-                logger.info("Using uploader selected API key for RAG embedding (user_id=%s)", user_id)
-                return selected_key
-
-    fallback_key = (
-        UserApiKey.query
-        .filter_by(user_id=user_id, is_active=True, provider="ai_studio")
-        .order_by(UserApiKey.updated_at.desc())
-        .first()
-    )
-    if fallback_key:
-        decrypted = fallback_key.get_decrypted_key()
-        if decrypted:
-            logger.info("Using uploader fallback API key for RAG embedding (user_id=%s)", user_id)
-            return decrypted
-
-    return None

@@ -15,6 +15,9 @@
 </head>
 <body class="admin-page">
 
+    <!-- Toast Notification Container -->
+    <div id="toastContainer"></div>
+
     <!-- Floating Decorations -->
     <div class="floating-stars">
         <span class="star">✦</span>
@@ -175,13 +178,25 @@
                 <!-- Document List -->
                 <div class="kb-section">
                     <h3><i class="fas fa-folder-open"></i> 已上傳文件</h3>
+
+                    <!-- Batch action toolbar (hidden until rows selected) -->
+                    <div class="kb-batch-toolbar" id="kbBatchToolbar">
+                        <span class="batch-count" id="batchCount">已選擇 0 個文件</span>
+                        <button class="kb-btn-batch-clear" onclick="clearDocSelection()">
+                            <i class="fas fa-times"></i> 取消選擇
+                        </button>
+                        <button class="kb-btn-batch-delete" onclick="batchDeleteDocs()">
+                            <i class="fas fa-trash"></i> 批量刪除
+                        </button>
+                    </div>
+
                     <table class="kb-table" id="kbDocTable">
                         <thead>
                             <tr>
+                                <th style="width:36px;"><input type="checkbox" id="kbSelectAll" title="全選/取消" style="accent-color:#fff;width:16px;height:16px;cursor:pointer;"></th>
                                 <th>文件名稱</th>
                                 <th>格式</th>
                                 <th>大小</th>
-                                <th>分段數</th>
                                 <th>狀態</th>
                                 <th>上傳日期</th>
                                 <th>操作</th>
@@ -742,11 +757,16 @@
 
             // ===== Knowledge Base Functions =====
             const kbUploadArea = document.getElementById('kbUploadArea');
-            const kbFileInput = document.getElementById('kbFileInput');
-            const kbDocBody = document.getElementById('kbDocBody');
+            const kbDocBody    = document.getElementById('kbDocBody');
             const kbSearchInput = document.getElementById('kbSearchInput');
-            const kbSearchBtn = document.getElementById('kbSearchBtn');
+            const kbSearchBtn   = document.getElementById('kbSearchBtn');
             const kbSearchResults = document.getElementById('kbSearchResults');
+            const kbSelectAll   = document.getElementById('kbSelectAll');
+
+            // --- State ---
+            let pendingDocIds  = new Set();  // IDs currently being imported
+            let selectedDocIds = new Set();  // IDs selected via checkboxes
+            let pollingTimer   = null;
 
             function formatSize(bytes) {
                 if (bytes < 1024) return bytes + ' B';
@@ -760,7 +780,120 @@
                 return d.toLocaleDateString('zh-TW') + ' ' + d.toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'});
             }
 
-            kbUploadArea.addEventListener('click', () => kbFileInput.click());
+            // ── Toast notifications ───────────────────────────────────────
+            function showToast(message, type) {
+                type = type || 'info';
+                const icons = { success:'fa-check-circle', error:'fa-times-circle',
+                                info:'fa-info-circle', warning:'fa-exclamation-circle' };
+                const toast = document.createElement('div');
+                toast.className = 'kb-toast kb-toast-' + type;
+                toast.innerHTML = `<i class="fas ${icons[type] || icons.info}"></i>
+                    <span style="flex:1">${message}</span>
+                    <button class="toast-close" onclick="this.parentElement.remove()"><i class="fas fa-times"></i></button>`;
+                document.getElementById('toastContainer').appendChild(toast);
+                requestAnimationFrame(() => toast.classList.add('show'));
+                // auto-dismiss after 6 s
+                setTimeout(() => {
+                    toast.classList.remove('show');
+                    setTimeout(() => toast.remove(), 350);
+                }, 6000);
+            }
+
+            // ── Polling for pending/processing docs ───────────────────────
+            function startPolling() {
+                if (pollingTimer) return;
+                pollingTimer = setInterval(pollPendingDocs, 3000);
+            }
+
+            function stopPolling() {
+                if (pollingTimer) { clearInterval(pollingTimer); pollingTimer = null; }
+            }
+
+            async function pollPendingDocs() {
+                if (pendingDocIds.size === 0) { stopPolling(); return; }
+                try {
+                    const res  = await fetch('/admin/rag/documents', { headers: { 'Authorization': 'Bearer ' + getToken() } });
+                    if (!res.ok) return;
+                    const data = await res.json();
+                    const docMap = {};
+                    (data.documents || []).forEach(d => docMap[d.id] = d);
+
+                    for (const id of [...pendingDocIds]) {
+                        const doc = docMap[id];
+                        if (!doc || doc.status === 'ready' || doc.status === 'error') {
+                            pendingDocIds.delete(id);
+                        }
+                    }
+
+                    // Refresh table rows in-place (don't reload if user has selections)
+                    renderKbTable(data.documents || []);
+
+                    if (pendingDocIds.size === 0) stopPolling();
+                } catch (e) { console.warn('KB poll error:', e); }
+            }
+
+            // ── Upload (non-blocking) ─────────────────────────────────────
+            function resetUploadArea() {
+                kbUploadArea.innerHTML =
+                    '<div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>' +
+                    '<div class="upload-text"><h3>點擊或拖放文件上傳</h3>' +
+                    '<p>支援格式：PDF、TXT、Markdown（可批量上傳）</p></div>' +
+                    '<input type="file" id="kbFileInput" accept=".pdf,.txt,.md" multiple style="display:none;">';
+                document.getElementById('kbFileInput').addEventListener('change', e => {
+                    if (e.target.files.length) uploadKbFiles(e.target.files);
+                });
+            }
+
+            async function uploadKbFiles(files) {
+                const fileArray = Array.from(files);
+                const total     = fileArray.length;
+                let queuedCount = 0, failCount = 0;
+
+                for (let i = 0; i < fileArray.length; i++) {
+                    const file = fileArray[i];
+                    // Show which file is being pushed to GCS
+                    kbUploadArea.innerHTML =
+                        `<div class="upload-icon spin"><i class="fas fa-spinner"></i></div>` +
+                        `<div class="upload-text"><h3>上傳中... (${i + 1}/${total})</h3>` +
+                        `<p>${file.name}</p></div>`;
+
+                    const fd = new FormData();
+                    fd.append('file', file);
+                    try {
+                        const res  = await fetch('/admin/rag/documents', {
+                            method: 'POST',
+                            headers: { 'Authorization': 'Bearer ' + getToken() },
+                            body: fd,
+                        });
+                        // 202 = accepted (background import started)
+                        if (res.status === 202 || res.ok) {
+                            const data = await res.json();
+                            queuedCount++;
+                            if (data.document && data.document.id) {
+                                pendingDocIds.add(data.document.id);
+                            }
+                        } else {
+                            const data = await res.json().catch(() => {});
+                            failCount++;
+                            showToast(`${file.name}: ${(data && data.error) || '上傳失敗'}`, 'error');
+                        }
+                    } catch (e) {
+                        failCount++;
+                        showToast(`${file.name}: ${e.message}`, 'error');
+                    }
+                }
+
+                resetUploadArea();
+                await loadKbDocuments();  // refresh table to show new pending rows
+
+                if (queuedCount > 0) startPolling();  // keep table fresh; completion toast via socket
+            }
+
+            // ── Drag / click upload wiring ────────────────────────────────
+            kbUploadArea.addEventListener('click', () => {
+                const inp = document.getElementById('kbFileInput');
+                if (inp) inp.click();
+            });
             kbUploadArea.addEventListener('dragover', e => { e.preventDefault(); kbUploadArea.classList.add('dragover'); });
             kbUploadArea.addEventListener('dragleave', () => kbUploadArea.classList.remove('dragover'));
             kbUploadArea.addEventListener('drop', e => {
@@ -768,104 +901,178 @@
                 kbUploadArea.classList.remove('dragover');
                 if (e.dataTransfer.files.length) uploadKbFiles(e.dataTransfer.files);
             });
-            kbFileInput.addEventListener('change', () => { if (kbFileInput.files.length) uploadKbFiles(kbFileInput.files); });
+            document.getElementById('kbFileInput').addEventListener('change', e => {
+                if (e.target.files.length) uploadKbFiles(e.target.files);
+            });
 
-            async function uploadKbFiles(files) {
-                const fileArray = Array.from(files);
-                const total = fileArray.length;
-                let successCount = 0;
-                let failCount = 0;
-                let errors = [];
-
-                for (let i = 0; i < fileArray.length; i++) {
-                    const file = fileArray[i];
-                    kbUploadArea.innerHTML = `<div class="upload-icon spin"><i class="fas fa-spinner"></i></div><div class="upload-text"><h3>上傳中... (${i + 1}/${total})</h3><p>${file.name}</p></div>`;
-                    
-                    const fd = new FormData();
-                    fd.append('file', file);
-                    try {
-                        const res = await fetch('/admin/rag/documents', {
-                            method: 'POST',
-                            headers: { 'Authorization': 'Bearer ' + getToken() },
-                            body: fd,
-                        });
-                        const data = await res.json();
-                        if (res.ok || res.status === 207) {
-                            successCount++;
-                        } else {
-                            failCount++;
-                            errors.push(`${file.name}: ${data.error || '上傳失敗'}`);
-                        }
-                    } catch (e) {
-                        failCount++;
-                        errors.push(`${file.name}: ${e.message}`);
-                    }
-                }
-
-                let message = `上傳完成：成功 ${successCount} 個`;
-                if (failCount > 0) {
-                    message += `，失敗 ${failCount} 個`;
-                }
-                if (errors.length > 0 && errors.length <= 3) {
-                    message += '\n' + errors.join('\n');
-                } else if (errors.length > 3) {
-                    message += '\n' + errors.slice(0, 3).join('\n') + `\n...及其他 ${errors.length - 3} 個錯誤`;
-                }
-                alert(message);
-
-                kbUploadArea.innerHTML = '<div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div><div class="upload-text"><h3>點擊或拖放文件上傳</h3><p>支援格式：PDF、TXT、Markdown（可批量上傳）</p></div><input type="file" id="kbFileInput" accept=".pdf,.txt,.md" multiple style="display:none;">';
-                document.getElementById('kbFileInput').addEventListener('change', () => { if (kbFileInput.files.length) uploadKbFiles(kbFileInput.files); });
-                loadKbDocuments();
-            }
-
+            // ── Table rendering ───────────────────────────────────────────
             async function loadKbDocuments() {
                 try {
-                    const res = await fetch('/admin/rag/documents', { headers: { 'Authorization': 'Bearer ' + getToken() } });
+                    const res  = await fetch('/admin/rag/documents', { headers: { 'Authorization': 'Bearer ' + getToken() } });
                     const data = await res.json();
-                    if (!res.ok) { kbDocBody.innerHTML = '<tr><td colspan="7" class="kb-empty">載入失敗</td></tr>'; return; }
-
-                    const docs = data.documents || [];
-                    if (docs.length === 0) {
-                        kbDocBody.innerHTML = '<tr><td colspan="7" class="kb-empty">尚無文件。上傳文件以建立知識庫。</td></tr>';
+                    if (!res.ok) {
+                        kbDocBody.innerHTML = '<tr><td colspan="7" class="kb-empty">載入失敗</td></tr>';
                         return;
                     }
-                    kbDocBody.innerHTML = docs.map(d => `
-                        <tr>
-                            <td><a href="/view_rag_document/${d.id}/${encodeURIComponent(d.original_filename)}" target="_blank" class="kb-doc-link" title="${d.original_filename}">${d.original_filename.length > 30 ? d.original_filename.slice(0,27)+'...' : d.original_filename}</a></td>
-                            <td>${d.content_type.split('/').pop().toUpperCase()}</td>
-                            <td>${formatSize(d.file_size)}</td>
-                            <td>${d.chunk_count || 0}</td>
-                            <td><span class="kb-status ${d.status}">${d.status}</span></td>
-                            <td>${formatDate(d.created_at)}</td>
-                            <td>
-                                <button class="kb-btn kb-btn-reprocess" onclick="reprocessDoc(${d.id})"><i class="fas fa-redo"></i></button>
-                                <button class="kb-btn kb-btn-delete" onclick="deleteDoc(${d.id})"><i class="fas fa-trash"></i></button>
-                            </td>
-                        </tr>
-                    `).join('');
+                    renderKbTable(data.documents || []);
+
+                    // If any docs are still pending/processing — start polling
+                    const hasPending = (data.documents || []).some(
+                        d => d.status === 'pending' || d.status === 'processing'
+                    );
+                    if (hasPending) startPolling();
                 } catch (e) {
                     kbDocBody.innerHTML = '<tr><td colspan="7" class="kb-empty">錯誤: ' + e.message + '</td></tr>';
                 }
             }
 
+            function renderKbTable(docs) {
+                if (docs.length === 0) {
+                    kbDocBody.innerHTML = '<tr><td colspan="7" class="kb-empty">尚無文件。上傳文件以建立知識庫。</td></tr>';
+                    kbSelectAll.checked = false;
+                    kbSelectAll.indeterminate = false;
+                    return;
+                }
+
+                const statusLabel = { ready:'就緒', processing:'匯入中', pending:'等待中', error:'錯誤' };
+
+                kbDocBody.innerHTML = docs.map(d => {
+                    const checked = selectedDocIds.has(d.id) ? 'checked' : '';
+                    const sLabel  = statusLabel[d.status] || d.status;
+                    const fname   = d.original_filename || '';
+                    const display = fname.length > 32 ? fname.slice(0, 29) + '...' : fname;
+                    return `
+                        <tr data-doc-id="${d.id}">
+                            <td><input type="checkbox" class="kb-row-check" data-id="${d.id}" ${checked}
+                                onchange="toggleDocSelection(${d.id}, this.checked)"></td>
+                            <td><a href="/view_rag_document/${d.id}/${encodeURIComponent(fname)}"
+                                target="_blank" class="kb-doc-link" title="${fname}">${display}</a></td>
+                            <td>${(d.content_type || '').split('/').pop().toUpperCase()}</td>
+                            <td>${formatSize(d.file_size)}</td>
+                            <td><span class="kb-status ${d.status}">${sLabel}</span></td>
+                            <td>${formatDate(d.created_at)}</td>
+                            <td>
+                                <button class="kb-btn kb-btn-reprocess" onclick="reprocessDoc(${d.id})" title="重新匯入"><i class="fas fa-redo"></i></button>
+                                <button class="kb-btn kb-btn-delete"    onclick="deleteDoc(${d.id})"    title="刪除"><i class="fas fa-trash"></i></button>
+                            </td>
+                        </tr>`;
+                }).join('');
+
+                updateSelectAllState();
+            }
+
+            // ── Checkbox / selection helpers ──────────────────────────────
+            window.toggleDocSelection = function(id, checked) {
+                if (checked) selectedDocIds.add(id);
+                else         selectedDocIds.delete(id);
+                updateBatchToolbar();
+                updateSelectAllState();
+            };
+
+            window.clearDocSelection = function() {
+                selectedDocIds.clear();
+                document.querySelectorAll('.kb-row-check').forEach(cb => cb.checked = false);
+                updateBatchToolbar();
+                updateSelectAllState();
+            };
+
+            kbSelectAll.addEventListener('change', function() {
+                const cbs = document.querySelectorAll('.kb-row-check');
+                cbs.forEach(cb => {
+                    cb.checked = this.checked;
+                    const id = parseInt(cb.dataset.id);
+                    if (this.checked) selectedDocIds.add(id);
+                    else              selectedDocIds.delete(id);
+                });
+                updateBatchToolbar();
+            });
+
+            function updateSelectAllState() {
+                const cbs = document.querySelectorAll('.kb-row-check');
+                if (!cbs.length) {
+                    kbSelectAll.checked = false;
+                    kbSelectAll.indeterminate = false;
+                    return;
+                }
+                const checkedCount = [...cbs].filter(cb => cb.checked).length;
+                kbSelectAll.checked       = checkedCount === cbs.length;
+                kbSelectAll.indeterminate = checkedCount > 0 && checkedCount < cbs.length;
+            }
+
+            function updateBatchToolbar() {
+                const toolbar = document.getElementById('kbBatchToolbar');
+                const count   = selectedDocIds.size;
+                if (count > 0) {
+                    toolbar.style.display = 'flex';
+                    document.getElementById('batchCount').textContent = `已選擇 ${count} 個文件`;
+                } else {
+                    toolbar.style.display = 'none';
+                }
+            }
+
+            // ── CRUD operations ───────────────────────────────────────────
             window.deleteDoc = async function(id) {
-                if (!confirm('確定刪除此文件及所有相關資料？')) return;
+                if (!confirm('確定刪除此文件及所有相關資料？此操作無法復原。')) return;
                 try {
-                    await fetch(`/admin/rag/documents/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + getToken() } });
+                    const res = await fetch(`/admin/rag/documents/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + getToken() },
+                    });
+                    if (res.ok) {
+                        selectedDocIds.delete(id);
+                        updateBatchToolbar();
+                        showToast('文件已刪除', 'success');
+                    } else {
+                        const data = await res.json().catch(() => {});
+                        showToast('刪除失敗: ' + ((data && data.error) || ''), 'error');
+                    }
                     loadKbDocuments();
-                } catch (e) { alert('刪除失敗: ' + e.message); }
+                } catch (e) { showToast('刪除失敗: ' + e.message, 'error'); }
+            };
+
+            window.batchDeleteDocs = async function() {
+                const count = selectedDocIds.size;
+                if (count === 0) return;
+                if (!confirm(`確定要刪除選中的 ${count} 個文件嗎？此操作無法復原。`)) return;
+
+                const ids = [...selectedDocIds];
+                selectedDocIds.clear();
+                updateBatchToolbar();
+
+                try {
+                    const res = await fetch('/admin/rag/documents/batch-delete', {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ doc_ids: ids }),
+                    });
+                    const data = await res.json();
+                    if (res.ok) {
+                        const deleted = (data.results && data.results.deleted) ? data.results.deleted.length : 0;
+                        const failed  = (data.results && data.results.failed)  ? data.results.failed.length  : 0;
+                        if (deleted > 0) showToast(`成功刪除 ${deleted} 個文件`, 'success');
+                        if (failed  > 0) showToast(`${failed} 個文件刪除失敗`, 'error');
+                    } else {
+                        showToast('批量刪除失敗: ' + (data.error || ''), 'error');
+                    }
+                } catch (e) { showToast('批量刪除失敗: ' + e.message, 'error'); }
+
+                loadKbDocuments();
             };
 
             window.reprocessDoc = async function(id) {
-                if (!confirm('重新分段並嵌入此文件？')) return;
+                if (!confirm('重新匯入此文件到知識庫？')) return;
                 try {
-                    const res = await fetch(`/admin/rag/documents/${id}/reprocess`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + getToken() } });
+                    const res  = await fetch(`/admin/rag/documents/${id}/reprocess`, {
+                        method: 'POST',
+                        headers: { 'Authorization': 'Bearer ' + getToken() },
+                    });
                     const data = await res.json();
-                    alert(data.message || '完成');
+                    showToast(data.message || '重新匯入完成', res.ok ? 'success' : 'error');
                     loadKbDocuments();
-                } catch (e) { alert('重新處理失敗: ' + e.message); }
+                } catch (e) { showToast('重新匯入失敗: ' + e.message, 'error'); }
             };
 
+            // ── Search ────────────────────────────────────────────────────
             kbSearchBtn.addEventListener('click', searchKb);
             kbSearchInput.addEventListener('keydown', e => { if (e.key === 'Enter') searchKb(); });
 
@@ -874,14 +1081,16 @@
                 if (!query) return;
                 kbSearchResults.innerHTML = '<div class="kb-empty">搜尋中...</div>';
                 try {
-                    const res = await fetch('/admin/rag/search', {
+                    const res  = await fetch('/admin/rag/search', {
                         method: 'POST',
                         headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' },
                         body: JSON.stringify({ query }),
                     });
                     const data = await res.json();
-                    if (!res.ok) { kbSearchResults.innerHTML = '<div class="kb-empty">錯誤: ' + (data.error || '搜尋失敗') + '</div>'; return; }
-
+                    if (!res.ok) {
+                        kbSearchResults.innerHTML = '<div class="kb-empty">錯誤: ' + (data.error || '搜尋失敗') + '</div>';
+                        return;
+                    }
                     const results = data.results || [];
                     if (results.length === 0) {
                         kbSearchResults.innerHTML = '<div class="kb-empty">未找到相關結果</div>';
@@ -890,9 +1099,11 @@
                     kbSearchResults.innerHTML = results.map((r, i) => `
                         <div class="kb-result-item">
                             <div class="kb-result-meta">
-                                <i class="fas fa-file-alt"></i> #${i+1} | ${r.document_name}${r.page_number ? ' p.' + r.page_number : ''}${r.heading ? ' | ' + r.heading : ''} | 相關度: ${(r.similarity * 100).toFixed(0)}%
+                                <i class="fas fa-file-alt"></i>
+                                #${i+1} | ${r.document_name}${r.page_number ? ' p.' + r.page_number : ''}${r.heading ? ' | ' + r.heading : ''}
+                                | 相關度: ${(r.similarity * 100).toFixed(0)}%
                             </div>
-                            <div class="kb-result-content">${r.content.length > 500 ? r.content.slice(0,500)+'...' : r.content}</div>
+                            <div class="kb-result-content">${r.content.length > 500 ? r.content.slice(0,500) + '...' : r.content}</div>
                         </div>
                     `).join('');
                 } catch (e) {
@@ -901,5 +1112,6 @@
             }
         });
     </script>
+
 </body>
 </html>

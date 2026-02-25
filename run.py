@@ -4,6 +4,16 @@
 import eventlet
 eventlet.monkey_patch(thread=False)  # thread=False: keep real OS threads for asyncio
 
+import logging
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)-8s %(name)s: %(message)s",
+    datefmt="%H:%M:%S",
+)
+# Make RAG / agent logs visible at DEBUG level so distance scores show up
+logging.getLogger("app.rag").setLevel(logging.DEBUG)
+logging.getLogger("app.agent").setLevel(logging.DEBUG)
+
 from app import create_app, socketio
 
 app = create_app()

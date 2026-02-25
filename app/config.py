@@ -51,15 +51,28 @@ class Config:
     # Disable CSRF protection for cookie-based JWTs since we pair them with Authorization headers
     JWT_COOKIE_CSRF_PROTECT = os.environ.get('JWT_COOKIE_CSRF_PROTECT', 'false').lower() == 'true'
 
-    # RAG Configuration
-    RAG_EMBEDDING_MODEL = os.environ.get('RAG_EMBEDDING_MODEL', 'gemini-embedding-001')
-    RAG_EMBEDDING_DIMENSION = int(os.environ.get('RAG_EMBEDDING_DIMENSION', '768'))
+    # RAG Configuration (GCP Vertex AI RAG Engine)
+    RAG_CORPUS_NAME = os.environ.get(
+        'RAG_CORPUS_NAME',
+        'projects/fyp-project-4f3b7/locations/us-west1/ragCorpora/3458764513820540928',
+    )
+    GCP_PROJECT = os.environ.get('GCP_PROJECT', 'fyp-project-4f3b7')
+    RAG_LOCATION = os.environ.get('RAG_LOCATION', 'us-west1')
+    RAG_LAYOUT_PARSER_PROCESSOR = os.environ.get(
+        'RAG_LAYOUT_PARSER_PROCESSOR',
+        'projects/1082304305565/locations/us/processors/f04c32bad7e0f28c',
+    )
     RAG_TOP_K = int(os.environ.get('RAG_TOP_K', '5'))
-    RAG_MIN_SIMILARITY = float(os.environ.get('RAG_MIN_SIMILARITY', '0.3'))
     RAG_GCS_FOLDER = os.environ.get('RAG_GCS_FOLDER', 'RAG')
-    RAG_MAX_CHUNK_CHARS = int(os.environ.get('RAG_MAX_CHUNK_CHARS', '2000'))
-    RAG_MIN_CHUNK_CHARS = int(os.environ.get('RAG_MIN_CHUNK_CHARS', '100'))
     RAG_ALLOWED_EXTENSIONS = {'pdf', 'txt', 'md'}
+
+    # Weaviate (RAG Engine vector store) — direct access for chunk cleanup
+    WEAVIATE_URL = os.environ.get(
+        'WEAVIATE_URL',
+        'https://cjnwy6xssgog1xn3a6aq.c0.us-west3.gcp.weaviate.cloud',
+    )
+    WEAVIATE_API_KEY = os.environ.get('WEAVIATE_API_KEY', '')
+    WEAVIATE_COLLECTION = os.environ.get('WEAVIATE_COLLECTION', 'FYP')
 
     # Pose Detection Configuration
     POSE_DETECTION_ENABLED = os.environ.get('POSE_DETECTION_ENABLED', 'true').lower() == 'true'

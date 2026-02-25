@@ -170,9 +170,13 @@ def admin():
 @bp.route('/admin/rag/documents', methods=['POST'])
 @jwt_required()
 def rag_upload_document():
-    """Upload a document to the global RAG knowledge base (admin only)."""
+    """Upload a document to the global RAG knowledge base (admin only).
+
+    File is uploaded to GCS synchronously; the Vertex AI RAG Engine import
+    runs in a background daemon thread so the response returns immediately.
+    """
+    import threading
     from flask_jwt_extended import get_jwt_identity
-    from .auth import admin_required
     from .models import User, RagDocument, db
     from . import gcp_bucket as gcs
 
@@ -195,13 +199,14 @@ def rag_upload_document():
         return jsonify({'error': f'Unsupported file type: .{ext}. Allowed: {sorted(allowed)}'}), 400
 
     try:
+        # 1. Upload to GCS (fast — seconds)
         gcs_path, file_size = gcs.upload_rag_document(file, file.filename, file.content_type)
 
-        # Determine correct content type from extension if not provided
         content_type = file.content_type
         if not content_type or content_type == 'application/octet-stream':
             content_type = gcs.get_content_type_from_url(file.filename)
 
+        # 2. Create DB record immediately with status='pending'
         doc = RagDocument(
             filename=gcs_path.split('/')[-1],
             original_filename=file.filename,
@@ -210,20 +215,33 @@ def rag_upload_document():
             file_size=file_size,
             status='pending',
             uploaded_by=user_id,
+            rag_corpus_name=current_app.config.get('RAG_CORPUS_NAME'),
         )
         db.session.add(doc)
         db.session.commit()
+        doc_id = doc.id
 
-        # Process document (chunk + embed) synchronously
-        from app.rag.processor import process_document
-        success = process_document(doc.id)
+        # 3. Run RAG Engine import in background thread (can take minutes)
+        app = current_app._get_current_object()
 
-        # Refresh to get updated status
-        db.session.refresh(doc)
+        def _background_import(flask_app, document_id):
+            with flask_app.app_context():
+                from app.rag.processor import process_document
+                process_document(document_id)
+
+        t = threading.Thread(
+            target=_background_import,
+            args=(app, doc_id),
+            daemon=True,
+            name=f'rag-import-{doc_id}',
+        )
+        t.start()
+
+        # Return 202 immediately — client polls for status
         return jsonify({
-            'message': 'Document uploaded and processed' if success else 'Document uploaded but processing failed',
+            'message': 'Document uploaded. Background import started.',
             'document': doc.to_dict(),
-        }), 201 if success else 207
+        }), 202
 
     except Exception as e:
         db.session.rollback()
@@ -233,7 +251,7 @@ def rag_upload_document():
 @bp.route('/admin/rag/documents', methods=['GET'])
 @jwt_required()
 def rag_list_documents():
-    """List all RAG documents (admin only)."""
+    """List all RAG documents (admin only). Syncs with GCS bucket first."""
     from flask_jwt_extended import get_jwt_identity
     from .models import User, RagDocument
 
@@ -242,14 +260,25 @@ def rag_list_documents():
     if not user or not user.is_admin():
         return jsonify({'error': 'Admin access required'}), 403
 
+    # Sync GCS bucket with DB — discover files added outside the UI
+    sync_stats = None
+    try:
+        from app.rag.rag_engine import sync_bucket_to_db
+        sync_stats = sync_bucket_to_db()
+    except Exception as e:
+        current_app.logger.warning('Bucket sync failed: %s', e)
+
     docs = RagDocument.query.order_by(RagDocument.created_at.desc()).all()
-    return jsonify({'documents': [d.to_dict() for d in docs]}), 200
+    result = {'documents': [d.to_dict() for d in docs]}
+    if sync_stats:
+        result['sync'] = sync_stats
+    return jsonify(result), 200
 
 
 @bp.route('/admin/rag/documents/<int:doc_id>', methods=['GET'])
 @jwt_required()
 def rag_get_document(doc_id):
-    """Get a RAG document with chunk previews (admin only)."""
+    """Get a RAG document details (admin only)."""
     from flask_jwt_extended import get_jwt_identity
     from .models import User, RagDocument
 
@@ -262,13 +291,13 @@ def rag_get_document(doc_id):
     if not doc:
         return jsonify({'error': 'Document not found'}), 404
 
-    return jsonify({'document': doc.to_dict(include_chunks=True)}), 200
+    return jsonify({'document': doc.to_dict()}), 200
 
 
 @bp.route('/admin/rag/documents/<int:doc_id>', methods=['DELETE'])
 @jwt_required()
 def rag_delete_document(doc_id):
-    """Delete a RAG document, its chunks, and GCS file (admin only)."""
+    """Delete a RAG document from Weaviate, GCS, and DB (admin only)."""
     from flask_jwt_extended import get_jwt_identity
     from .models import User, RagDocument, db
     from . import gcp_bucket as gcs
@@ -284,19 +313,22 @@ def rag_delete_document(doc_id):
         return jsonify({'error': 'Document not found'}), 404
 
     gcs_path = doc.gcs_path
+    # Delete from RAG Engine (Weaviate chunks) + DB row
     delete_document_data(doc_id)
+    # Delete from GCS
     gcs.delete_rag_document(gcs_path)
 
-    return jsonify({'message': 'Document deleted'}), 200
+    return jsonify({'message': 'Document deleted (Weaviate + GCS + DB)'}), 200
 
 
 @bp.route('/admin/rag/documents/<int:doc_id>/reprocess', methods=['POST'])
 @jwt_required()
 def rag_reprocess_document(doc_id):
-    """Re-chunk and re-embed a document (admin only)."""
+    """Re-import a document into the RAG Engine (admin only)."""
     from flask_jwt_extended import get_jwt_identity
     from .models import User, RagDocument, db
     from app.rag.processor import process_document
+    from app.rag.rag_engine import delete_rag_file
 
     user_id = get_jwt_identity()
     user = User.query.get(user_id)
@@ -307,6 +339,13 @@ def rag_reprocess_document(doc_id):
     if not doc:
         return jsonify({'error': 'Document not found'}), 404
 
+    # Delete old RAG Engine entry if it exists
+    if doc.rag_file_name:
+        delete_rag_file(doc.rag_file_name)
+        doc.rag_file_name = None
+        doc.status = 'pending'
+        db.session.commit()
+
     success = process_document(doc.id)
     db.session.refresh(doc)
 
@@ -314,6 +353,51 @@ def rag_reprocess_document(doc_id):
         'message': 'Reprocessing complete' if success else 'Reprocessing failed',
         'document': doc.to_dict(),
     }), 200 if success else 500
+
+
+@bp.route('/admin/rag/documents/batch-delete', methods=['POST'])
+@jwt_required()
+def rag_batch_delete_documents():
+    """Batch delete RAG documents by ID list (admin only).
+
+    Request body: {"doc_ids": [1, 2, 3]}
+    Returns:      {"message": "...", "results": {"deleted": [...], "failed": [...], "not_found": [...]}}
+    """
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User, RagDocument, db
+    from . import gcp_bucket as gcs
+    from app.rag.processor import delete_document_data
+
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+
+    data = request.get_json() or {}
+    doc_ids = data.get('doc_ids', [])
+    if not doc_ids:
+        return jsonify({'error': 'No document IDs provided'}), 400
+
+    results = {'deleted': [], 'failed': [], 'not_found': []}
+
+    for doc_id in doc_ids:
+        doc = RagDocument.query.get(doc_id)
+        if not doc:
+            results['not_found'].append(doc_id)
+            continue
+        try:
+            gcs_path = doc.gcs_path
+            delete_document_data(doc_id)      # removes from RAG Engine + DB
+            gcs.delete_rag_document(gcs_path)  # removes from GCS
+            results['deleted'].append(doc_id)
+        except Exception as exc:
+            current_app.logger.error('Batch delete: failed to delete doc %d: %s', doc_id, exc)
+            results['failed'].append({'id': doc_id, 'error': str(exc)})
+
+    return jsonify({
+        'message': f"Deleted {len(results['deleted'])} document(s)",
+        'results': results,
+    }), 200
 
 
 @bp.route('/admin/rag/search', methods=['POST'])
@@ -335,7 +419,7 @@ def rag_test_search():
         return jsonify({'error': 'Query is required'}), 400
 
     top_k = data.get('top_k', current_app.config.get('RAG_TOP_K', 5))
-    results = search_knowledge(query, top_k=top_k, user_id=user.id)
+    results = search_knowledge(query, top_k=top_k)
 
     return jsonify({'query': query, 'results': results}), 200
 

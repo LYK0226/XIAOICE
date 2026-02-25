@@ -65,13 +65,16 @@ logger = logging.getLogger(__name__)
 
 def _make_retrieve_knowledge_tool(user_id: Optional[int] = None):
     """
-    Factory that returns a retrieve_knowledge FunctionTool bound to a specific
-    user_id so that RAG embedding calls can use the user's own API key.
+    Factory that returns a retrieve_knowledge FunctionTool.
 
-    The tool is declared `async` so ADK awaits it instead of calling it
-    synchronously (which would block the event loop).  The actual DB + embedding
-    I/O is offloaded to a threadpool via run_in_executor so the LLM API
-    connection keepalive is not disrupted.
+    Uses the Vertex AI RAG Engine for retrieval.  The user_id parameter is
+    kept for API compatibility but is no longer used (RAG Engine uses
+    service account auth).
+
+    The tool is declared ``async`` so ADK awaits it instead of calling it
+    synchronously.  The actual RAG Engine call is offloaded to a threadpool
+    via ``run_in_executor`` so the LLM API connection keepalive is not
+    disrupted.
     """
 
     async def retrieve_knowledge(query: str) -> str:
@@ -97,7 +100,7 @@ def _make_retrieve_knowledge_tool(user_id: Optional[int] = None):
         """
         def _do_search():
             """Run the synchronous RAG query in a dedicated threadpool worker."""
-            logger.info("[RAG-TOOL] retrieve_knowledge called | query=%r | user_id=%s", query, user_id)
+            logger.info("[RAG-TOOL] retrieve_knowledge called | query=%r", query)
             # Resolve which Flask app to use for the app context
             flask_app = None
             try:
@@ -113,7 +116,7 @@ def _make_retrieve_knowledge_tool(user_id: Optional[int] = None):
                 from app.rag.retriever import search_knowledge, format_context
 
                 def _query():
-                    results = search_knowledge(query, top_k=5, user_id=user_id)
+                    results = search_knowledge(query, top_k=5)
                     logger.info("[RAG-TOOL] search_knowledge returned %d results", len(results) if results else 0)
                     if not results:
                         logger.info("[RAG-TOOL] No results → answering from general knowledge")
@@ -126,7 +129,8 @@ def _make_retrieve_knowledge_tool(user_id: Optional[int] = None):
                     logger.info("[RAG-TOOL] Returning %d chars of context", len(context))
                     return (
                         "The following information was retrieved from the knowledge base. "
-                        "Use it to support your answer and cite the sources:\n\n"
+                        "Incorporate it naturally into your answer without mentioning "
+                        "document names, filenames, or source titles:\n\n"
                         + context
                     )
 
@@ -139,15 +143,17 @@ def _make_retrieve_knowledge_tool(user_id: Optional[int] = None):
                 logger.warning("RAG retrieval failed: %s", exc)
                 return "Knowledge base retrieval is currently unavailable. Answer based on your general knowledge."
 
-        # Run synchronous DB + embedding call in a threadpool so that the ADK
-        # async event loop is NOT blocked during the HTTP round-trip.  If the
-        # event loop is blocked, the LLM API connection's keepalive timeout
-        # expires and causes "Server disconnected without sending a response."
+        # Run synchronous RAG Engine call in a threadpool so that the ADK
+        # async event loop is NOT blocked during the HTTP round-trip.
+        # Use get_running_loop() (not get_event_loop()) since we are already
+        # inside an async context when ADK invokes this tool.
         try:
-            loop = asyncio.get_event_loop()
-            return await loop.run_in_executor(None, _do_search)
+            loop = asyncio.get_running_loop()
+            result = await loop.run_in_executor(None, _do_search)
+            logger.info("[RAG-TOOL] executor finished, result length=%d", len(result) if result else 0)
+            return result
         except Exception as exc:
-            logger.warning("RAG retrieval failed: %s", exc)
+            logger.warning("[RAG-TOOL] run_in_executor failed: %s", exc, exc_info=True)
             return "Knowledge base retrieval is currently unavailable. Answer based on your general knowledge."
 
     return retrieve_knowledge

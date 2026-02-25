@@ -2,7 +2,6 @@ from flask_sqlalchemy import SQLAlchemy
 from werkzeug.security import generate_password_hash, check_password_hash
 from datetime import datetime, date
 from dateutil.relativedelta import relativedelta
-from pgvector.sqlalchemy import Vector
 import uuid
 import json
 import os
@@ -708,7 +707,7 @@ class VideoTimestamp(db.Model):
 class RagDocument(db.Model):
     """
     A document uploaded to the global RAG knowledge base.
-    Stored in GCS under the RAG/ folder, chunked and embedded for retrieval.
+    Stored in GCS under the RAG/ folder and imported into Vertex AI RAG Engine.
     """
     __tablename__ = 'rag_documents'
 
@@ -720,7 +719,8 @@ class RagDocument(db.Model):
     file_size = db.Column(db.BigInteger, nullable=False, default=0)
     status = db.Column(db.String(30), nullable=False, default='pending', index=True)
     # pending → processing → ready | error
-    chunk_count = db.Column(db.Integer, nullable=True, default=0)
+    rag_file_name = db.Column(db.String(512), nullable=True)        # Vertex RAG file resource name
+    rag_corpus_name = db.Column(db.String(512), nullable=True)      # Vertex RAG corpus resource name
     uploaded_by = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='SET NULL'), nullable=True, index=True)
     metadata_ = db.Column('metadata', db.JSON, nullable=True)      # Extra doc-level metadata
     created_at = db.Column(db.DateTime, default=datetime.utcnow, index=True)
@@ -728,13 +728,12 @@ class RagDocument(db.Model):
 
     # Relationships
     uploader = db.relationship('User', backref=db.backref('rag_documents', lazy='dynamic'))
-    chunks = db.relationship('RagChunk', backref='document', lazy='dynamic', cascade='all, delete-orphan')
 
     def __repr__(self):
         return f'<RagDocument {self.id} {self.original_filename}>'
 
-    def to_dict(self, include_chunks=False):
-        data = {
+    def to_dict(self):
+        return {
             'id': self.id,
             'filename': self.filename,
             'original_filename': self.original_filename,
@@ -742,48 +741,10 @@ class RagDocument(db.Model):
             'gcs_path': self.gcs_path,
             'file_size': self.file_size,
             'status': self.status,
-            'chunk_count': self.chunk_count,
+            'rag_file_name': self.rag_file_name,
+            'rag_corpus_name': self.rag_corpus_name,
             'uploaded_by': self.uploaded_by,
             'metadata': self.metadata_,
             'created_at': self.created_at.isoformat() if self.created_at else None,
             'updated_at': self.updated_at.isoformat() if self.updated_at else None,
-        }
-        if include_chunks:
-            data['chunks'] = [c.to_dict() for c in self.chunks.order_by(RagChunk.chunk_index).all()]
-        return data
-
-
-class RagChunk(db.Model):
-    """
-    A single semantic chunk of text from a RagDocument, with its embedding vector.
-    """
-    __tablename__ = 'rag_chunks'
-
-    id = db.Column(db.Integer, primary_key=True)
-    document_id = db.Column(db.Integer, db.ForeignKey('rag_documents.id', ondelete='CASCADE'), nullable=False, index=True)
-    chunk_index = db.Column(db.Integer, nullable=False)             # Order within document
-    content = db.Column(db.Text, nullable=False)                    # Chunk text
-    heading = db.Column(db.String(500), nullable=True)              # Section heading (if detected)
-    page_number = db.Column(db.Integer, nullable=True)              # PDF page number
-    char_start = db.Column(db.Integer, nullable=True)               # Character offset start
-    char_end = db.Column(db.Integer, nullable=True)                 # Character offset end
-    embedding = db.Column(Vector(768), nullable=True)               # pgvector embedding
-    token_count = db.Column(db.Integer, nullable=True)              # Estimated token count
-    created_at = db.Column(db.DateTime, default=datetime.utcnow)
-
-    def __repr__(self):
-        return f'<RagChunk {self.id} doc={self.document_id} idx={self.chunk_index}>'
-
-    def to_dict(self):
-        return {
-            'id': self.id,
-            'document_id': self.document_id,
-            'chunk_index': self.chunk_index,
-            'content': self.content,
-            'heading': self.heading,
-            'page_number': self.page_number,
-            'char_start': self.char_start,
-            'char_end': self.char_end,
-            'token_count': self.token_count,
-            'created_at': self.created_at.isoformat() if self.created_at else None,
         }
