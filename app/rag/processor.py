@@ -2,10 +2,15 @@
 Document processing pipeline for RAG.
 
 Orchestrates:
-  file download from GCS → chunking → embedding → DB storage
+  file download from GCS -> Gemini chunking -> Vertex AI embedding -> DB storage
+
+All AI calls use the project Service Account (Vertex AI) — no per-user API
+key is required.  Status updates are pushed to the admin frontend via
+Socket.IO so background processing is visible in real time.
 """
 
 import logging
+import os
 from typing import Optional
 
 from app.rag.chunker import chunk_document
@@ -14,14 +19,38 @@ from app.rag.embeddings import generate_embeddings
 logger = logging.getLogger(__name__)
 
 
+# ---------------------------------------------------------------------------
+# Socket.IO status helpers
+# ---------------------------------------------------------------------------
+
+def _emit_status(document_id: int, status: str, chunk_count: int = 0, error: str = ""):
+    """Push a real-time status update to connected admin clients."""
+    try:
+        from app import socketio
+        socketio.emit("rag_document_status", {
+            "document_id": document_id,
+            "status": status,
+            "chunk_count": chunk_count,
+            "error": error,
+        }, namespace="/")
+    except Exception as exc:
+        logger.debug("Could not emit rag_document_status: %s", exc)
+
+
+# ---------------------------------------------------------------------------
+# Main pipeline
+# ---------------------------------------------------------------------------
+
 def process_document(document_id: int) -> bool:
     """
     Process a RAG document end-to-end:
       1. Download file bytes from GCS
-      2. Chunk the document semantically
-      3. Generate embeddings for each chunk
+      2. Chunk the document via Gemini
+      3. Generate embeddings via Vertex AI
       4. Store chunks + embeddings in rag_chunks table
       5. Update document status to 'ready'
+
+    Status changes are emitted via Socket.IO for real-time frontend updates.
 
     Args:
         document_id: Primary key of the RagDocument row.
@@ -30,7 +59,6 @@ def process_document(document_id: int) -> bool:
         True on success, False on failure.
     """
     from app.models import db, RagDocument, RagChunk
-    from app import gcp_bucket
 
     doc = RagDocument.query.get(document_id)
     if not doc:
@@ -40,12 +68,13 @@ def process_document(document_id: int) -> bool:
     try:
         doc.status = "processing"
         db.session.commit()
+        _emit_status(document_id, "processing")
 
         # 1. Download from GCS
         logger.info("Downloading document %d from GCS: %s", document_id, doc.gcs_path)
         file_bytes = _download_from_gcs(doc.gcs_path)
 
-        # 2. Chunk
+        # 2. Chunk (Gemini-powered, with paragraph fallback)
         logger.info("Chunking document %d (%s, %s)", document_id, doc.content_type, doc.original_filename)
         chunks = chunk_document(file_bytes, doc.content_type, doc.original_filename)
         if not chunks:
@@ -53,15 +82,10 @@ def process_document(document_id: int) -> bool:
 
         logger.info("Document %d produced %d chunks", document_id, len(chunks))
 
-        # 3. Generate embeddings
+        # 3. Generate embeddings (Vertex AI service account)
         texts = [c.content for c in chunks]
         logger.info("Generating embeddings for %d chunks…", len(texts))
-        uploader_api_key = _get_uploader_api_key(doc.uploaded_by)
-        embeddings = generate_embeddings(
-            texts,
-            task_type="RETRIEVAL_DOCUMENT",
-            api_key=uploader_api_key,
-        )
+        embeddings = generate_embeddings(texts, task_type="RETRIEVAL_DOCUMENT")
 
         if len(embeddings) != len(chunks):
             raise ValueError(
@@ -91,6 +115,7 @@ def process_document(document_id: int) -> bool:
         doc.chunk_count = len(chunks)
         db.session.commit()
 
+        _emit_status(document_id, "ready", chunk_count=len(chunks))
         logger.info("Document %d processed successfully: %d chunks stored", document_id, len(chunks))
         return True
 
@@ -108,6 +133,7 @@ def process_document(document_id: int) -> bool:
             doc.metadata_ = doc.metadata_ or {}
             doc.metadata_["error"] = str(exc)[:500]
             db.session.commit()
+            _emit_status(document_id, "error", error=str(exc)[:200])
         except Exception:
             db.session.rollback()
         return False
@@ -117,12 +143,6 @@ def delete_document_data(document_id: int) -> bool:
     """
     Delete a document and all its chunks from the database.
     GCS file deletion should be handled by the caller.
-
-    Args:
-        document_id: Primary key of the RagDocument row.
-
-    Returns:
-        True on success, False on failure.
     """
     from app.models import db, RagDocument, RagChunk
 
@@ -144,13 +164,15 @@ def delete_document_data(document_id: int) -> bool:
 
 def _download_from_gcs(gcs_path: str) -> bytes:
     """Download file from GCS using the configured bucket."""
-    import os
     from google.cloud import storage
 
     bucket_name = os.environ.get("GCS_BUCKET_NAME")
     if not bucket_name:
-        from flask import current_app
-        bucket_name = current_app.config.get("GCS_BUCKET_NAME")
+        try:
+            from flask import current_app
+            bucket_name = current_app.config.get("GCS_BUCKET_NAME")
+        except RuntimeError:
+            pass
 
     if not bucket_name:
         raise ValueError("GCS_BUCKET_NAME not configured")
@@ -166,51 +188,7 @@ def _download_from_gcs(gcs_path: str) -> bytes:
 
 
 def _estimate_tokens(text: str) -> int:
-    """
-    Rough token-count estimate.
-    For CJK-heavy text: ~1.5 chars per token.
-    For Latin text: ~4 chars per token.
-    We use a blended heuristic.
-    """
+    """Rough token-count estimate (CJK ~1.5 chars/token, Latin ~4 chars/token)."""
     cjk_count = sum(1 for c in text if '\u4e00' <= c <= '\u9fff' or '\u3400' <= c <= '\u4dbf')
     latin_count = len(text) - cjk_count
     return int(cjk_count / 1.5 + latin_count / 4)
-
-
-def _get_uploader_api_key(user_id: Optional[int]) -> Optional[str]:
-    """
-    Resolve uploader's AI Studio API key for RAG embedding.
-
-    Priority:
-      1) UserProfile.selected_api_key_id if active and provider == ai_studio
-      2) Most recently updated active ai_studio key for the user
-
-    Returns:
-      Decrypted API key string, or None if unavailable.
-    """
-    if not user_id:
-        return None
-
-    from app.models import UserProfile, UserApiKey
-
-    profile = UserProfile.query.filter_by(user_id=user_id).first()
-    if profile and profile.selected_api_key and profile.selected_api_key.is_active:
-        if profile.selected_api_key.provider == "ai_studio":
-            selected_key = profile.selected_api_key.get_decrypted_key()
-            if selected_key:
-                logger.info("Using uploader selected API key for RAG embedding (user_id=%s)", user_id)
-                return selected_key
-
-    fallback_key = (
-        UserApiKey.query
-        .filter_by(user_id=user_id, is_active=True, provider="ai_studio")
-        .order_by(UserApiKey.updated_at.desc())
-        .first()
-    )
-    if fallback_key:
-        decrypted = fallback_key.get_decrypted_key()
-        if decrypted:
-            logger.info("Using uploader fallback API key for RAG embedding (user_id=%s)", user_id)
-            return decrypted
-
-    return None

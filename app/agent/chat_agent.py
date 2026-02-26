@@ -63,13 +63,15 @@ logger = logging.getLogger(__name__)
 # RAG Retrieval Tool (FunctionTool for ADK coordinator)
 # ---------------------------------------------------------------------------
 
-def _make_retrieve_knowledge_tool(user_id: Optional[int] = None):
+def _make_retrieve_knowledge_tool():
     """
-    Factory that returns a retrieve_knowledge FunctionTool bound to a specific
-    user_id so that RAG embedding calls can use the user's own API key.
+    Factory that returns a retrieve_knowledge FunctionTool for the ADK
+    coordinator agent.
 
-    The tool is declared `async` so ADK awaits it instead of calling it
-    synchronously (which would block the event loop).  The actual DB + embedding
+    All RAG embedding calls now use the project Service Account (Vertex AI),
+    so no per-user API key is needed.
+
+    The tool is declared ``async`` so ADK awaits it.  The actual DB + embedding
     I/O is offloaded to a threadpool via run_in_executor so the LLM API
     connection keepalive is not disrupted.
     """
@@ -97,7 +99,7 @@ def _make_retrieve_knowledge_tool(user_id: Optional[int] = None):
         """
         def _do_search():
             """Run the synchronous RAG query in a dedicated threadpool worker."""
-            logger.info("[RAG-TOOL] retrieve_knowledge called | query=%r | user_id=%s", query, user_id)
+            logger.info("[RAG-TOOL] retrieve_knowledge called | query=%r", query)
             # Resolve which Flask app to use for the app context
             flask_app = None
             try:
@@ -113,7 +115,7 @@ def _make_retrieve_knowledge_tool(user_id: Optional[int] = None):
                 from app.rag.retriever import search_knowledge, format_context
 
                 def _query():
-                    results = search_knowledge(query, top_k=5, user_id=user_id)
+                    results = search_knowledge(query, top_k=5)
                     logger.info("[RAG-TOOL] search_knowledge returned %d results", len(results) if results else 0)
                     if not results:
                         logger.info("[RAG-TOOL] No results → answering from general knowledge")
@@ -140,9 +142,7 @@ def _make_retrieve_knowledge_tool(user_id: Optional[int] = None):
                 return "Knowledge base retrieval is currently unavailable. Answer based on your general knowledge."
 
         # Run synchronous DB + embedding call in a threadpool so that the ADK
-        # async event loop is NOT blocked during the HTTP round-trip.  If the
-        # event loop is blocked, the LLM API connection's keepalive timeout
-        # expires and causes "Server disconnected without sending a response."
+        # async event loop is NOT blocked during the HTTP round-trip.
         try:
             loop = asyncio.get_event_loop()
             return await loop.run_in_executor(None, _do_search)
@@ -188,7 +188,7 @@ class ChatAgentManager:
         self._api_keys: Dict[str, str] = {}  # Cache API keys per user to avoid global env pollution
         self._created_sessions: set = set()  # Track created sessions
     
-    def _create_agent(self, api_key: str, model_name: str = "gemini-3-flash", user_id: Optional[int] = None) -> Agent:
+    def _create_agent(self, api_key: str, model_name: str = "gemini-3-flash") -> Agent:
         """
         Create a new ADK Agent with the specified configuration.
         This creates a multi-agent system with:
@@ -258,7 +258,7 @@ class ChatAgentManager:
             description="XIAOICE coordinator that manages conversations, delegates analysis tasks, receives results from specialists, and interacts directly with users",
             instruction=COORDINATOR_AGENT_INSTRUCTION,
             generate_content_config=generation_config,
-            tools=[_make_retrieve_knowledge_tool(user_id)],  # RAG knowledge retrieval tool (user-scoped)
+            tools=[_make_retrieve_knowledge_tool()],  # RAG knowledge retrieval tool (Vertex AI service account)
             sub_agents=[pdf_agent, media_agent],  # Register sub-agents
         )
         
@@ -276,12 +276,6 @@ class ChatAgentManager:
         Returns:
             Agent instance for the user
         """
-        # Parse numeric user_id for RAG API key lookup (user_id here may be a string)
-        if _numeric_user_id is None:
-            try:
-                _numeric_user_id = int(user_id)
-            except (ValueError, TypeError):
-                _numeric_user_id = None
         agent_key = f"{user_id}_{model_name}"
         
         # Store API key per user for later retrieval
@@ -289,7 +283,7 @@ class ChatAgentManager:
         
         # Check if we need to create a new agent (different model or new user)
         if agent_key not in self._agents:
-            self._agents[agent_key] = self._create_agent(api_key, model_name, user_id=_numeric_user_id)
+            self._agents[agent_key] = self._create_agent(api_key, model_name)
         
         return self._agents[agent_key]
     

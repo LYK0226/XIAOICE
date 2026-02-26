@@ -214,16 +214,24 @@ def rag_upload_document():
         db.session.add(doc)
         db.session.commit()
 
-        # Process document (chunk + embed) synchronously
+        # Process document in a background task so the HTTP response
+        # returns immediately.  Status updates are pushed via Socket.IO.
+        from app import socketio
         from app.rag.processor import process_document
-        success = process_document(doc.id)
 
-        # Refresh to get updated status
-        db.session.refresh(doc)
+        app = current_app._get_current_object()
+        doc_id = doc.id
+
+        def _bg_process():
+            with app.app_context():
+                process_document(doc_id)
+
+        socketio.start_background_task(_bg_process)
+
         return jsonify({
-            'message': 'Document uploaded and processed' if success else 'Document uploaded but processing failed',
+            'message': 'Document uploaded — processing in background',
             'document': doc.to_dict(),
-        }), 201 if success else 207
+        }), 201
 
     except Exception as e:
         db.session.rollback()
@@ -307,13 +315,52 @@ def rag_reprocess_document(doc_id):
     if not doc:
         return jsonify({'error': 'Document not found'}), 404
 
-    success = process_document(doc.id)
-    db.session.refresh(doc)
+    # Reprocess in a background task (eventlet-compatible)
+    from app import socketio
+    app = current_app._get_current_object()
+    doc_id_val = doc.id
+
+    def _bg_reprocess():
+        with app.app_context():
+            process_document(doc_id_val)
+
+    socketio.start_background_task(_bg_reprocess)
 
     return jsonify({
-        'message': 'Reprocessing complete' if success else 'Reprocessing failed',
+        'message': 'Reprocessing started — status will update via Socket.IO',
         'document': doc.to_dict(),
-    }), 200 if success else 500
+    }), 200
+
+
+@bp.route('/admin/rag/documents/batch', methods=['DELETE'])
+@jwt_required()
+def rag_batch_delete():
+    """Batch delete multiple RAG documents (admin only)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import User, RagDocument, db
+    from . import gcp_bucket as gcs
+    from app.rag.processor import delete_document_data
+
+    user_id = get_jwt_identity()
+    user = User.query.get(user_id)
+    if not user or not user.is_admin():
+        return jsonify({'error': 'Admin access required'}), 403
+
+    data = request.get_json() or {}
+    doc_ids = data.get('document_ids', [])
+    if not doc_ids or not isinstance(doc_ids, list):
+        return jsonify({'error': 'document_ids array is required'}), 400
+
+    deleted = 0
+    for doc_id in doc_ids:
+        doc = RagDocument.query.get(doc_id)
+        if doc:
+            gcs_path = doc.gcs_path
+            delete_document_data(doc_id)
+            gcs.delete_rag_document(gcs_path)
+            deleted += 1
+
+    return jsonify({'message': f'{deleted} document(s) deleted', 'deleted': deleted}), 200
 
 
 @bp.route('/admin/rag/search', methods=['POST'])
@@ -335,7 +382,7 @@ def rag_test_search():
         return jsonify({'error': 'Query is required'}), 400
 
     top_k = data.get('top_k', current_app.config.get('RAG_TOP_K', 5))
-    results = search_knowledge(query, top_k=top_k, user_id=user.id)
+    results = search_knowledge(query, top_k=top_k)
 
     return jsonify({'query': query, 'results': results}), 200
 

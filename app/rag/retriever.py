@@ -4,6 +4,9 @@ Vector-based knowledge retrieval for RAG.
 Performs cosine similarity search on the rag_chunks table using pgvector's
 <=> (cosine distance) operator, returning the most relevant chunks for a
 given query along with source metadata.
+
+All embedding calls use the project Service Account via Vertex AI — no
+per-user API key is required.
 """
 
 import logging
@@ -22,16 +25,16 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 
 def _get_top_k() -> int:
-    from flask import current_app
     try:
+        from flask import current_app
         return current_app.config.get("RAG_TOP_K", 5)
     except RuntimeError:
         return int(os.environ.get("RAG_TOP_K", "5"))
 
 
 def _get_min_similarity() -> float:
-    from flask import current_app
     try:
+        from flask import current_app
         return current_app.config.get("RAG_MIN_SIMILARITY", 0.3)
     except RuntimeError:
         return float(os.environ.get("RAG_MIN_SIMILARITY", "0.3"))
@@ -47,7 +50,6 @@ def search_knowledge(
     top_k: Optional[int] = None,
     min_similarity: Optional[float] = None,
     document_id: Optional[int] = None,
-    user_id: Optional[int] = None,
 ) -> List[Dict]:
     """
     Search the RAG knowledge base for chunks most relevant to *query*.
@@ -57,12 +59,9 @@ def search_knowledge(
         top_k:          Max results to return (default from config).
         min_similarity: Minimum cosine similarity threshold (0-1).
         document_id:    Optional filter to search within a specific document.
-        user_id:        Optional user id used to resolve per-user AI Studio API key.
 
     Returns:
-        List of dicts, each with keys:
-          content, heading, document_name, page_number, similarity, document_id
-        Sorted by similarity descending.
+        List of dicts sorted by similarity descending.
     """
     from app.models import db
 
@@ -71,16 +70,12 @@ def search_knowledge(
     if min_similarity is None:
         min_similarity = _get_min_similarity()
 
-    api_key = _get_user_api_key(user_id)
-
     try:
-        query_embedding = generate_query_embedding(query, api_key=api_key)
+        query_embedding = generate_query_embedding(query)
     except Exception as exc:
         logger.error("Failed to generate query embedding: %s", exc)
         return []
 
-    # pgvector cosine distance: <=> returns distance in [0, 2].
-    # similarity = 1 - distance.
     embedding_str = "[" + ",".join(str(v) for v in query_embedding) + "]"
 
     sql = text("""
@@ -121,48 +116,15 @@ def search_knowledge(
         })
 
     logger.info(
-        "RAG search: query=%r → %d results (top_k=%d, min_sim=%.2f)",
+        "RAG search: query=%r -> %d results (top_k=%d, min_sim=%.2f)",
         query[:80], len(results), top_k, min_similarity,
     )
     return results
 
 
-def _get_user_api_key(user_id: Optional[int]) -> Optional[str]:
-    """Resolve user API key for embedding requests."""
-    if not user_id:
-        return None
-
-    from app.models import UserProfile, UserApiKey
-
-    profile = UserProfile.query.filter_by(user_id=user_id).first()
-    if profile and profile.selected_api_key and profile.selected_api_key.is_active:
-        if profile.selected_api_key.provider == "ai_studio":
-            selected_key = profile.selected_api_key.get_decrypted_key()
-            if selected_key:
-                return selected_key
-
-    fallback_key = (
-        UserApiKey.query
-        .filter_by(user_id=user_id, is_active=True, provider="ai_studio")
-        .order_by(UserApiKey.updated_at.desc())
-        .first()
-    )
-    if fallback_key:
-        return fallback_key.get_decrypted_key()
-
-    return None
-
-
 def format_context(results: List[Dict], *, max_chars: int = 6000) -> str:
     """
     Format search results into a context string suitable for LLM injection.
-
-    Returns a block like:
-        [Knowledge Base Reference 1 — Source: filename.pdf, p.3]
-        <chunk text>
-
-        [Knowledge Base Reference 2 — Source: guide.md]
-        <chunk text>
     """
     if not results:
         return ""
@@ -186,6 +148,6 @@ def format_context(results: List[Dict], *, max_chars: int = 6000) -> str:
         if char_count + len(block) > max_chars:
             break
         parts.append(block)
-        char_count += len(block) + 2  # +2 for separator newlines
+        char_count += len(block) + 2
 
     return "\n\n".join(parts)

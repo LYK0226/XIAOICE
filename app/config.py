@@ -12,7 +12,7 @@ class Config:
     FLASK_ENV = os.environ.get('FLASK_ENV', 'development')
     
     # Gemini Model
-    GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3-flash')
+    GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3-flash-preview')
 
     # Uploads
     UPLOAD_FOLDER = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'static', 'upload')
@@ -26,6 +26,10 @@ class Config:
     # Google Cloud Storage
     GCS_BUCKET_NAME = os.environ.get('GCS_BUCKET_NAME')
     GCS_CREDENTIALS_PATH = os.environ.get('GCS_CREDENTIALS_PATH')
+
+    # Google Cloud / Vertex AI (RAG embedding + Gemini chunking)
+    GOOGLE_CLOUD_PROJECT = os.environ.get('GOOGLE_CLOUD_PROJECT')
+    GOOGLE_CLOUD_LOCATION = os.environ.get('GOOGLE_CLOUD_LOCATION', 'global')
 
     # Database
     # Use DATABASE_URL environment variable if provided (Postgres, MySQL, etc.),
@@ -57,9 +61,8 @@ class Config:
     RAG_TOP_K = int(os.environ.get('RAG_TOP_K', '5'))
     RAG_MIN_SIMILARITY = float(os.environ.get('RAG_MIN_SIMILARITY', '0.3'))
     RAG_GCS_FOLDER = os.environ.get('RAG_GCS_FOLDER', 'RAG')
-    RAG_MAX_CHUNK_CHARS = int(os.environ.get('RAG_MAX_CHUNK_CHARS', '2000'))
-    RAG_MIN_CHUNK_CHARS = int(os.environ.get('RAG_MIN_CHUNK_CHARS', '100'))
     RAG_ALLOWED_EXTENSIONS = {'pdf', 'txt', 'md'}
+    RAG_CHUNKING_MODEL = os.environ.get('RAG_CHUNKING_MODEL', 'gemini-3-flash-preview')
 
     # Pose Detection Configuration
     POSE_DETECTION_ENABLED = os.environ.get('POSE_DETECTION_ENABLED', 'true').lower() == 'true'

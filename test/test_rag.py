@@ -157,19 +157,19 @@ def sample_document(app, db, admin_user):
 # ===========================================================================
 
 class TestChunkerText:
-    """Test plain text chunking."""
+    """Test fallback paragraph-based chunking."""
 
     def test_basic_paragraphs(self, app):
         """Plain text split on blank lines into paragraphs."""
         with app.app_context():
-            from app.rag.chunker import chunk_text
+            from app.rag.chunker import _fallback_chunk_text
 
             text = (
                 "This is the first paragraph about motor development in early childhood, covering walking, running, and jumping milestones.\n\n"
                 "This is the second paragraph about language acquisition and how children learn to communicate through babbling, words, and sentences.\n\n"
                 "This is the third paragraph about social skills development, including sharing, turn-taking, and emotional regulation in young children."
             )
-            chunks = chunk_text(text, is_markdown=False)
+            chunks = _fallback_chunk_text(text)
             assert len(chunks) == 3
             assert "motor development" in chunks[0].content
             assert "language acquisition" in chunks[1].content
@@ -178,27 +178,35 @@ class TestChunkerText:
     def test_empty_text(self, app):
         """Empty text produces no chunks."""
         with app.app_context():
-            from app.rag.chunker import chunk_text
-            assert chunk_text("", is_markdown=False) == []
-            assert chunk_text("   \n\n  ", is_markdown=False) == []
+            from app.rag.chunker import _fallback_chunk_text
+            assert _fallback_chunk_text("") == []
+            assert _fallback_chunk_text("   \n\n  ") == []
 
     def test_single_paragraph(self, app):
         """A single paragraph without blank lines → 1 chunk."""
         with app.app_context():
-            from app.rag.chunker import chunk_text
+            from app.rag.chunker import _fallback_chunk_text
             text = "This is a single continuous paragraph that talks about early childhood education and the importance of structured play in developing cognitive abilities."
-            chunks = chunk_text(text, is_markdown=False)
+            chunks = _fallback_chunk_text(text)
             assert len(chunks) == 1
             assert chunks[0].content == text
 
 
 class TestChunkerMarkdown:
-    """Test Markdown chunking."""
+    """Test Markdown chunking via chunk_document (with Gemini mocked)."""
 
-    def test_heading_split(self, app):
-        """Markdown split at heading boundaries."""
+    @patch('app.rag.chunker._chunk_with_gemini')
+    def test_heading_split(self, mock_gemini, app):
+        """Markdown split via Gemini produces chunks with headings."""
         with app.app_context():
-            from app.rag.chunker import chunk_text
+            from app.rag.chunker import chunk_document, Chunk
+
+            # Mock Gemini to return structured chunks
+            mock_gemini.return_value = [
+                Chunk(content="Children develop gross motor skills in the first year.", heading="Motor Development"),
+                Chunk(content="Fine motor skills include grasping and pinching.", heading="Fine Motor"),
+                Chunk(content="Babbling begins around 6 months.", heading="Language Development"),
+            ]
 
             md = (
                 "# Motor Development\n\n"
@@ -208,63 +216,68 @@ class TestChunkerMarkdown:
                 "# Language Development\n\n"
                 "Babbling begins around 6 months."
             )
-            chunks = chunk_text(md, is_markdown=True)
+            chunks = chunk_document(md.encode('utf-8'), 'text/markdown', 'guide.md')
             assert len(chunks) >= 3
-            # First chunk should reference Motor Development heading
             assert any("Motor Development" in (c.heading or "") for c in chunks)
-            # Should have Language Development heading too
             assert any("Language Development" in (c.heading or "") for c in chunks)
 
-    def test_heading_chain(self, app):
-        """Nested headings produce 'H1 > H2' chain."""
+    def test_fallback_markdown(self, app):
+        """When Gemini is unavailable, markdown falls back to paragraph splitting."""
         with app.app_context():
-            from app.rag.chunker import _split_markdown_sections
+            from app.rag.chunker import _fallback_chunk_text
 
             md = (
                 "# Chapter 1\n\n"
                 "Intro text.\n\n"
                 "## Section A\n\n"
                 "Section A content.\n\n"
-                "### Sub A1\n\n"
-                "Sub A1 content.\n\n"
                 "## Section B\n\n"
                 "Section B content."
             )
-            sections = _split_markdown_sections(md)
-            headings = [h for h, _ in sections]
-            assert "Chapter 1" in headings
-            assert "Chapter 1 > Section A" in headings
-            assert "Chapter 1 > Section A > Sub A1" in headings
-            assert "Chapter 1 > Section B" in headings
+            chunks = _fallback_chunk_text(md)
+            # Fallback splits on blank lines — each paragraph becomes a chunk
+            assert len(chunks) >= 4
+            assert any("Chapter 1" in c.content for c in chunks)
+            assert any("Section A" in c.content for c in chunks)
 
 
-class TestChunkerMergeAndSplit:
-    """Test the merge-short / split-long logic."""
+class TestChunkerGemini:
+    """Test Gemini-powered chunking with mocked API calls."""
 
-    def test_merge_short_chunks(self, app):
-        """Short chunks get merged into neighbours."""
+    @patch('app.rag.chunker._get_vertex_genai_client')
+    def test_chunk_with_gemini_success(self, mock_client_fn, app):
+        """Gemini chunking parses JSON response into Chunk objects."""
         with app.app_context():
-            from app.rag.chunker import Chunk, _merge_short_chunks
+            from app.rag.chunker import _chunk_with_gemini
 
-            chunks = [
-                Chunk(content="Hi", char_start=0, char_end=2),        # too short
-                Chunk(content="World" * 20, char_start=3, char_end=103),  # decent
-            ]
-            merged = _merge_short_chunks(chunks, min_chars=50)
-            assert len(merged) == 1  # merged together
+            mock_response = MagicMock()
+            mock_response.text = json.dumps([
+                {"content": "First topic about motor development.", "heading": "Motor", "page_number": 1},
+                {"content": "Second topic about language.", "heading": "Language", "page_number": 2},
+            ])
+            mock_client = MagicMock()
+            mock_client.models.generate_content.return_value = mock_response
+            mock_client_fn.return_value = mock_client
 
-    def test_split_long_chunk(self, app):
-        """A chunk exceeding max_chars is split at sentence boundaries."""
+            chunks = _chunk_with_gemini("Test document text")
+            assert len(chunks) == 2
+            assert chunks[0].heading == "Motor"
+            assert chunks[1].page_number == 2
+            assert "motor development" in chunks[0].content.lower()
+
+    @patch('app.rag.chunker._get_vertex_genai_client')
+    def test_chunk_with_gemini_fallback(self, mock_client_fn, app):
+        """When Gemini raises, chunk_document falls back to paragraph split."""
         with app.app_context():
-            from app.rag.chunker import Chunk, _split_long_chunk
+            from app.rag.chunker import chunk_document
 
-            long_text = ". ".join([f"Sentence number {i} about child education" for i in range(100)])
-            chunk = Chunk(content=long_text, char_start=0, char_end=len(long_text))
-            result = _split_long_chunk(chunk, max_chars=500)
-            assert len(result) > 1
-            # All result chunks should be ≤ 500 chars (or close, since we split on sentences)
-            for c in result:
-                assert len(c.content) <= 600  # some slack for sentence boundary
+            mock_client_fn.side_effect = Exception("API unavailable")
+
+            text = "Paragraph one about walking.\n\nParagraph two about running."
+            chunks = chunk_document(text.encode('utf-8'), 'text/plain', 'test.txt')
+            assert len(chunks) == 2
+            assert "walking" in chunks[0].content
+            assert "running" in chunks[1].content
 
 
 class TestChunkerDispatch:
@@ -943,7 +956,7 @@ class TestChatAgentIntegration:
         import asyncio
         with app.app_context():
             from app.agent.chat_agent import _make_retrieve_knowledge_tool
-            retrieve_knowledge = _make_retrieve_knowledge_tool(user_id=None)
+            retrieve_knowledge = _make_retrieve_knowledge_tool()
 
             mock_search.return_value = [
                 {'content': 'Test result', 'similarity': 0.9, 'document_name': 'doc.pdf',
@@ -961,7 +974,7 @@ class TestChatAgentIntegration:
         import asyncio
         with app.app_context():
             from app.agent.chat_agent import _make_retrieve_knowledge_tool
-            retrieve_knowledge = _make_retrieve_knowledge_tool(user_id=None)
+            retrieve_knowledge = _make_retrieve_knowledge_tool()
 
             mock_search.return_value = []
             result = asyncio.run(retrieve_knowledge("something very specific"))
@@ -973,7 +986,7 @@ class TestChatAgentIntegration:
         import asyncio
         with app.app_context():
             from app.agent.chat_agent import _make_retrieve_knowledge_tool
-            retrieve_knowledge = _make_retrieve_knowledge_tool(user_id=None)
+            retrieve_knowledge = _make_retrieve_knowledge_tool()
 
             mock_search.side_effect = Exception("DB connection error")
             result = asyncio.run(retrieve_knowledge("test query"))

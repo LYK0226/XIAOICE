@@ -174,21 +174,25 @@
 
                 <!-- Document List -->
                 <div class="kb-section">
-                    <h3><i class="fas fa-folder-open"></i> 已上傳文件</h3>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+                        <h3 style="margin:0;"><i class="fas fa-folder-open"></i> 已上傳文件</h3>
+                        <button class="kb-btn kb-btn-delete" id="kbBatchDeleteBtn" style="display:none;" onclick="batchDeleteDocs()">
+                            <i class="fas fa-trash"></i> 刪除已選 (<span id="kbSelectedCount">0</span>)
+                        </button>
+                    </div>
                     <table class="kb-table" id="kbDocTable">
                         <thead>
                             <tr>
+                                <th style="width:36px;"><input type="checkbox" id="kbSelectAll" onchange="toggleSelectAll(this)"></th>
                                 <th>文件名稱</th>
                                 <th>格式</th>
-                                <th>大小</th>
-                                <th>分段數</th>
                                 <th>狀態</th>
                                 <th>上傳日期</th>
                                 <th>操作</th>
                             </tr>
                         </thead>
                         <tbody id="kbDocBody">
-                            <tr><td colspan="7" class="kb-empty">載入中...</td></tr>
+                            <tr><td colspan="6" class="kb-empty">載入中...</td></tr>
                         </tbody>
                     </table>
                 </div>
@@ -747,12 +751,8 @@
             const kbSearchInput = document.getElementById('kbSearchInput');
             const kbSearchBtn = document.getElementById('kbSearchBtn');
             const kbSearchResults = document.getElementById('kbSearchResults');
-
-            function formatSize(bytes) {
-                if (bytes < 1024) return bytes + ' B';
-                if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
-                return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-            }
+            const kbBatchDeleteBtn = document.getElementById('kbBatchDeleteBtn');
+            const kbSelectedCount = document.getElementById('kbSelectedCount');
 
             function formatDate(iso) {
                 if (!iso) return '-';
@@ -760,6 +760,42 @@
                 return d.toLocaleDateString('zh-TW') + ' ' + d.toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'});
             }
 
+            // --- Checkbox / batch delete ---
+            window.updateBatchDeleteBtn = function() {
+                const checked = document.querySelectorAll('.kb-doc-checkbox:checked');
+                const total = document.querySelectorAll('.kb-doc-checkbox').length;
+                kbSelectedCount.textContent = checked.length;
+                kbBatchDeleteBtn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
+                // Sync the select-all checkbox state
+                const selectAll = document.getElementById('kbSelectAll');
+                if (selectAll) {
+                    selectAll.checked = total > 0 && checked.length === total;
+                    selectAll.indeterminate = checked.length > 0 && checked.length < total;
+                }
+            };
+
+            window.toggleSelectAll = function(el) {
+                document.querySelectorAll('.kb-doc-checkbox').forEach(cb => cb.checked = el.checked);
+                updateBatchDeleteBtn();
+            };
+
+            window.batchDeleteDocs = async function() {
+                const ids = Array.from(document.querySelectorAll('.kb-doc-checkbox:checked')).map(cb => parseInt(cb.value));
+                if (ids.length === 0) return;
+                if (!confirm(`確定刪除已選的 ${ids.length} 個文件及所有相關資料？`)) return;
+                try {
+                    const res = await fetch('/admin/rag/documents/batch', {
+                        method: 'DELETE',
+                        headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ document_ids: ids }),
+                    });
+                    const data = await res.json();
+                    alert(data.message || '刪除完成');
+                    loadKbDocuments();
+                } catch (e) { alert('批量刪除失敗: ' + e.message); }
+            };
+
+            // --- Upload ---
             kbUploadArea.addEventListener('click', () => kbFileInput.click());
             kbUploadArea.addEventListener('dragover', e => { e.preventDefault(); kbUploadArea.classList.add('dragover'); });
             kbUploadArea.addEventListener('dragleave', () => kbUploadArea.classList.remove('dragover'));
@@ -790,7 +826,7 @@
                             body: fd,
                         });
                         const data = await res.json();
-                        if (res.ok || res.status === 207) {
+                        if (res.ok) {
                             successCount++;
                         } else {
                             failCount++;
@@ -802,7 +838,7 @@
                     }
                 }
 
-                let message = `上傳完成：成功 ${successCount} 個`;
+                let message = `已提交 ${successCount} 個文件，背景處理中`;
                 if (failCount > 0) {
                     message += `，失敗 ${failCount} 個`;
                 }
@@ -818,24 +854,27 @@
                 loadKbDocuments();
             }
 
+            // --- Document list ---
             async function loadKbDocuments() {
                 try {
                     const res = await fetch('/admin/rag/documents', { headers: { 'Authorization': 'Bearer ' + getToken() } });
                     const data = await res.json();
-                    if (!res.ok) { kbDocBody.innerHTML = '<tr><td colspan="7" class="kb-empty">載入失敗</td></tr>'; return; }
+                    if (!res.ok) { kbDocBody.innerHTML = '<tr><td colspan="6" class="kb-empty">載入失敗</td></tr>'; return; }
 
                     const docs = data.documents || [];
                     if (docs.length === 0) {
-                        kbDocBody.innerHTML = '<tr><td colspan="7" class="kb-empty">尚無文件。上傳文件以建立知識庫。</td></tr>';
+                        kbDocBody.innerHTML = '<tr><td colspan="6" class="kb-empty">尚無文件。上傳文件以建立知識庫。</td></tr>';
+                        document.getElementById('kbSelectAll').checked = false;
+                        document.getElementById('kbSelectAll').indeterminate = false;
+                        updateBatchDeleteBtn();
                         return;
                     }
                     kbDocBody.innerHTML = docs.map(d => `
-                        <tr>
+                        <tr data-doc-id="${d.id}">
+                            <td><input type="checkbox" class="kb-doc-checkbox" value="${d.id}" onchange="updateBatchDeleteBtn()"></td>
                             <td><a href="/view_rag_document/${d.id}/${encodeURIComponent(d.original_filename)}" target="_blank" class="kb-doc-link" title="${d.original_filename}">${d.original_filename.length > 30 ? d.original_filename.slice(0,27)+'...' : d.original_filename}</a></td>
                             <td>${d.content_type.split('/').pop().toUpperCase()}</td>
-                            <td>${formatSize(d.file_size)}</td>
-                            <td>${d.chunk_count || 0}</td>
-                            <td><span class="kb-status ${d.status}">${d.status}</span></td>
+                            <td><span class="kb-status ${d.status}" data-doc-status="${d.id}">${d.status}</span></td>
                             <td>${formatDate(d.created_at)}</td>
                             <td>
                                 <button class="kb-btn kb-btn-reprocess" onclick="reprocessDoc(${d.id})"><i class="fas fa-redo"></i></button>
@@ -843,8 +882,11 @@
                             </td>
                         </tr>
                     `).join('');
+                    // Reset select-all checkbox
+                    document.getElementById('kbSelectAll').checked = false;
+                    updateBatchDeleteBtn();
                 } catch (e) {
-                    kbDocBody.innerHTML = '<tr><td colspan="7" class="kb-empty">錯誤: ' + e.message + '</td></tr>';
+                    kbDocBody.innerHTML = '<tr><td colspan="6" class="kb-empty">錯誤: ' + e.message + '</td></tr>';
                 }
             }
 
@@ -861,11 +903,43 @@
                 try {
                     const res = await fetch(`/admin/rag/documents/${id}/reprocess`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + getToken() } });
                     const data = await res.json();
-                    alert(data.message || '完成');
-                    loadKbDocuments();
+                    // Status will update via Socket.IO — no need to alert/reload
                 } catch (e) { alert('重新處理失敗: ' + e.message); }
             };
 
+            // --- Socket.IO for real-time status updates ---
+            (function initKbSocket() {
+                if (typeof io === 'undefined') {
+                    // Load socket.io client if not already present
+                    const script = document.createElement('script');
+                    script.src = 'https://cdn.socket.io/4.7.5/socket.io.min.js';
+                    script.onload = connectKbSocket;
+                    document.head.appendChild(script);
+                } else {
+                    connectKbSocket();
+                }
+
+                function connectKbSocket() {
+                    const token = getToken();
+                    const socket = io({
+                        transports: ['websocket', 'polling'],
+                        auth: { token: token },
+                    });
+                    socket.on('rag_document_status', function(data) {
+                        // Update the status badge in-place
+                        const badge = document.querySelector(`[data-doc-status="${data.document_id}"]`);
+                        if (badge) {
+                            badge.className = 'kb-status ' + data.status;
+                            badge.textContent = data.status;
+                        } else {
+                            // Row may not exist yet; reload the table
+                            loadKbDocuments();
+                        }
+                    });
+                }
+            })();
+
+            // --- Search ---
             kbSearchBtn.addEventListener('click', searchKb);
             kbSearchInput.addEventListener('keydown', e => { if (e.key === 'Enter') searchKb(); });
 

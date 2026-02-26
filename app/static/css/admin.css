@@ -627,6 +627,24 @@ body.admin-page {
 .kb-btn-reprocess { background: #E3F2FD; color: #1565C0; }
 .kb-btn-reprocess:hover { background: #BBDEFB; }
 
+/* Batch delete button (header) */
+#kbBatchDeleteBtn {
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    font-weight: 600;
+    animation: fadeIn 0.2s ease;
+}
+@keyframes fadeIn { from { opacity: 0; transform: translateY(-4px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Checkbox styling in KB table */
+.kb-table input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+    accent-color: var(--deep-purple, #512DA8);
+}
+
 /* KB Search */
 .kb-search-bar {
     display: flex;
