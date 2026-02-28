@@ -15,6 +15,7 @@ from typing import Optional
 
 from app.rag.chunker import chunk_document
 from app.rag.embeddings import generate_embeddings
+from app.rag.enricher import enrich_chunks
 
 logger = logging.getLogger(__name__)
 
@@ -74,17 +75,25 @@ def process_document(document_id: int) -> bool:
         logger.info("Downloading document %d from GCS: %s", document_id, doc.gcs_path)
         file_bytes = _download_from_gcs(doc.gcs_path)
 
-        # 2. Chunk (Gemini-powered, with paragraph fallback)
+        # 2. Chunk (Docling + heading split + secondary split)
         logger.info("Chunking document %d (%s, %s)", document_id, doc.content_type, doc.original_filename)
+        _emit_status(document_id, "chunking")
         chunks = chunk_document(file_bytes, doc.content_type, doc.original_filename)
         if not chunks:
             raise ValueError("Document produced no chunks — it may be empty or unreadable")
 
         logger.info("Document %d produced %d chunks", document_id, len(chunks))
 
-        # 3. Generate embeddings (Vertex AI service account)
-        texts = [c.content for c in chunks]
+        # 3. Enrich chunks with contextual background (Gemini 3 Flash)
+        logger.info("Enriching %d chunks with contextual background…", len(chunks))
+        _emit_status(document_id, "enriching")
+        enrich_chunks(chunks)
+        logger.info("Enrichment complete for document %d", document_id)
+
+        # 4. Generate embeddings on enriched content (Vertex AI service account)
+        texts = [c.enriched_content or c.content for c in chunks]
         logger.info("Generating embeddings for %d chunks…", len(texts))
+        _emit_status(document_id, "embedding")
         embeddings = generate_embeddings(texts, task_type="RETRIEVAL_DOCUMENT")
 
         if len(embeddings) != len(chunks):
@@ -92,25 +101,26 @@ def process_document(document_id: int) -> bool:
                 f"Embedding count mismatch: {len(embeddings)} embeddings for {len(chunks)} chunks"
             )
 
-        # 4. Delete existing chunks (in case of reprocessing)
+        # 5. Delete existing chunks (in case of reprocessing)
         RagChunk.query.filter_by(document_id=document_id).delete()
 
-        # 5. Insert new chunks
+        # 6. Insert new chunks
         for idx, (chunk, embedding) in enumerate(zip(chunks, embeddings)):
             db_chunk = RagChunk(
                 document_id=document_id,
                 chunk_index=idx,
                 content=chunk.content,
+                enriched_content=chunk.enriched_content or chunk.content,
                 heading=chunk.heading,
                 page_number=chunk.page_number,
                 char_start=chunk.char_start,
                 char_end=chunk.char_end,
                 embedding=embedding,
-                token_count=_estimate_tokens(chunk.content),
+                token_count=_estimate_tokens(chunk.enriched_content or chunk.content),
             )
             db.session.add(db_chunk)
 
-        # 6. Update document status
+        # 7. Update document status
         doc.status = "ready"
         doc.chunk_count = len(chunks)
         db.session.commit()

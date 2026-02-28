@@ -1,21 +1,24 @@
 """
-Gemini-powered semantic document chunker for RAG.
+Structural document chunker for RAG with Docling PDF conversion.
 
-Sends the full document text to a Gemini model which splits it into
-meaning-based chunks.  Falls back to simple paragraph splitting if the
-Gemini call fails.
+Pipeline:
+  1. PDF  → Docling converts to structured Markdown (preserving headings)
+     TXT/MD → decoded directly
+  2. Heading-based structural split (Markdown headings as boundaries)
+  3. Secondary character-based split (chunk_size=800, chunk_overlap=100)
+     for sections that exceed the chunk size limit
 
 Supported formats:
-  • PDF  – via PyMuPDF (fitz), extracts text with page metadata
-  • TXT  – plain text
+  • PDF  – via Docling (preserves headings, tables, structure)
+  • TXT  – plain text (heading detection via Markdown-style headings)
   • MD   – Markdown
 """
 
-import json
 import logging
 import os
 import re
-from dataclasses import dataclass
+import tempfile
+from dataclasses import dataclass, field
 from typing import List, Optional
 
 logger = logging.getLogger(__name__)
@@ -33,242 +36,300 @@ class Chunk:
     page_number: Optional[int] = None
     char_start: int = 0
     char_end: int = 0
+    context_summary: Optional[str] = None
+    enriched_content: Optional[str] = None
 
 
 # ---------------------------------------------------------------------------
-# Vertex AI / Gemini client helper
+# Configuration helpers
 # ---------------------------------------------------------------------------
 
-def _get_vertex_genai_client():
-    """
-    Build a google-genai Client using the project Service Account for
-    Vertex AI calls.  Reads GCS_CREDENTIALS_PATH -> sets
-    GOOGLE_APPLICATION_CREDENTIALS, then uses GOOGLE_CLOUD_PROJECT /
-    GOOGLE_CLOUD_LOCATION.
-    """
-    from google import genai
-
-    credentials_path = (
-        os.environ.get("GOOGLE_APPLICATION_CREDENTIALS")
-        or os.environ.get("GCS_CREDENTIALS_PATH")
-    )
-    if credentials_path:
-        os.environ["GOOGLE_APPLICATION_CREDENTIALS"] = credentials_path
-
-    project = None
-    location = None
+def _get_chunk_size() -> int:
+    """Return the configured chunk size for secondary splitting."""
     try:
         from flask import current_app
-        project = current_app.config.get("GOOGLE_CLOUD_PROJECT")
-        location = current_app.config.get("GOOGLE_CLOUD_LOCATION", "global")
+        return current_app.config.get("RAG_CHUNK_SIZE", 800)
     except RuntimeError:
-        pass
+        return int(os.environ.get("RAG_CHUNK_SIZE", "800"))
 
-    if not project:
-        project = os.environ.get("GOOGLE_CLOUD_PROJECT")
-    if not location:
-        location = os.environ.get("GOOGLE_CLOUD_LOCATION", "global")
 
-    if not project:
-        raise RuntimeError(
-            "GOOGLE_CLOUD_PROJECT is not set. "
-            "Configure it in .env or app config for Vertex AI."
+def _get_chunk_overlap() -> int:
+    """Return the configured chunk overlap for secondary splitting."""
+    try:
+        from flask import current_app
+        return current_app.config.get("RAG_CHUNK_OVERLAP", 100)
+    except RuntimeError:
+        return int(os.environ.get("RAG_CHUNK_OVERLAP", "100"))
+
+
+# ---------------------------------------------------------------------------
+# Step 1: PDF → Markdown via Docling
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
+# Cached Docling converter singleton (avoid re-initialization overhead)
+# ---------------------------------------------------------------------------
+_DOCLING_CONVERTER = None
+
+
+def _get_docling_converter():
+    """Return a cached DocumentConverter instance."""
+    global _DOCLING_CONVERTER
+    if _DOCLING_CONVERTER is None:
+        from docling.document_converter import DocumentConverter, PdfFormatOption
+        from docling.datamodel.pipeline_options import PdfPipelineOptions
+        from docling.backend.pypdfium2_backend import PyPdfiumDocumentBackend
+
+        pipeline_options = PdfPipelineOptions()
+        pipeline_options.do_table_structure = True
+        pipeline_options.document_timeout = 300  # 5 minute max
+        # OCR stays enabled (default) — Docling auto-detects when needed
+
+        _DOCLING_CONVERTER = DocumentConverter(
+            format_options={
+                "pdf": PdfFormatOption(
+                    pipeline_options=pipeline_options,
+                    backend=PyPdfiumDocumentBackend,
+                ),
+            }
         )
-
-    return genai.Client(vertexai=True, project=project, location=location)
-
-
-def _get_chunking_model() -> str:
-    """Return the Gemini model used for semantic chunking."""
-    try:
-        from flask import current_app
-        return current_app.config.get("RAG_CHUNKING_MODEL", "gemini-3-flash-preview")
-    except RuntimeError:
-        return os.environ.get("RAG_CHUNKING_MODEL", "gemini-3-flash-preview")
+    return _DOCLING_CONVERTER
 
 
-# ---------------------------------------------------------------------------
-# PDF text extraction (preserves page numbers)
-# ---------------------------------------------------------------------------
-
-def _clean_pdf_line(line: str) -> str:
-    """Clean a single line extracted from a PDF."""
-    line = line.strip()
-    if not line:
-        return ""
-    if re.fullmatch(r'\d{1,4}', line):
-        return ""
-    if re.fullmatch(r'\d{1,4}-\d{1,4}', line):
-        return ""
-    if len(line) <= 2 and not line[0].isalpha():
-        return ""
-    return line
-
-
-def _extract_pdf_text(file_bytes: bytes) -> str:
+def _pdf_to_markdown(file_bytes: bytes) -> str:
     """
-    Extract text from a PDF with page markers so Gemini can track page numbers.
-    Returns text with ``[PAGE N]`` markers before each page's content.
+    Convert a PDF file to structured Markdown using Docling.
+    Preserves headings, tables, lists, and document hierarchy.
+
+    OCR is enabled and Docling auto-detects when to apply it (e.g. scanned pages).
+    Converter instance is cached for reuse across uploads.
+    If Docling fails, falls back to PyMuPDF text extraction.
+
+    Args:
+        file_bytes: Raw PDF bytes.
+
+    Returns:
+        Markdown string with structure preserved.
     """
-    import fitz  # PyMuPDF
-
-    doc = fitz.open(stream=file_bytes, filetype="pdf")
-    pages: List[str] = []
-
-    for page_num in range(len(doc)):
-        page = doc[page_num]
-        blocks = page.get_text("dict", sort=True).get("blocks", [])
-
-        parts: List[str] = []
-        for block in blocks:
-            if block.get("type") != 0:
-                continue
-            for line in block.get("lines", []):
-                spans = line.get("spans", [])
-                line_text = "".join(s.get("text", "") for s in spans)
-                cleaned = _clean_pdf_line(line_text)
-                if cleaned:
-                    parts.append(cleaned)
-
-        page_text = "\n".join(parts).strip()
-        if page_text:
-            pages.append(f"[PAGE {page_num + 1}]\n{page_text}")
-
-    doc.close()
-    return "\n\n".join(pages)
-
-
-# ---------------------------------------------------------------------------
-# JSON repair for truncated Gemini output
-# ---------------------------------------------------------------------------
-
-def _repair_truncated_json(raw: str) -> list:
-    """
-    Attempt to salvage a truncated JSON array from Gemini output.
-    Finds the last complete object in the array and closes the array.
-    Raises ValueError if repair fails.
-    """
-    # Find the last complete object ending with "}"
-    last_brace = raw.rfind("}")
-    if last_brace == -1:
-        raise ValueError("No complete JSON object found in truncated output")
-
-    # Take everything up to and including the last complete "}"
-    candidate = raw[:last_brace + 1].rstrip().rstrip(",")
-
-    # Ensure it ends as a valid JSON array
-    if not candidate.endswith("]"):
-        candidate += "]"
+    # Docling requires a file path — write bytes to a temporary file
+    with tempfile.NamedTemporaryFile(suffix=".pdf", delete=False) as tmp:
+        tmp.write(file_bytes)
+        tmp_path = tmp.name
 
     try:
-        data = json.loads(candidate)
-        if isinstance(data, list) and len(data) > 0:
-            logger.warning(
-                "Repaired truncated Gemini JSON: recovered %d chunks", len(data)
-            )
-            return data
-    except json.JSONDecodeError:
-        pass
-
-    raise ValueError("Could not repair truncated JSON from Gemini")
-
-
-# ---------------------------------------------------------------------------
-# Gemini-powered chunking
-# ---------------------------------------------------------------------------
-
-_CHUNKING_PROMPT = """You are a document chunking assistant. Your task is to split the following document into meaningful, self-contained chunks based on different topics or ideas.
-
-Rules:
-1. Each chunk should cover ONE coherent topic or idea.
-2. Chunks should be self-contained — a reader should understand the chunk without needing other chunks.
-3. Keep related information together. Do NOT split mid-sentence or mid-paragraph if it breaks meaning.
-4. If the document has clear section headings, use them as chunk boundaries.
-5. For each chunk, identify the section heading it belongs to (if any).
-6. If the text contains [PAGE N] markers, record which page each chunk starts on.
-7. Aim for chunks of roughly 300-2000 characters, but prioritize meaning over length.
-8. Return ONLY a valid JSON array — no markdown fences, no explanation.
-
-Output format — a JSON array of objects:
-[
-  {
-    "content": "The actual text content of this chunk (without [PAGE N] markers)",
-    "heading": "Section heading if identifiable, otherwise null",
-    "page_number": page number (integer) if available from [PAGE N] markers, otherwise null
-  }
-]
-
-Document to chunk:
----
-"""
+        converter = _get_docling_converter()
+        result = converter.convert(tmp_path)
+        markdown_text = result.document.export_to_markdown()
+        logger.info(
+            "Docling PDF→Markdown conversion complete: %d characters",
+            len(markdown_text),
+        )
+        return markdown_text
+    except Exception as exc:
+        logger.warning(
+            "Docling conversion failed: %s — falling back to PyMuPDF", exc,
+        )
+        return _extract_pdf_text_fallback(file_bytes)
+    finally:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
 
 
-def _chunk_with_gemini(full_text: str) -> List[Chunk]:
-    """
-    Send the document text to Gemini and parse the returned chunk list.
-    Raises on failure so the caller can fall back.
-    """
-    client = _get_vertex_genai_client()
-    model = _get_chunking_model()
-
-    prompt = _CHUNKING_PROMPT + full_text
-
-    response = client.models.generate_content(
-        model=model,
-        contents=prompt,
-        config={
-            "temperature": 0.1,
-        },
-    )
-
-    raw = response.text.strip()
-
-    # Strip markdown code fences if present
-    if raw.startswith("```"):
-        lines = raw.split("\n")
-        if lines[0].startswith("```"):
-            lines = lines[1:]
-        if lines and lines[-1].strip() == "```":
-            lines = lines[:-1]
-        raw = "\n".join(lines)
-
-    # Attempt JSON parse; if truncated, try to repair
+def _extract_pdf_text_fallback(file_bytes: bytes) -> str:
+    """Fallback PDF text extraction using PyMuPDF (fitz)."""
     try:
-        chunks_data = json.loads(raw)
-    except json.JSONDecodeError:
-        chunks_data = _repair_truncated_json(raw)
+        import fitz
+        doc = fitz.open(stream=file_bytes, filetype="pdf")
+        pages = []
+        for page in doc:
+            pages.append(page.get_text())
+        doc.close()
+        return "\n\n".join(pages)
+    except Exception as exc:
+        logger.error("PyMuPDF fallback also failed: %s", exc)
+        return ""
 
-    if not isinstance(chunks_data, list) or len(chunks_data) == 0:
-        raise ValueError("Gemini returned empty or non-list JSON")
+
+# ---------------------------------------------------------------------------
+# Step 2: Heading-based structural split
+# ---------------------------------------------------------------------------
+
+# Matches Markdown headings: # Title, ## Subtitle, ### Sub-subtitle, etc.
+_HEADING_PATTERN = re.compile(r'^(#{1,6})\s+(.+)', re.MULTILINE)
+
+
+def _split_by_headings(markdown_text: str) -> List[Chunk]:
+    """
+    Split Markdown text at heading boundaries.
+
+    Each section (heading + body) becomes one Chunk, with the heading stored
+    as metadata.  Text before the first heading (if any) becomes an
+    untitled chunk.
+
+    Args:
+        markdown_text: Full Markdown text.
+
+    Returns:
+        List of Chunk objects, one per section.
+    """
+    if not markdown_text or not markdown_text.strip():
+        return []
+
+    # Find all heading positions
+    headings = list(_HEADING_PATTERN.finditer(markdown_text))
+
+    if not headings:
+        # No headings found — return the whole text as one chunk
+        text = markdown_text.strip()
+        if text:
+            return [Chunk(content=text, char_start=0, char_end=len(text))]
+        return []
 
     chunks: List[Chunk] = []
-    offset = 0
-    for item in chunks_data:
-        content = item.get("content", "").strip()
-        if not content:
+
+    # Text before the first heading (preamble)
+    preamble = markdown_text[:headings[0].start()].strip()
+    if preamble:
+        chunks.append(Chunk(
+            content=preamble,
+            heading=None,
+            char_start=0,
+            char_end=len(preamble),
+        ))
+
+    # Each heading starts a section that ends at the next heading
+    for i, match in enumerate(headings):
+        heading_text = match.group(2).strip()
+        section_start = match.start()
+
+        if i + 1 < len(headings):
+            section_end = headings[i + 1].start()
+        else:
+            section_end = len(markdown_text)
+
+        # Section body = everything after the heading line until next heading
+        heading_line_end = match.end()
+        body = markdown_text[heading_line_end:section_end].strip()
+
+        if not body:
             continue
-        heading = item.get("heading") or None
-        page = item.get("page_number")
-        if page is not None:
-            try:
-                page = int(page)
-            except (ValueError, TypeError):
-                page = None
 
         chunks.append(Chunk(
-            content=content,
-            heading=heading,
-            page_number=page,
-            char_start=offset,
-            char_end=offset + len(content),
+            content=body,
+            heading=heading_text,
+            char_start=section_start,
+            char_end=section_end,
         ))
-        offset += len(content) + 1
 
     return chunks
 
 
 # ---------------------------------------------------------------------------
-# Fallback: simple paragraph splitting (used when Gemini is unavailable)
+# Step 3: Secondary character-based splitting
+# ---------------------------------------------------------------------------
+
+def _secondary_split(
+    chunks: List[Chunk],
+    chunk_size: Optional[int] = None,
+    chunk_overlap: Optional[int] = None,
+) -> List[Chunk]:
+    """
+    Split oversized chunks into sub-chunks of approximately *chunk_size*
+    characters with *chunk_overlap* character overlap.
+
+    Preserves the parent chunk's heading and page_number metadata on all
+    sub-chunks.  Tries to break at sentence boundaries (。.!?！？\\n)
+    for cleaner splits.
+
+    Args:
+        chunks:        Input chunks from heading-based split.
+        chunk_size:    Max characters per sub-chunk (default from config).
+        chunk_overlap: Character overlap between consecutive sub-chunks.
+
+    Returns:
+        List of Chunk objects (may be longer than input if splits occurred).
+    """
+    if chunk_size is None:
+        chunk_size = _get_chunk_size()
+    if chunk_overlap is None:
+        chunk_overlap = _get_chunk_overlap()
+
+    result: List[Chunk] = []
+
+    for chunk in chunks:
+        text = chunk.content
+        if len(text) <= chunk_size:
+            result.append(chunk)
+            continue
+
+        # Split oversized chunk into sub-chunks
+        sub_chunks = _split_text_with_overlap(text, chunk_size, chunk_overlap)
+        for i, sub_text in enumerate(sub_chunks):
+            offset = i * max(chunk_size - chunk_overlap, 1) if i > 0 else 0
+            result.append(Chunk(
+                content=sub_text,
+                heading=chunk.heading,
+                page_number=chunk.page_number,
+                char_start=chunk.char_start + offset,
+                char_end=chunk.char_start + offset + len(sub_text),
+            ))
+
+    return result
+
+
+def _split_text_with_overlap(text: str, chunk_size: int, overlap: int) -> List[str]:
+    """
+    Split *text* into segments of approximately *chunk_size* characters
+    with *overlap* character overlap.  Prefers breaking at sentence
+    boundaries.
+    """
+    if len(text) <= chunk_size:
+        return [text]
+
+    # Sentence-ending patterns (Chinese + English punctuation + newlines)
+    sentence_endings = re.compile(r'[。.!?！？\n]')
+
+    segments: List[str] = []
+    start = 0
+
+    while start < len(text):
+        end = start + chunk_size
+
+        if end >= len(text):
+            # Last segment — take everything
+            segment = text[start:].strip()
+            if segment:
+                segments.append(segment)
+            break
+
+        # Try to find a sentence boundary near the end of the window
+        # Search backwards from `end` within a buffer zone
+        search_start = max(start + chunk_size // 2, start)
+        search_region = text[search_start:end]
+        breaks = list(sentence_endings.finditer(search_region))
+
+        if breaks:
+            # Use the last sentence boundary in the search region
+            best_break = breaks[-1]
+            actual_end = search_start + best_break.end()
+        else:
+            # No sentence boundary found — break at chunk_size
+            actual_end = end
+
+        segment = text[start:actual_end].strip()
+        if segment:
+            segments.append(segment)
+
+        # Move start forward by (actual_end - overlap), but ensure progress
+        start = max(actual_end - overlap, start + 1)
+
+    return segments
+
+
+# ---------------------------------------------------------------------------
+# Fallback: simple paragraph splitting (used when everything else fails)
 # ---------------------------------------------------------------------------
 
 def _fallback_chunk_text(text: str) -> List[Chunk]:
@@ -277,23 +338,13 @@ def _fallback_chunk_text(text: str) -> List[Chunk]:
     chunks: List[Chunk] = []
     offset = 0
 
-    current_page = None
     for para in paragraphs:
         para = para.strip()
         if not para:
             continue
 
-        # Check for page marker
-        page_match = re.match(r'\[PAGE\s+(\d+)\]', para)
-        if page_match:
-            current_page = int(page_match.group(1))
-            para = re.sub(r'\[PAGE\s+\d+\]\s*', '', para).strip()
-            if not para:
-                continue
-
         chunks.append(Chunk(
             content=para,
-            page_number=current_page,
             char_start=offset,
             char_end=offset + len(para),
         ))
@@ -303,89 +354,19 @@ def _fallback_chunk_text(text: str) -> List[Chunk]:
 
 
 # ---------------------------------------------------------------------------
-# Large document handling — split into sections, chunk each via Gemini
-# ---------------------------------------------------------------------------
-
-# If the document text exceeds this size, split it into sections first.
-# ~30k chars ≈ ~8–10k tokens, comfortably within Gemini's context window.
-_MAX_CHARS_PER_GEMINI_CALL = 30_000
-
-
-def _split_into_sections(text: str, max_chars: int = _MAX_CHARS_PER_GEMINI_CALL) -> List[str]:
-    """
-    Split text into sections of approximately *max_chars* characters,
-    breaking at paragraph boundaries ([PAGE N] markers or blank lines).
-    """
-    paragraphs = re.split(r'\n\s*\n', text)
-    sections: List[str] = []
-    current: List[str] = []
-    current_len = 0
-
-    for para in paragraphs:
-        para_len = len(para)
-        if current_len + para_len > max_chars and current:
-            sections.append("\n\n".join(current))
-            current = []
-            current_len = 0
-        current.append(para)
-        current_len += para_len + 2  # +2 for the \n\n separator
-
-    if current:
-        sections.append("\n\n".join(current))
-
-    return sections
-
-
-def _chunk_large_document_with_gemini(full_text: str, filename: str = "") -> List[Chunk]:
-    """
-    Split a large document into sections and send each section to Gemini
-    for semantic chunking.  Combines all resulting chunks with corrected
-    char offsets.
-    """
-    sections = _split_into_sections(full_text)
-    logger.info(
-        "Large document split into %d sections for Gemini chunking: %s",
-        len(sections), filename,
-    )
-
-    all_chunks: List[Chunk] = []
-    global_offset = 0
-
-    for i, section in enumerate(sections):
-        try:
-            section_chunks = _chunk_with_gemini(section)
-            # Adjust char_start / char_end to global offsets
-            for chunk in section_chunks:
-                chunk.char_start += global_offset
-                chunk.char_end += global_offset
-                all_chunks.append(chunk)
-        except Exception as exc:
-            logger.warning(
-                "Gemini chunking failed for section %d/%d of %s: %s — "
-                "using fallback for this section",
-                i + 1, len(sections), filename, exc,
-            )
-            # Fallback to paragraph split for this section only
-            fallback = _fallback_chunk_text(section)
-            for chunk in fallback:
-                chunk.char_start += global_offset
-                chunk.char_end += global_offset
-                all_chunks.append(chunk)
-
-        global_offset += len(section) + 2  # +2 for the separator
-
-    return all_chunks
-
-
-# ---------------------------------------------------------------------------
 # Dispatcher
 # ---------------------------------------------------------------------------
 
 def chunk_document(file_bytes: bytes, content_type: str, filename: str = "") -> List[Chunk]:
     """
-    Chunk a document using Gemini-based semantic splitting.
+    Chunk a document using Docling (PDF) or heading-based splitting (TXT/MD),
+    followed by secondary character-based splitting for oversized chunks.
 
-    Falls back to paragraph-based splitting if Gemini is unavailable.
+    Falls back to paragraph-based splitting if all else fails.
+
+    Pipeline:
+      PDF:    Docling → Markdown → heading split → secondary split
+      TXT/MD: decode  → heading split → secondary split
 
     Args:
         file_bytes:   Raw file bytes.
@@ -398,41 +379,54 @@ def chunk_document(file_bytes: bytes, content_type: str, filename: str = "") -> 
     ct = (content_type or "").lower()
     fn = (filename or "").lower()
 
-    # Step 1: Extract text from the document
-    if ct == "application/pdf" or fn.endswith(".pdf"):
-        full_text = _extract_pdf_text(file_bytes)
-    else:
-        full_text = file_bytes.decode("utf-8", errors="replace")
-
-    if not full_text.strip():
-        return []
-
-    # Step 2: Try Gemini-powered chunking
-    #   For large documents, split into sections first to avoid API limits
+    # Step 1: Convert to Markdown / extract text
     try:
-        text_len = len(full_text)
-        if text_len > _MAX_CHARS_PER_GEMINI_CALL:
-            # Split into sections and chunk each independently
-            chunks = _chunk_large_document_with_gemini(full_text, filename)
+        if ct == "application/pdf" or fn.endswith(".pdf"):
+            markdown_text = _pdf_to_markdown(file_bytes)
         else:
-            chunks = _chunk_with_gemini(full_text)
-
-        if chunks:
-            logger.info(
-                "Gemini chunking succeeded: %d chunks for %s",
-                len(chunks), filename,
-            )
-            return chunks
+            # TXT and MD — decode directly
+            markdown_text = file_bytes.decode("utf-8", errors="replace")
     except Exception as exc:
         logger.warning(
-            "Gemini chunking failed for %s, falling back to paragraph split: %s",
+            "Text extraction failed for %s (%s), falling back to raw decode: %s",
+            filename, content_type, exc,
+        )
+        markdown_text = file_bytes.decode("utf-8", errors="replace")
+
+    if not markdown_text.strip():
+        return []
+
+    # Step 2: Heading-based structural split
+    try:
+        chunks = _split_by_headings(markdown_text)
+        if chunks:
+            logger.info(
+                "Heading-based split: %d sections for %s",
+                len(chunks), filename,
+            )
+        else:
+            raise ValueError("Heading split produced no chunks")
+    except Exception as exc:
+        logger.warning(
+            "Heading-based split failed for %s: %s — using fallback",
             filename, exc,
         )
+        chunks = _fallback_chunk_text(markdown_text)
 
-    # Step 3: Fallback to simple paragraph splitting
-    chunks = _fallback_chunk_text(full_text)
+    # Step 3: Secondary character-based split for oversized chunks
+    chunks = _secondary_split(chunks)
+
     logger.info(
-        "Fallback paragraph chunking: %d chunks for %s",
+        "Final chunking: %d chunks for %s (after secondary split)",
         len(chunks), filename,
     )
+
+    if not chunks:
+        # Last resort fallback
+        chunks = _fallback_chunk_text(markdown_text)
+        logger.info(
+            "Fallback paragraph chunking: %d chunks for %s",
+            len(chunks), filename,
+        )
+
     return chunks

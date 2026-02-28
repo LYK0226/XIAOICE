@@ -82,6 +82,7 @@ def search_knowledge(
         SELECT
             c.id,
             c.content,
+            c.enriched_content,
             c.heading,
             c.page_number,
             c.document_id,
@@ -108,6 +109,7 @@ def search_knowledge(
         results.append({
             "chunk_id": row.id,
             "content": row.content,
+            "enriched_content": row.enriched_content,
             "heading": row.heading,
             "page_number": row.page_number,
             "document_id": row.document_id,

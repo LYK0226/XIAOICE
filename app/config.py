@@ -57,12 +57,15 @@ class Config:
 
     # RAG Configuration
     RAG_EMBEDDING_MODEL = os.environ.get('RAG_EMBEDDING_MODEL', 'gemini-embedding-001')
-    RAG_EMBEDDING_DIMENSION = int(os.environ.get('RAG_EMBEDDING_DIMENSION', '768'))
+    RAG_EMBEDDING_DIMENSION = int(os.environ.get('RAG_EMBEDDING_DIMENSION', '1536'))
     RAG_TOP_K = int(os.environ.get('RAG_TOP_K', '5'))
     RAG_MIN_SIMILARITY = float(os.environ.get('RAG_MIN_SIMILARITY', '0.3'))
     RAG_GCS_FOLDER = os.environ.get('RAG_GCS_FOLDER', 'RAG')
     RAG_ALLOWED_EXTENSIONS = {'pdf', 'txt', 'md'}
     RAG_CHUNKING_MODEL = os.environ.get('RAG_CHUNKING_MODEL', 'gemini-3-flash-preview')
+    RAG_CONTEXT_MODEL = os.environ.get('RAG_CONTEXT_MODEL', 'gemini-3-flash-preview')
+    RAG_CHUNK_SIZE = int(os.environ.get('RAG_CHUNK_SIZE', '800'))
+    RAG_CHUNK_OVERLAP = int(os.environ.get('RAG_CHUNK_OVERLAP', '100'))
 
     # Pose Detection Configuration
     POSE_DETECTION_ENABLED = os.environ.get('POSE_DETECTION_ENABLED', 'true').lower() == 'true'

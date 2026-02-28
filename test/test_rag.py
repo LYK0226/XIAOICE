@@ -47,7 +47,7 @@ def app():
         'RAG_MAX_CHUNK_CHARS': 2000,
         'RAG_MIN_CHUNK_CHARS': 50,
         'RAG_EMBEDDING_MODEL': 'text-multilingual-embedding-002',
-        'RAG_EMBEDDING_DIMENSION': 768,
+        'RAG_EMBEDDING_DIMENSION': 1536,
         'RAG_TOP_K': 5,
         'RAG_MIN_SIMILARITY': 0.3,
         'RAG_GCS_FOLDER': 'RAG',
@@ -192,21 +192,128 @@ class TestChunkerText:
             assert chunks[0].content == text
 
 
-class TestChunkerMarkdown:
-    """Test Markdown chunking via chunk_document (with Gemini mocked)."""
+class TestHeadingSplit:
+    """Test heading-based structural splitting."""
 
-    @patch('app.rag.chunker._chunk_with_gemini')
-    def test_heading_split(self, mock_gemini, app):
-        """Markdown split via Gemini produces chunks with headings."""
+    def test_basic_heading_split(self, app):
+        """Markdown with headings splits into sections."""
         with app.app_context():
-            from app.rag.chunker import chunk_document, Chunk
+            from app.rag.chunker import _split_by_headings
 
-            # Mock Gemini to return structured chunks
-            mock_gemini.return_value = [
-                Chunk(content="Children develop gross motor skills in the first year.", heading="Motor Development"),
-                Chunk(content="Fine motor skills include grasping and pinching.", heading="Fine Motor"),
-                Chunk(content="Babbling begins around 6 months.", heading="Language Development"),
+            md = (
+                "# Motor Development\n\n"
+                "Children develop gross motor skills in the first year.\n\n"
+                "## Fine Motor\n\n"
+                "Fine motor skills include grasping and pinching.\n\n"
+                "# Language Development\n\n"
+                "Babbling begins around 6 months."
+            )
+            chunks = _split_by_headings(md)
+            assert len(chunks) == 3
+            assert chunks[0].heading == "Motor Development"
+            assert chunks[1].heading == "Fine Motor"
+            assert chunks[2].heading == "Language Development"
+            assert "gross motor" in chunks[0].content
+            assert "grasping" in chunks[1].content
+            assert "Babbling" in chunks[2].content
+
+    def test_preamble_before_headings(self, app):
+        """Text before the first heading becomes an untitled chunk."""
+        with app.app_context():
+            from app.rag.chunker import _split_by_headings
+
+            md = (
+                "This is a preamble paragraph.\n\n"
+                "# Chapter 1\n\n"
+                "Chapter content here."
+            )
+            chunks = _split_by_headings(md)
+            assert len(chunks) == 2
+            assert chunks[0].heading is None
+            assert "preamble" in chunks[0].content
+            assert chunks[1].heading == "Chapter 1"
+
+    def test_no_headings(self, app):
+        """Text without headings returns as a single chunk."""
+        with app.app_context():
+            from app.rag.chunker import _split_by_headings
+
+            text = "This is just plain text without any headings."
+            chunks = _split_by_headings(text)
+            assert len(chunks) == 1
+            assert chunks[0].heading is None
+
+    def test_empty_text(self, app):
+        """Empty text produces no chunks."""
+        with app.app_context():
+            from app.rag.chunker import _split_by_headings
+            assert _split_by_headings("") == []
+            assert _split_by_headings("   ") == []
+
+    def test_heading_without_body(self, app):
+        """Headings without body content are skipped."""
+        with app.app_context():
+            from app.rag.chunker import _split_by_headings
+
+            md = "# Empty Section\n\n# Section With Content\n\nSome content here."
+            chunks = _split_by_headings(md)
+            assert len(chunks) == 1
+            assert chunks[0].heading == "Section With Content"
+
+
+class TestSecondarySplit:
+    """Test secondary character-based splitting."""
+
+    def test_short_chunks_unchanged(self, app):
+        """Chunks within chunk_size are not split further."""
+        with app.app_context():
+            from app.rag.chunker import _secondary_split, Chunk
+
+            chunks = [
+                Chunk(content="Short content.", heading="H1"),
+                Chunk(content="Also short.", heading="H2"),
             ]
+            result = _secondary_split(chunks, chunk_size=800, chunk_overlap=100)
+            assert len(result) == 2
+            assert result[0].content == "Short content."
+
+    def test_long_chunk_split(self, app):
+        """Chunks exceeding chunk_size are split into sub-chunks."""
+        with app.app_context():
+            from app.rag.chunker import _secondary_split, Chunk
+
+            long_text = "A" * 2000  # 2000 characters
+            chunks = [Chunk(content=long_text, heading="Long Section")]
+            result = _secondary_split(chunks, chunk_size=800, chunk_overlap=100)
+            assert len(result) > 1
+            # All sub-chunks inherit the heading
+            for c in result:
+                assert c.heading == "Long Section"
+
+    def test_overlap_exists(self, app):
+        """Sub-chunks have overlapping characters."""
+        with app.app_context():
+            from app.rag.chunker import _split_text_with_overlap
+
+            # Create text with sentence boundaries
+            text = ". ".join([f"Sentence number {i}" for i in range(50)])
+            segments = _split_text_with_overlap(text, chunk_size=200, overlap=50)
+            assert len(segments) > 1
+            # Check that consecutive segments have some overlapping content
+            for i in range(len(segments) - 1):
+                end_of_first = segments[i][-50:]
+                start_of_second = segments[i + 1][:50]
+                # At least some overlap should exist
+                assert len(end_of_first) > 0 and len(start_of_second) > 0
+
+
+class TestChunkerMarkdown:
+    """Test Markdown chunking via chunk_document (heading-based split)."""
+
+    def test_heading_split(self, app):
+        """Markdown split produces chunks with headings (no Gemini needed)."""
+        with app.app_context():
+            from app.rag.chunker import chunk_document
 
             md = (
                 "# Motor Development\n\n"
@@ -222,7 +329,7 @@ class TestChunkerMarkdown:
             assert any("Language Development" in (c.heading or "") for c in chunks)
 
     def test_fallback_markdown(self, app):
-        """When Gemini is unavailable, markdown falls back to paragraph splitting."""
+        """Markdown without headings falls back to paragraph splitting."""
         with app.app_context():
             from app.rag.chunker import _fallback_chunk_text
 
@@ -241,76 +348,41 @@ class TestChunkerMarkdown:
             assert any("Section A" in c.content for c in chunks)
 
 
-class TestChunkerGemini:
-    """Test Gemini-powered chunking with mocked API calls."""
-
-    @patch('app.rag.chunker._get_vertex_genai_client')
-    def test_chunk_with_gemini_success(self, mock_client_fn, app):
-        """Gemini chunking parses JSON response into Chunk objects."""
-        with app.app_context():
-            from app.rag.chunker import _chunk_with_gemini
-
-            mock_response = MagicMock()
-            mock_response.text = json.dumps([
-                {"content": "First topic about motor development.", "heading": "Motor", "page_number": 1},
-                {"content": "Second topic about language.", "heading": "Language", "page_number": 2},
-            ])
-            mock_client = MagicMock()
-            mock_client.models.generate_content.return_value = mock_response
-            mock_client_fn.return_value = mock_client
-
-            chunks = _chunk_with_gemini("Test document text")
-            assert len(chunks) == 2
-            assert chunks[0].heading == "Motor"
-            assert chunks[1].page_number == 2
-            assert "motor development" in chunks[0].content.lower()
-
-    @patch('app.rag.chunker._get_vertex_genai_client')
-    def test_chunk_with_gemini_fallback(self, mock_client_fn, app):
-        """When Gemini raises, chunk_document falls back to paragraph split."""
-        with app.app_context():
-            from app.rag.chunker import chunk_document
-
-            mock_client_fn.side_effect = Exception("API unavailable")
-
-            text = "Paragraph one about walking.\n\nParagraph two about running."
-            chunks = chunk_document(text.encode('utf-8'), 'text/plain', 'test.txt')
-            assert len(chunks) == 2
-            assert "walking" in chunks[0].content
-            assert "running" in chunks[1].content
-
-
 class TestChunkerDispatch:
     """Test chunk_document dispatcher."""
 
-    def test_pdf_dispatch(self, app):
-        """PDF files are dispatched to chunk_pdf."""
+    @patch('app.rag.chunker._pdf_to_markdown')
+    def test_pdf_dispatch(self, mock_docling, app):
+        """PDF files are dispatched to Docling → heading split → secondary split."""
         with app.app_context():
             from app.rag.chunker import chunk_document
 
-            # Create a minimal valid PDF
-            import fitz
-            doc = fitz.open()
-            page = doc.new_page()
-            page.insert_text((72, 72), "Hello from PyMuPDF test document about motor skills.")
-            pdf_bytes = doc.tobytes()
-            doc.close()
+            mock_docling.return_value = (
+                "# Introduction\n\n"
+                "Hello from Docling test document about motor skills.\n\n"
+                "# Conclusion\n\n"
+                "Motor skills are important."
+            )
 
-            chunks = chunk_document(pdf_bytes, 'application/pdf', 'test.pdf')
-            assert len(chunks) >= 1
+            chunks = chunk_document(b"fake pdf bytes", 'application/pdf', 'test.pdf')
+            assert len(chunks) >= 2
             assert any("motor skills" in c.content.lower() for c in chunks)
+            mock_docling.assert_called_once()
 
     def test_txt_dispatch(self, app):
-        """TXT files are dispatched to chunk_text (plain)."""
+        """TXT files are dispatched to heading split → secondary split."""
         with app.app_context():
             from app.rag.chunker import chunk_document
 
-            text = "Paragraph one about walking milestones in the first year of life, including cruising and independent steps.\n\nParagraph two about running development and how children gradually gain speed and coordination over time."
+            # Text with no headings → falls into single chunk (or fallback paragraphs)
+            text = "# Walking Milestones\n\nParagraph one about walking milestones in the first year of life, including cruising and independent steps.\n\n# Running Development\n\nParagraph two about running development and how children gradually gain speed and coordination over time."
             chunks = chunk_document(text.encode('utf-8'), 'text/plain', 'notes.txt')
             assert len(chunks) == 2
+            assert any("Walking" in (c.heading or "") for c in chunks)
+            assert any("Running" in (c.heading or "") for c in chunks)
 
     def test_markdown_dispatch(self, app):
-        """MD files are dispatched to chunk_text (markdown mode)."""
+        """MD files are dispatched to heading split → secondary split."""
         with app.app_context():
             from app.rag.chunker import chunk_document
 
@@ -333,7 +405,7 @@ class TestEmbeddings:
             from app.rag.embeddings import generate_embeddings
 
             mock_embedding = MagicMock()
-            mock_embedding.values = [0.1] * 768
+            mock_embedding.values = [0.1] * 1536
 
             mock_response = MagicMock()
             mock_response.embeddings = [mock_embedding, mock_embedding]
@@ -344,7 +416,7 @@ class TestEmbeddings:
 
             result = generate_embeddings(["text one", "text two"])
             assert len(result) == 2
-            assert len(result[0]) == 768
+            assert len(result[0]) == 1536
             mock_client.models.embed_content.assert_called_once()
 
     @patch('app.rag.embeddings._get_genai_client')
@@ -354,7 +426,7 @@ class TestEmbeddings:
             from app.rag.embeddings import generate_query_embedding
 
             mock_embedding = MagicMock()
-            mock_embedding.values = [0.5] * 768
+            mock_embedding.values = [0.5] * 1536
 
             mock_response = MagicMock()
             mock_response.embeddings = [mock_embedding]
@@ -364,7 +436,7 @@ class TestEmbeddings:
             mock_client_fn.return_value = mock_client
 
             result = generate_query_embedding("what are motor skills?")
-            assert len(result) == 768
+            assert len(result) == 1536
 
     @patch('app.rag.embeddings._get_genai_client')
     def test_empty_input(self, mock_client_fn, app):
@@ -382,7 +454,7 @@ class TestEmbeddings:
             from app.rag.embeddings import generate_embeddings
 
             mock_embedding = MagicMock()
-            mock_embedding.values = [0.1] * 768
+            mock_embedding.values = [0.1] * 1536
             mock_response = MagicMock()
             mock_response.embeddings = [mock_embedding]
 
@@ -400,36 +472,37 @@ class TestEmbeddings:
 
     @patch('app.rag.embeddings._get_genai_client')
     @patch('app.rag.embeddings._get_embedding_model')
-    def test_model_fallback_on_not_found(self, mock_model, mock_client_fn, app):
-        """Falls back to text-embedding-004 when preferred model is unavailable."""
+    def test_uses_only_configured_model(self, mock_model, mock_client_fn, app):
+        """Only uses the configured embedding model (no fallbacks)."""
         with app.app_context():
-            from app.rag.embeddings import generate_embeddings
+            import app.rag.embeddings as emb_mod
+            from app.rag.embeddings import generate_embeddings, _candidate_embedding_models
 
-            mock_model.return_value = "text-multilingual-embedding-002"
+            # Reset cached model from previous tests
+            emb_mod._LAST_WORKING_MODEL = None
+            emb_mod._LAST_WORKING_API_VERSION = None
 
-            class FakeNotFound(Exception):
-                pass
+            mock_model.return_value = "gemini-embedding-001"
+
+            # Verify no fallback candidates
+            candidates = _candidate_embedding_models()
+            assert candidates == ["gemini-embedding-001"]
 
             mock_embedding = MagicMock()
-            mock_embedding.values = [0.3] * 768
+            mock_embedding.values = [0.3] * 1536
             mock_response = MagicMock()
             mock_response.embeddings = [mock_embedding]
 
             mock_client = MagicMock()
-            mock_client.models.embed_content.side_effect = [
-                FakeNotFound("404 NOT_FOUND model not supported for embedContent"),
-                mock_response,
-            ]
+            mock_client.models.embed_content.return_value = mock_response
             mock_client_fn.return_value = mock_client
 
-            result = generate_embeddings(["fallback test"], max_retries=1)
+            result = generate_embeddings(["test"], max_retries=1)
             assert len(result) == 1
-            assert len(result[0]) == 768
+            assert len(result[0]) == 1536
 
-            first_call = mock_client.models.embed_content.call_args_list[0]
-            second_call = mock_client.models.embed_content.call_args_list[1]
-            assert first_call.kwargs["model"] in ("text-multilingual-embedding-002", "text-embedding-004")
-            assert second_call.kwargs["model"] in ("text-embedding-004", "gemini-embedding-001")
+            call_kwargs = mock_client.models.embed_content.call_args.kwargs
+            assert call_kwargs["model"] == "gemini-embedding-001"
 
 
 # ===========================================================================
@@ -537,7 +610,8 @@ class TestProcessor:
 
     @patch('app.rag.processor._download_from_gcs')
     @patch('app.rag.processor.generate_embeddings')
-    def test_process_document_success(self, mock_embed, mock_download, app, db, sample_document):
+    @patch('app.rag.processor.enrich_chunks')
+    def test_process_document_success(self, mock_enrich, mock_embed, mock_download, app, db, sample_document):
         """Successful end-to-end document processing."""
         with app.app_context():
             from app.rag.processor import process_document
@@ -549,8 +623,16 @@ class TestProcessor:
             doc.original_filename = 'test_document.txt'
             db.session.commit()
 
-            mock_download.return_value = b"Paragraph one about gross motor development in early childhood.\n\nParagraph two about fine motor skills and hand coordination."
-            mock_embed.return_value = [[0.1] * 768, [0.2] * 768]
+            mock_download.return_value = b"# Gross Motor\n\nParagraph one about gross motor development in early childhood.\n\n# Fine Motor\n\nParagraph two about fine motor skills and hand coordination."
+
+            # Mock enrich_chunks to set enriched_content on chunks
+            def fake_enrich(chunks):
+                for c in chunks:
+                    c.context_summary = "Background summary."
+                    c.enriched_content = f"\u80cc\u666f\uff1aBackground summary.\n\u6b63\u6587\uff1a{c.content}"
+            mock_enrich.side_effect = fake_enrich
+
+            mock_embed.return_value = [[0.1] * 1536, [0.2] * 1536]
 
             success = process_document(doc.id)
             assert success is True
@@ -559,6 +641,12 @@ class TestProcessor:
             assert doc.status == 'ready'
             assert doc.chunk_count == 2
             assert doc.chunks.count() == 2
+
+            # Verify enriched_content is stored
+            first_chunk = doc.chunks.order_by(RagChunk.chunk_index).first()
+            assert first_chunk.enriched_content is not None
+            assert "\u80cc\u666f\uff1a" in first_chunk.enriched_content
+            assert "\u6b63\u6587\uff1a" in first_chunk.enriched_content
 
     @patch('app.rag.processor._download_from_gcs')
     def test_process_document_empty(self, mock_download, app, db, sample_document):
@@ -596,7 +684,7 @@ class TestProcessor:
                     document_id=doc_id,
                     chunk_index=i,
                     content=f"Chunk {i} content about testing.",
-                    embedding=[0.1] * 768,
+                    embedding=[0.1] * 1536,
                 )
                 db.session.add(chunk)
             db.session.commit()
@@ -634,7 +722,7 @@ class TestModels:
                 chunk_index=0,
                 content="Test chunk content",
                 heading="Test Heading",
-                embedding=[0.1] * 768,
+                embedding=[0.1] * 1536,
             )
             db.session.add(chunk)
             db.session.commit()
@@ -651,18 +739,20 @@ class TestModels:
                 document_id=sample_document.id,
                 chunk_index=0,
                 content="Test content",
+                enriched_content="背景：Test background.\n正文：Test content",
                 heading="Heading",
                 page_number=5,
                 char_start=0,
                 char_end=12,
                 token_count=3,
-                embedding=[0.1] * 768,
+                embedding=[0.1] * 1536,
             )
             db.session.add(chunk)
             db.session.commit()
 
             d = chunk.to_dict()
             assert d['content'] == "Test content"
+            assert d['enriched_content'] == "背景：Test background.\n正文：Test content"
             assert d['heading'] == "Heading"
             assert d['page_number'] == 5
             assert 'embedding' not in d  # Embedding excluded from dict
@@ -676,7 +766,7 @@ class TestModels:
                     document_id=doc_id,
                     chunk_index=i,
                     content=f"Chunk {i}",
-                    embedding=[0.1] * 768,
+                    embedding=[0.1] * 1536,
                 ))
             db.session.commit()
 
@@ -708,6 +798,148 @@ class TestModels:
             # Cleanup
             db.session.delete(user)
             db.session.commit()
+
+
+# ===========================================================================
+# 5.5 Enricher Tests
+# ===========================================================================
+
+class TestEnricher:
+    """Test contextual enrichment via Gemini (batched prompts)."""
+
+    @patch('app.rag.enricher._get_vertex_genai_client')
+    @patch('app.rag.enricher._get_context_model')
+    def test_enrich_chunks_success(self, mock_model, mock_client_fn, app):
+        """enrich_chunks generates context summaries and enriched content via batch."""
+        with app.app_context():
+            from app.rag.chunker import Chunk
+            from app.rag.enricher import enrich_chunks
+
+            mock_model.return_value = "gemini-3-flash"
+
+            # Batch response: JSON array of summaries
+            mock_response = MagicMock()
+            mock_response.text = '["這段文字關於兒童動作發展。", "這段文字關於語言發展。"]'
+
+            mock_client = MagicMock()
+            mock_client.models.generate_content.return_value = mock_response
+            mock_client_fn.return_value = mock_client
+
+            chunks = [
+                Chunk(content="Children walk at 12 months.", heading="Motor"),
+                Chunk(content="Babbling starts at 6 months.", heading="Language"),
+            ]
+            enrich_chunks(chunks)
+
+            assert len(chunks) == 2
+            for c in chunks:
+                assert c.context_summary is not None
+                assert c.enriched_content is not None
+                assert "背景：" in c.enriched_content
+                assert "正文：" in c.enriched_content
+            # Verify only 1 API call (batched)
+            assert mock_client.models.generate_content.call_count == 1
+
+    @patch('app.rag.enricher._get_vertex_genai_client')
+    @patch('app.rag.enricher._get_context_model')
+    def test_enrich_chunks_batch_failure(self, mock_model, mock_client_fn, app):
+        """When batch enrichment fails, chunks gracefully degrade."""
+        with app.app_context():
+            from app.rag.chunker import Chunk
+            from app.rag.enricher import enrich_chunks
+
+            mock_model.return_value = "gemini-3-flash"
+
+            mock_client = MagicMock()
+            mock_client.models.generate_content.side_effect = [
+                Exception("API error"),
+                Exception("API error"),  # retry
+            ]
+            mock_client_fn.return_value = mock_client
+
+            chunks = [
+                Chunk(content="Good chunk.", heading="H1"),
+                Chunk(content="Bad chunk.", heading="H2"),
+            ]
+            enrich_chunks(chunks, max_retries=2)
+
+            # Both chunks should gracefully degrade
+            for c in chunks:
+                assert c.context_summary == ""
+                assert c.enriched_content == c.content
+
+    @patch('app.rag.enricher._get_vertex_genai_client')
+    @patch('app.rag.enricher._get_context_model')
+    def test_enrich_chunks_json_parse_failure(self, mock_model, mock_client_fn, app):
+        """When Gemini returns invalid JSON, chunks degrade gracefully."""
+        with app.app_context():
+            from app.rag.chunker import Chunk
+            from app.rag.enricher import enrich_chunks
+
+            mock_model.return_value = "gemini-3-flash"
+
+            mock_response = MagicMock()
+            mock_response.text = "This is not valid JSON"
+
+            mock_client = MagicMock()
+            mock_client.models.generate_content.return_value = mock_response
+            mock_client_fn.return_value = mock_client
+
+            chunks = [Chunk(content="Test content.", heading="H1")]
+            enrich_chunks(chunks)
+
+            # Should degrade (empty summary from JSON parse failure)
+            assert chunks[0].context_summary == ""
+            assert chunks[0].enriched_content == "Test content."
+
+    @patch('app.rag.enricher._get_vertex_genai_client')
+    def test_enrich_chunks_client_failure(self, mock_client_fn, app):
+        """When Vertex AI client init fails, all chunks degrade gracefully."""
+        with app.app_context():
+            from app.rag.chunker import Chunk
+            from app.rag.enricher import enrich_chunks
+
+            mock_client_fn.side_effect = RuntimeError("No credentials")
+
+            chunks = [Chunk(content="Test content.", heading="H1")]
+            enrich_chunks(chunks)
+
+            assert chunks[0].context_summary == ""
+            assert chunks[0].enriched_content == "Test content."
+
+    def test_enrich_empty_list(self, app):
+        """Enriching empty list does nothing."""
+        with app.app_context():
+            from app.rag.enricher import enrich_chunks
+            enrich_chunks([])  # Should not raise
+
+
+class TestEnrichedContent:
+    """Test enriched content building."""
+
+    def test_build_enriched_content(self, app):
+        """build_enriched_content produces correct format."""
+        with app.app_context():
+            from app.rag.enricher import build_enriched_content
+
+            result = build_enriched_content("This is about motor development.", "Original text here.")
+            assert result == "背景：This is about motor development.\n正文：Original text here."
+
+    def test_build_enriched_content_empty_summary(self, app):
+        """Empty summary returns original content only."""
+        with app.app_context():
+            from app.rag.enricher import build_enriched_content
+
+            result = build_enriched_content("", "Original text.")
+            assert result == "Original text."
+
+    def test_build_enriched_content_none_summary(self, app):
+        """None summary returns original content only."""
+        with app.app_context():
+            from app.rag.enricher import build_enriched_content
+
+            result = build_enriched_content(None, "Original text.")
+            assert result == "Original text."
 
 
 # ===========================================================================

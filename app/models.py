@@ -762,12 +762,13 @@ class RagChunk(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     document_id = db.Column(db.Integer, db.ForeignKey('rag_documents.id', ondelete='CASCADE'), nullable=False, index=True)
     chunk_index = db.Column(db.Integer, nullable=False)             # Order within document
-    content = db.Column(db.Text, nullable=False)                    # Chunk text
+    content = db.Column(db.Text, nullable=False)                    # Chunk text (original)
+    enriched_content = db.Column(db.Text, nullable=True)            # Enriched text (背景 + 正文)
     heading = db.Column(db.String(500), nullable=True)              # Section heading (if detected)
     page_number = db.Column(db.Integer, nullable=True)              # PDF page number
     char_start = db.Column(db.Integer, nullable=True)               # Character offset start
     char_end = db.Column(db.Integer, nullable=True)                 # Character offset end
-    embedding = db.Column(Vector(768), nullable=True)               # pgvector embedding
+    embedding = db.Column(Vector(1536), nullable=True)               # pgvector embedding
     token_count = db.Column(db.Integer, nullable=True)              # Estimated token count
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
@@ -780,6 +781,7 @@ class RagChunk(db.Model):
             'document_id': self.document_id,
             'chunk_index': self.chunk_index,
             'content': self.content,
+            'enriched_content': self.enriched_content,
             'heading': self.heading,
             'page_number': self.page_number,
             'char_start': self.char_start,

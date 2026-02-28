@@ -1,8 +1,8 @@
 """
 Embedding service for RAG.
 
-Uses Google's embedding models via Vertex AI (service account) to generate
-768-dimensional embeddings.  No per-user API key is needed — all calls go
+Uses gemini-embedding-001 via Vertex AI (service account) to generate
+1536-dimensional embeddings.  No per-user API key is needed — all calls go
 through the project's Service Account configured via GCS_CREDENTIALS_PATH.
 """
 
@@ -35,24 +35,17 @@ def _get_embedding_model() -> str:
 
 
 def _candidate_embedding_models() -> List[str]:
-    """Return embedding model candidates ordered by preference."""
-    preferred = _get_embedding_model()
-    candidates = [preferred]
-
-    for fallback in ("gemini-embedding-001", "text-embedding-004", "text-multilingual-embedding-002"):
-        if fallback not in candidates:
-            candidates.append(fallback)
-
-    return candidates
+    """Return the embedding model (gemini-embedding-001 only)."""
+    return [_get_embedding_model()]
 
 
 def _get_embedding_dimension() -> int:
     """Return the expected embedding dimension."""
     try:
         from flask import current_app
-        return current_app.config.get("RAG_EMBEDDING_DIMENSION", 768)
+        return current_app.config.get("RAG_EMBEDDING_DIMENSION", 1536)
     except RuntimeError:
-        return int(os.environ.get("RAG_EMBEDDING_DIMENSION", "768"))
+        return int(os.environ.get("RAG_EMBEDDING_DIMENSION", "1536"))
 
 
 def _is_model_not_found_error(exc: Optional[Exception]) -> bool:
