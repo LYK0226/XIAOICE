@@ -63,7 +63,25 @@
                     <i class="fas fa-users"></i>
                 </div>
                 <span>用戶管理</span>
-            </div>            
+            </div>
+            <div class="nav-card" data-section="reports">
+                <div class="nav-icon-wrap">
+                    <i class="fas fa-file-waveform"></i>
+                </div>
+                <span>分析報告</span>
+            </div>
+            <div class="nav-card" data-section="assessments">
+                <div class="nav-icon-wrap">
+                    <i class="fas fa-clipboard-check"></i>
+                </div>
+                <span>發展評估</span>
+            </div>
+            <div class="nav-card" data-section="pose-runs">
+                <div class="nav-icon-wrap">
+                    <i class="fas fa-person-running"></i>
+                </div>
+                <span>姿態檢測</span>
+            </div>
             <div class="nav-card" data-section="knowledge-base">
                 <div class="nav-icon-wrap">
                     <i class="fas fa-brain"></i>
@@ -92,40 +110,61 @@
                             <i class="fas fa-users"></i>
                         </div>
                         <div class="stat-info">
-                            <span class="stat-number">1,250</span>
+                            <span class="stat-number" id="totalUsersStat">1,250</span>
                             <span class="stat-label">總用戶數</span>
                         </div>
-                        <div class="stat-badge new">+15 今日</div>
+                        <div class="stat-badge new" id="newUsersBadge">+15 今日</div>
                     </div>
                     <div class="stat-card blue">
                         <div class="stat-icon">
-                            <i class="fas fa-file-alt"></i>
+                            <i class="fas fa-user-check"></i>
                         </div>
                         <div class="stat-info">
-                            <span class="stat-number">45</span>
-                            <span class="stat-label">活躍課程</span>
+                            <span class="stat-number" id="activeUsersStat">0</span>
+                            <span class="stat-label">啟用用戶</span>
                         </div>
-                        <div class="stat-badge">正常</div>
+                        <div class="stat-badge" id="adminUsersBadge">0 位管理員</div>
                     </div>
                     <div class="stat-card orange">
                         <div class="stat-icon">
-                            <i class="fas fa-exclamation-circle"></i>
+                            <i class="fas fa-clipboard-list"></i>
                         </div>
                         <div class="stat-info">
-                            <span class="stat-number">12</span>
-                            <span class="stat-label">待處理事項</span>
+                            <span class="stat-number" id="assessmentsStat">0</span>
+                            <span class="stat-label">評估紀錄</span>
                         </div>
-                        <div class="stat-badge warning">需關注</div>
+                        <div class="stat-badge warning" id="completedAssessmentsBadge">0 需關注</div>
                     </div>
                     <div class="stat-card green">
                         <div class="stat-icon">
-                            <i class="fas fa-server"></i>
+                            <i class="fas fa-video"></i>
                         </div>
                         <div class="stat-info">
-                            <span class="stat-number">99.9%</span>
-                            <span class="stat-label">系統可用性</span>
+                            <span class="stat-number" id="videosStat">0</span>
+                            <span class="stat-label">影片紀錄</span>
                         </div>
-                        <div class="stat-badge success">良好</div>
+                        <div class="stat-badge success" id="childrenStatBadge">0 筆失敗</div>
+                    </div>
+                </div>
+
+                <div class="admin-focus-panel">
+                    <h3><i class="fas fa-triangle-exclamation"></i> 後台關注中心</h3>
+                    <div class="focus-grid">
+                        <button class="focus-card critical" type="button" onclick="document.querySelector('[data-section=\'reports\']').click()">
+                            <span class="focus-card__label">需關注報告</span>
+                            <span class="focus-card__count" id="flaggedReportsCount">0</span>
+                            <span class="focus-card__hint">查看影片分析中需關注或需轉介的報告</span>
+                        </button>
+                        <button class="focus-card warning" type="button" onclick="document.querySelector('[data-section=\'assessments\']').click()">
+                            <span class="focus-card__label">需關注評估</span>
+                            <span class="focus-card__count" id="flaggedAssessmentsCount">0</span>
+                            <span class="focus-card__hint">快速查看 DQ 偏低或尚未完成的發展評估</span>
+                        </button>
+                        <button class="focus-card warning" type="button" onclick="document.querySelector('[data-section=\'pose-runs\']').click()">
+                            <span class="focus-card__label">需關注姿態結果</span>
+                            <span class="focus-card__count" id="flaggedPoseRunsCount">0</span>
+                            <span class="focus-card__hint">查看完成率偏低或未完成動作較多的姿態測驗</span>
+                        </button>
                     </div>
                 </div>
 
@@ -137,13 +176,9 @@
                             <i class="fas fa-user-plus"></i>
                             <span>新增用戶</span>
                         </button>
-                        <button class="action-card">
+                        <button class="action-card" id="btnUploadRag">
                             <i class="fas fa-file-upload"></i>
-                            <span>上傳教材</span>
-                        </button>
-                        <button class="action-card">
-                            <i class="fas fa-bullhorn"></i>
-                            <span>發布公告</span>
+                            <span>上載文件到 RAG</span>
                         </button>
                         <button class="action-card" onclick="document.querySelector('[data-section=\'knowledge-base\']').click()">
                             <i class="fas fa-search"></i>
@@ -291,6 +326,163 @@
                 </div>
             </section>
 
+            <section id="section-reports" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-file-waveform"></i> 影片分析報告</h2>
+                    <p>查看所有結構化影片分析報告，並標明需關注、需轉介或不合格項目。</p>
+                </div>
+
+                <div class="kb-section">
+                    <div class="admin-record-toolbar">
+                        <div class="search-box admin-search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="reportSearchInput" placeholder="搜尋用戶、兒童、影片或報告 ID...">
+                        </div>
+                        <select id="reportStatusFilter" class="form-input admin-filter-select">
+                            <option value="all">全部狀態</option>
+                            <option value="completed">已完成</option>
+                            <option value="processing">處理中</option>
+                            <option value="pending">等待中</option>
+                            <option value="failed">失敗</option>
+                        </select>
+                        <select id="reportAttentionFilter" class="form-input admin-filter-select">
+                            <option value="all">全部關注</option>
+                            <option value="flagged">全部需關注</option>
+                            <option value="critical">高優先</option>
+                            <option value="warning">一般關注</option>
+                        </select>
+                        <button class="btn-create admin-inline-btn" id="reportRefreshBtn"><i class="fas fa-rotate"></i> 重新整理</button>
+                    </div>
+                    <div class="admin-table-note" id="reportListSummary">載入中...</div>
+                    <div class="users-table-container">
+                        <table class="users-table admin-data-table">
+                            <thead>
+                                <tr>
+                                    <th>報告 ID</th>
+                                    <th>用戶</th>
+                                    <th>兒童</th>
+                                    <th>影片</th>
+                                    <th>狀態</th>
+                                    <th>關注</th>
+                                    <th>建立時間</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminReportsBody">
+                                <tr><td colspan="8" class="kb-empty">載入中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination admin-section-pagination">
+                        <button class="page-btn" id="reportPrevPage"><i class="fas fa-chevron-left"></i></button>
+                        <span class="page-info" id="reportPageInfo">第 1 頁，共 1 頁</span>
+                        <button class="page-btn" id="reportNextPage"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-assessments" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-clipboard-check"></i> 發展評估結果</h2>
+                    <p>查看所有用戶的發展評估紀錄，特別標明 DQ 偏低或需要後續關注的項目。</p>
+                </div>
+
+                <div class="kb-section">
+                    <div class="admin-record-toolbar">
+                        <div class="search-box admin-search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="assessmentSearchInput" placeholder="搜尋用戶、兒童或評估 ID...">
+                        </div>
+                        <select id="assessmentStatusFilter" class="form-input admin-filter-select">
+                            <option value="all">全部狀態</option>
+                            <option value="completed">已完成</option>
+                            <option value="pending">未完成</option>
+                        </select>
+                        <select id="assessmentAttentionFilter" class="form-input admin-filter-select">
+                            <option value="all">全部關注</option>
+                            <option value="flagged">全部需關注</option>
+                            <option value="critical">高優先</option>
+                            <option value="warning">一般關注</option>
+                        </select>
+                        <button class="btn-create admin-inline-btn" id="assessmentRefreshBtn"><i class="fas fa-rotate"></i> 重新整理</button>
+                    </div>
+                    <div class="admin-table-note" id="assessmentListSummary">載入中...</div>
+                    <div class="users-table-container">
+                        <table class="users-table admin-data-table">
+                            <thead>
+                                <tr>
+                                    <th>評估 ID</th>
+                                    <th>用戶</th>
+                                    <th>兒童</th>
+                                    <th>DQ</th>
+                                    <th>等級</th>
+                                    <th>完成狀態</th>
+                                    <th>關注</th>
+                                    <th>建立時間</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminAssessmentsBody">
+                                <tr><td colspan="9" class="kb-empty">載入中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination admin-section-pagination">
+                        <button class="page-btn" id="assessmentPrevPage"><i class="fas fa-chevron-left"></i></button>
+                        <span class="page-info" id="assessmentPageInfo">第 1 頁，共 1 頁</span>
+                        <button class="page-btn" id="assessmentNextPage"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </section>
+
+            <section id="section-pose-runs" class="content-section">
+                <div class="section-header">
+                    <h2><i class="fas fa-person-running"></i> 姿態檢測結果</h2>
+                    <p>查看所有姿態測驗結果，並突顯完成率偏低或未完成動作較多的紀錄。</p>
+                </div>
+
+                <div class="kb-section">
+                    <div class="admin-record-toolbar">
+                        <div class="search-box admin-search-box">
+                            <i class="fas fa-search"></i>
+                            <input type="text" id="poseSearchInput" placeholder="搜尋用戶、電郵或姿態 run ID...">
+                        </div>
+                        <select id="poseAttentionFilter" class="form-input admin-filter-select">
+                            <option value="all">全部關注</option>
+                            <option value="flagged">全部需關注</option>
+                            <option value="critical">高優先</option>
+                            <option value="warning">一般關注</option>
+                        </select>
+                        <button class="btn-create admin-inline-btn" id="poseRefreshBtn"><i class="fas fa-rotate"></i> 重新整理</button>
+                    </div>
+                    <div class="admin-table-note" id="poseListSummary">載入中...</div>
+                    <div class="users-table-container">
+                        <table class="users-table admin-data-table">
+                            <thead>
+                                <tr>
+                                    <th>Run ID</th>
+                                    <th>用戶</th>
+                                    <th>完成步數</th>
+                                    <th>完成率</th>
+                                    <th>評級</th>
+                                    <th>關注</th>
+                                    <th>建立時間</th>
+                                    <th>操作</th>
+                                </tr>
+                            </thead>
+                            <tbody id="adminPoseRunsBody">
+                                <tr><td colspan="8" class="kb-empty">載入中...</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <div class="pagination admin-section-pagination">
+                        <button class="page-btn" id="posePrevPage"><i class="fas fa-chevron-left"></i></button>
+                        <span class="page-info" id="posePageInfo">第 1 頁，共 1 頁</span>
+                        <button class="page-btn" id="poseNextPage"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                </div>
+            </section>
+
 
 
         </main>
@@ -392,588 +584,18 @@
         </div>
     </div>
 
-    <script>
-        // Auth check - use localStorage since cookie is httponly
-        if (!localStorage.getItem('access_token')) {
-            window.location.href = '/login';
-        }
+    <div class="modal-overlay" id="recordDetailModal">
+        <div class="modal-box modal-box--wide">
+            <div class="modal-header">
+                <h2 id="recordDetailTitle"><i class="fas fa-circle-info"></i> 詳細資料</h2>
+                <button class="modal-close" id="recordDetailClose">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="record-detail-body" id="recordDetailBody"></div>
+        </div>
+    </div>
 
-        // Token getter for API calls
-        function getToken() {
-            return localStorage.getItem('access_token') || '';
-        }
-
-        // User Management State
-        let userState = {
-            page: 1,
-            perPage: 20,
-            search: '',
-            role: '',
-            status: '',
-            totalPages: 1
-        };
-
-        // Stats State
-        let statsData = null;
-
-        document.addEventListener('DOMContentLoaded', () => {
-            // ===== Modal: Add User =====
-            const modal = document.getElementById('userModal');
-            const btnAddUser = document.getElementById('btnAddUser');
-            const btnCancel = document.getElementById('btnCancel');
-            const btnCancel2 = document.getElementById('btnCancel2');
-            const addUserForm = document.getElementById('addUserForm');
-
-            btnAddUser.addEventListener('click', () => {
-                modal.classList.add('active');
-                resetAddUserForm();
-            });
-            btnCancel.addEventListener('click', () => modal.classList.remove('active'));
-            btnCancel2.addEventListener('click', () => modal.classList.remove('active'));
-            modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('active'); });
-
-            function resetAddUserForm() {
-                addUserForm.reset();
-                document.querySelectorAll('#addUserRoleSelector .role-btn').forEach(b => b.classList.remove('active'));
-                document.querySelector('#addUserRoleSelector .role-btn[data-role="user"]').classList.add('active');
-            }
-
-            // Role selector for add user
-            document.querySelectorAll('#addUserRoleSelector .role-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('#addUserRoleSelector .role-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                });
-            });
-
-            addUserForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const username = document.getElementById('addUsername').value.trim();
-                const email = document.getElementById('addEmail').value.trim();
-                const password = document.getElementById('addPassword').value;
-                const role = document.querySelector('#addUserRoleSelector .role-btn.active').dataset.role;
-
-                try {
-                    const res = await fetch('/admin/users', {
-                        method: 'POST',
-                        headers: {
-                            'Authorization': 'Bearer ' + getToken(),
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({ username, email, password, role })
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        alert('用戶創建成功！');
-                        modal.classList.remove('active');
-                        loadUsers();
-                    } else {
-                        alert('錯誤: ' + (data.error || '創建失敗'));
-                    }
-                } catch (err) {
-                    alert('創建失敗: ' + err.message);
-                }
-            });
-
-            // ===== Modal: Edit User =====
-            const editModal = document.getElementById('editUserModal');
-            const btnEditCancel = document.getElementById('btnEditCancel');
-            const btnEditCancel2 = document.getElementById('btnEditCancel2');
-            const editUserForm = document.getElementById('editUserForm');
-
-            btnEditCancel.addEventListener('click', () => editModal.classList.remove('active'));
-            btnEditCancel2.addEventListener('click', () => editModal.classList.remove('active'));
-            editModal.addEventListener('click', (e) => { if (e.target === editModal) editModal.classList.remove('active'); });
-
-            editUserForm.addEventListener('submit', async (e) => {
-                e.preventDefault();
-                const userId = document.getElementById('editUserId').value;
-                const username = document.getElementById('editUsername').value.trim();
-                const email = document.getElementById('editEmail').value.trim();
-                const password = document.getElementById('editPassword').value;
-                const role = document.getElementById('editRole').value;
-                const isActive = document.getElementById('editStatus').value === 'active';
-
-                const data = { username, email, role, is_active: isActive };
-                if (password) data.password = password;
-
-                try {
-                    const res = await fetch(`/admin/users/${userId}`, {
-                        method: 'PUT',
-                        headers: {
-                            'Authorization': 'Bearer ' + getToken(),
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify(data)
-                    });
-                    const result = await res.json();
-                    if (res.ok) {
-                        alert('用戶更新成功！');
-                        editModal.classList.remove('active');
-                        loadUsers();
-                    } else {
-                        alert('錯誤: ' + (result.error || '更新失敗'));
-                    }
-                } catch (err) {
-                    alert('更新失敗: ' + err.message);
-                }
-            });
-
-            // ===== Navigation =====
-            const navCards = document.querySelectorAll('.nav-card');
-            const sections = document.querySelectorAll('.content-section');
-
-            navCards.forEach(card => {
-                card.addEventListener('click', function() {
-                    navCards.forEach(n => n.classList.remove('active'));
-                    this.classList.add('active');
-
-                    const target = this.dataset.section;
-                    sections.forEach(s => s.classList.remove('active'));
-                    document.getElementById('section-' + target).classList.add('active');
-
-                    if (target === 'overview') loadStats();
-                    if (target === 'knowledge-base') loadKbDocuments();
-                    if (target === 'users') {
-                        loadUsers();
-                        loadStats();
-                    }
-                });
-            });
-
-            // Load stats on page load (for overview section)
-            loadStats();
-
-            // ===== Theme Toggle =====
-            document.querySelectorAll('.theme-btn').forEach(btn => {
-                btn.addEventListener('click', function() {
-                    document.querySelectorAll('.theme-btn').forEach(b => b.classList.remove('active'));
-                    this.classList.add('active');
-                    const theme = this.dataset.theme;
-                    if (theme === 'dark') {
-                        document.body.classList.add('dark-theme');
-                    } else {
-                        document.body.classList.remove('dark-theme');
-                    }
-                });
-            });
-
-            // ===== User Management Functions =====
-            const usersTableBody = document.querySelector('.users-table tbody');
-            const userSearchInput = document.querySelector('.search-box input');
-            const filterTabs = document.querySelectorAll('.filter-tab');
-            const pageInfo = document.querySelector('.page-info');
-            const prevPageBtn = document.querySelector('.pagination .page-btn:first-child');
-            const nextPageBtn = document.querySelector('.pagination .page-btn:last-child');
-
-            async function loadStats() {
-                try {
-                    const res = await fetch('/admin/stats', { headers: { 'Authorization': 'Bearer ' + getToken() } });
-                    const data = await res.json();
-                    if (res.ok) {
-                        statsData = data;
-                        updateStatsDisplay();
-                    }
-                } catch (e) {
-                    console.error('Failed to load stats:', e);
-                }
-            }
-
-            function updateStatsDisplay() {
-                if (!statsData) return;
-                const statNumbers = document.querySelectorAll('.stat-number');
-                if (statNumbers[0]) statNumbers[0].textContent = statsData.users.total.toLocaleString();
-                if (statNumbers[1]) statNumbers[1].textContent = statsData.assessments.total || '0';
-                if (statNumbers[2]) statNumbers[2].textContent = statsData.videos.total || '0';
-                if (statNumbers[3]) statNumbers[3].textContent = statsData.users.new_today || '0';
-            }
-
-            async function loadUsers() {
-                usersTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">載入中...</td></tr>';
-                try {
-                    const params = new URLSearchParams({
-                        page: userState.page,
-                        per_page: userState.perPage
-                    });
-                    if (userState.search) params.append('search', userState.search);
-                    if (userState.role) params.append('role', userState.role);
-                    if (userState.status) params.append('status', userState.status);
-
-                    const res = await fetch(`/admin/users?${params}`, {
-                        headers: { 'Authorization': 'Bearer ' + getToken() }
-                    });
-                    const data = await res.json();
-
-                    if (!res.ok) {
-                        usersTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">錯誤: ${data.error || '載入失敗'}</td></tr>`;
-                        return;
-                    }
-
-                    userState.totalPages = data.pages;
-                    renderUsersTable(data.users);
-                    updatePagination();
-                } catch (e) {
-                    usersTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">錯誤: ${e.message}</td></tr>`;
-                }
-            }
-
-            function renderUsersTable(users) {
-                if (!users || users.length === 0) {
-                    usersTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">尚無用戶數據</td></tr>';
-                    return;
-                }
-
-                usersTableBody.innerHTML = users.map(u => {
-                    const roleLabel = { admin: '管理員', teacher: '教師', user: '學生' }[u.role] || u.role;
-                    const roleClass = { admin: 'admin', teacher: 'teacher', user: 'student' }[u.role] || 'student';
-                    const statusLabel = u.is_active ? '活躍' : '停用';
-                    const statusClass = u.is_active ? 'active' : 'inactive';
-                    const createdDate = u.created_at ? new Date(u.created_at).toLocaleDateString('zh-TW') : '-';
-
-                    return `
-                        <tr data-user-id="${u.id}">
-                            <td><input type="checkbox"></td>
-                            <td>
-                                <div class="user-cell">
-                                    <div class="user-avatar ${roleClass}">${u.username.charAt(0).toUpperCase()}</div>
-                                    <span>${u.username}</span>
-                                </div>
-                            </td>
-                            <td>${u.email}</td>
-                            <td><span class="role-badge ${roleClass}">${roleLabel}</span></td>
-                            <td>${createdDate}</td>
-                            <td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
-                            <td>
-                                <button class="table-btn edit" onclick="openEditUser(${u.id}, '${u.username}', '${u.email}', '${u.role}', ${u.is_active})"><i class="fas fa-edit"></i></button>
-                                <button class="table-btn delete" onclick="deleteUser(${u.id})"><i class="fas fa-trash"></i></button>
-                            </td>
-                        </tr>
-                    `;
-                }).join('');
-            }
-
-            function updatePagination() {
-                if (pageInfo) {
-                    pageInfo.textContent = `第 ${userState.page} 頁，共 ${userState.totalPages} 頁`;
-                }
-                if (prevPageBtn) {
-                    prevPageBtn.disabled = userState.page <= 1;
-                }
-                if (nextPageBtn) {
-                    nextPageBtn.disabled = userState.page >= userState.totalPages;
-                }
-            }
-
-            // User search
-            let searchTimeout;
-            userSearchInput.addEventListener('input', (e) => {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(() => {
-                    userState.search = e.target.value.trim();
-                    userState.page = 1;
-                    loadUsers();
-                }, 300);
-            });
-
-            // Filter tabs
-            filterTabs.forEach(tab => {
-                tab.addEventListener('click', function() {
-                    filterTabs.forEach(t => t.classList.remove('active'));
-                    this.classList.add('active');
-
-                    const filterText = this.textContent.trim();
-                    if (filterText === '全部') {
-                        userState.role = '';
-                    } else if (filterText === '管理員') {
-                        userState.role = 'admin';
-                    } else if (filterText === '教師') {
-                        userState.role = 'teacher';
-                    } else if (filterText === '學生') {
-                        userState.role = 'user';
-                    }
-                    userState.page = 1;
-                    loadUsers();
-                });
-            });
-
-            // Pagination buttons
-            if (prevPageBtn) {
-                prevPageBtn.addEventListener('click', () => {
-                    if (userState.page > 1) {
-                        userState.page--;
-                        loadUsers();
-                    }
-                });
-            }
-            if (nextPageBtn) {
-                nextPageBtn.addEventListener('click', () => {
-                    if (userState.page < userState.totalPages) {
-                        userState.page++;
-                        loadUsers();
-                    }
-                });
-            }
-
-            // Global functions for table buttons
-            window.openEditUser = function(id, username, email, role, isActive) {
-                document.getElementById('editUserId').value = id;
-                document.getElementById('editUsername').value = username;
-                document.getElementById('editEmail').value = email;
-                document.getElementById('editPassword').value = '';
-                document.getElementById('editRole').value = role;
-                document.getElementById('editStatus').value = isActive ? 'active' : 'inactive';
-                editModal.classList.add('active');
-            };
-
-            window.deleteUser = async function(id) {
-                if (!confirm('確定要刪除此用戶嗎？此操作無法復原。')) return;
-                try {
-                    const res = await fetch(`/admin/users/${id}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': 'Bearer ' + getToken() }
-                    });
-                    const data = await res.json();
-                    if (res.ok) {
-                        alert('用戶已刪除');
-                        loadUsers();
-                    } else {
-                        alert('錯誤: ' + (data.error || '刪除失敗'));
-                    }
-                } catch (e) {
-                    alert('刪除失敗: ' + e.message);
-                }
-            };
-
-            // ===== Knowledge Base Functions =====
-            const kbUploadArea = document.getElementById('kbUploadArea');
-            const kbFileInput = document.getElementById('kbFileInput');
-            const kbDocBody = document.getElementById('kbDocBody');
-            const kbSearchInput = document.getElementById('kbSearchInput');
-            const kbSearchBtn = document.getElementById('kbSearchBtn');
-            const kbSearchResults = document.getElementById('kbSearchResults');
-            const kbBatchDeleteBtn = document.getElementById('kbBatchDeleteBtn');
-            const kbSelectedCount = document.getElementById('kbSelectedCount');
-
-            function formatDate(iso) {
-                if (!iso) return '-';
-                const d = new Date(iso);
-                return d.toLocaleDateString('zh-TW') + ' ' + d.toLocaleTimeString('zh-TW', {hour:'2-digit',minute:'2-digit'});
-            }
-
-            // --- Checkbox / batch delete ---
-            window.updateBatchDeleteBtn = function() {
-                const checked = document.querySelectorAll('.kb-doc-checkbox:checked');
-                const total = document.querySelectorAll('.kb-doc-checkbox').length;
-                kbSelectedCount.textContent = checked.length;
-                kbBatchDeleteBtn.style.display = checked.length > 0 ? 'inline-flex' : 'none';
-                // Sync the select-all checkbox state
-                const selectAll = document.getElementById('kbSelectAll');
-                if (selectAll) {
-                    selectAll.checked = total > 0 && checked.length === total;
-                    selectAll.indeterminate = checked.length > 0 && checked.length < total;
-                }
-            };
-
-            window.toggleSelectAll = function(el) {
-                document.querySelectorAll('.kb-doc-checkbox').forEach(cb => cb.checked = el.checked);
-                updateBatchDeleteBtn();
-            };
-
-            window.batchDeleteDocs = async function() {
-                const ids = Array.from(document.querySelectorAll('.kb-doc-checkbox:checked')).map(cb => parseInt(cb.value));
-                if (ids.length === 0) return;
-                if (!confirm(`確定刪除已選的 ${ids.length} 個文件及所有相關資料？`)) return;
-                try {
-                    const res = await fetch('/admin/rag/documents/batch', {
-                        method: 'DELETE',
-                        headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ document_ids: ids }),
-                    });
-                    const data = await res.json();
-                    alert(data.message || '刪除完成');
-                    loadKbDocuments();
-                } catch (e) { alert('批量刪除失敗: ' + e.message); }
-            };
-
-            // --- Upload ---
-            kbUploadArea.addEventListener('click', () => kbFileInput.click());
-            kbUploadArea.addEventListener('dragover', e => { e.preventDefault(); kbUploadArea.classList.add('dragover'); });
-            kbUploadArea.addEventListener('dragleave', () => kbUploadArea.classList.remove('dragover'));
-            kbUploadArea.addEventListener('drop', e => {
-                e.preventDefault();
-                kbUploadArea.classList.remove('dragover');
-                if (e.dataTransfer.files.length) uploadKbFiles(e.dataTransfer.files);
-            });
-            kbFileInput.addEventListener('change', () => { if (kbFileInput.files.length) uploadKbFiles(kbFileInput.files); });
-
-            async function uploadKbFiles(files) {
-                const fileArray = Array.from(files);
-                const total = fileArray.length;
-                let successCount = 0;
-                let failCount = 0;
-                let errors = [];
-
-                for (let i = 0; i < fileArray.length; i++) {
-                    const file = fileArray[i];
-                    kbUploadArea.innerHTML = `<div class="upload-icon spin"><i class="fas fa-spinner"></i></div><div class="upload-text"><h3>上傳中... (${i + 1}/${total})</h3><p>${file.name}</p></div>`;
-                    
-                    const fd = new FormData();
-                    fd.append('file', file);
-                    try {
-                        const res = await fetch('/admin/rag/documents', {
-                            method: 'POST',
-                            headers: { 'Authorization': 'Bearer ' + getToken() },
-                            body: fd,
-                        });
-                        const data = await res.json();
-                        if (res.ok) {
-                            successCount++;
-                        } else {
-                            failCount++;
-                            errors.push(`${file.name}: ${data.error || '上傳失敗'}`);
-                        }
-                    } catch (e) {
-                        failCount++;
-                        errors.push(`${file.name}: ${e.message}`);
-                    }
-                }
-
-                let message = `已提交 ${successCount} 個文件，背景處理中`;
-                if (failCount > 0) {
-                    message += `，失敗 ${failCount} 個`;
-                }
-                if (errors.length > 0 && errors.length <= 3) {
-                    message += '\n' + errors.join('\n');
-                } else if (errors.length > 3) {
-                    message += '\n' + errors.slice(0, 3).join('\n') + `\n...及其他 ${errors.length - 3} 個錯誤`;
-                }
-                alert(message);
-
-                kbUploadArea.innerHTML = '<div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div><div class="upload-text"><h3>點擊或拖放文件上傳</h3><p>支援格式：PDF、TXT、Markdown（可批量上傳）</p></div><input type="file" id="kbFileInput" accept=".pdf,.txt,.md" multiple style="display:none;">';
-                document.getElementById('kbFileInput').addEventListener('change', () => { if (kbFileInput.files.length) uploadKbFiles(kbFileInput.files); });
-                loadKbDocuments();
-            }
-
-            // --- Document list ---
-            async function loadKbDocuments() {
-                try {
-                    const res = await fetch('/admin/rag/documents', { headers: { 'Authorization': 'Bearer ' + getToken() } });
-                    const data = await res.json();
-                    if (!res.ok) { kbDocBody.innerHTML = '<tr><td colspan="6" class="kb-empty">載入失敗</td></tr>'; return; }
-
-                    const docs = data.documents || [];
-                    if (docs.length === 0) {
-                        kbDocBody.innerHTML = '<tr><td colspan="6" class="kb-empty">尚無文件。上傳文件以建立知識庫。</td></tr>';
-                        document.getElementById('kbSelectAll').checked = false;
-                        document.getElementById('kbSelectAll').indeterminate = false;
-                        updateBatchDeleteBtn();
-                        return;
-                    }
-                    kbDocBody.innerHTML = docs.map(d => `
-                        <tr data-doc-id="${d.id}">
-                            <td><input type="checkbox" class="kb-doc-checkbox" value="${d.id}" onchange="updateBatchDeleteBtn()"></td>
-                            <td><a href="/view_rag_document/${d.id}/${encodeURIComponent(d.original_filename)}" target="_blank" class="kb-doc-link" title="${d.original_filename}">${d.original_filename.length > 30 ? d.original_filename.slice(0,27)+'...' : d.original_filename}</a></td>
-                            <td>${d.content_type.split('/').pop().toUpperCase()}</td>
-                            <td><span class="kb-status ${d.status}" data-doc-status="${d.id}">${d.status}</span></td>
-                            <td>${formatDate(d.created_at)}</td>
-                            <td>
-                                <button class="kb-btn kb-btn-reprocess" onclick="reprocessDoc(${d.id})"><i class="fas fa-redo"></i></button>
-                                <button class="kb-btn kb-btn-delete" onclick="deleteDoc(${d.id})"><i class="fas fa-trash"></i></button>
-                            </td>
-                        </tr>
-                    `).join('');
-                    // Reset select-all checkbox
-                    document.getElementById('kbSelectAll').checked = false;
-                    updateBatchDeleteBtn();
-                } catch (e) {
-                    kbDocBody.innerHTML = '<tr><td colspan="6" class="kb-empty">錯誤: ' + e.message + '</td></tr>';
-                }
-            }
-
-            window.deleteDoc = async function(id) {
-                if (!confirm('確定刪除此文件及所有相關資料？')) return;
-                try {
-                    await fetch(`/admin/rag/documents/${id}`, { method: 'DELETE', headers: { 'Authorization': 'Bearer ' + getToken() } });
-                    loadKbDocuments();
-                } catch (e) { alert('刪除失敗: ' + e.message); }
-            };
-
-            window.reprocessDoc = async function(id) {
-                if (!confirm('重新分段並嵌入此文件？')) return;
-                try {
-                    const res = await fetch(`/admin/rag/documents/${id}/reprocess`, { method: 'POST', headers: { 'Authorization': 'Bearer ' + getToken() } });
-                    const data = await res.json();
-                    // Status will update via Socket.IO — no need to alert/reload
-                } catch (e) { alert('重新處理失敗: ' + e.message); }
-            };
-
-            // --- Socket.IO for real-time status updates ---
-            (function initKbSocket() {
-                if (typeof io === 'undefined') {
-                    // Load socket.io client if not already present
-                    const script = document.createElement('script');
-                    script.src = 'https://cdn.socket.io/4.7.5/socket.io.min.js';
-                    script.onload = connectKbSocket;
-                    document.head.appendChild(script);
-                } else {
-                    connectKbSocket();
-                }
-
-                function connectKbSocket() {
-                    const token = getToken();
-                    const socket = io({
-                        transports: ['websocket', 'polling'],
-                        auth: { token: token },
-                    });
-                    socket.on('rag_document_status', function(data) {
-                        // Update the status badge in-place
-                        const badge = document.querySelector(`[data-doc-status="${data.document_id}"]`);
-                        if (badge) {
-                            badge.className = 'kb-status ' + data.status;
-                            badge.textContent = data.status;
-                        } else {
-                            // Row may not exist yet; reload the table
-                            loadKbDocuments();
-                        }
-                    });
-                }
-            })();
-
-            // --- Search ---
-            kbSearchBtn.addEventListener('click', searchKb);
-            kbSearchInput.addEventListener('keydown', e => { if (e.key === 'Enter') searchKb(); });
-
-            async function searchKb() {
-                const query = kbSearchInput.value.trim();
-                if (!query) return;
-                kbSearchResults.innerHTML = '<div class="kb-empty">搜尋中...</div>';
-                try {
-                    const res = await fetch('/admin/rag/search', {
-                        method: 'POST',
-                        headers: { 'Authorization': 'Bearer ' + getToken(), 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ query }),
-                    });
-                    const data = await res.json();
-                    if (!res.ok) { kbSearchResults.innerHTML = '<div class="kb-empty">錯誤: ' + (data.error || '搜尋失敗') + '</div>'; return; }
-
-                    const results = data.results || [];
-                    if (results.length === 0) {
-                        kbSearchResults.innerHTML = '<div class="kb-empty">未找到相關結果</div>';
-                        return;
-                    }
-                    kbSearchResults.innerHTML = results.map((r, i) => `
-                        <div class="kb-result-item">
-                            <div class="kb-result-meta">
-                                <i class="fas fa-file-alt"></i> #${i+1} | ${r.document_name}${r.page_number ? ' p.' + r.page_number : ''}${r.heading ? ' | ' + r.heading : ''} | 相關度: ${(r.similarity * 100).toFixed(0)}%
-                            </div>
-                            <div class="kb-result-content">${r.content.length > 500 ? r.content.slice(0,500)+'...' : r.content}</div>
-                        </div>
-                    `).join('');
-                } catch (e) {
-                    kbSearchResults.innerHTML = '<div class="kb-empty">錯誤: ' + e.message + '</div>';
-                }
-            }
-        });
-    </script>
+    <script src="{{ url_for('static', filename='js/admin.js') }}"></script>
 </body>
 </html>
