@@ -16,6 +16,10 @@ from app import gcp_bucket
 logger = logging.getLogger(__name__)
 
 
+def _category_label(item: dict) -> str:
+    return item.get("category_label") or item.get("category") or "—"
+
+
 def _status_label(status: str) -> str:
     """Convert status code to Chinese label with emoji."""
     mapping = {
@@ -23,9 +27,101 @@ def _status_label(status: str) -> str:
         "CONCERN": "⚠️ 需要關注",
         "NEEDS_ATTENTION": "🔴 需要注意",
         "UNABLE_TO_ASSESS": "❓ 無法評估",
-        "PASS": "✅ 通過",
+        "PASS": "✅ 達標",
     }
     return mapping.get(status, status or "—")
+
+
+def _compliance_status_label(status: str) -> str:
+    """Convert compliance status to Chinese label with colored badge HTML."""
+    mapping = {
+        "PASS": ("✅ 達標", "#c6f6d5", "#22543d"),
+        "CONCERN": ("⚠️ 需關注", "#fefcbf", "#744210"),
+        "UNABLE_TO_ASSESS": ("❓ 無法評估", "#e2e8f0", "#4a5568"),
+    }
+    label, bg, color = mapping.get(status, (status or "—", "#e2e8f0", "#4a5568"))
+    return f'<span style="background:{bg};color:{color};padding:1px 6px;border-radius:8px;font-size:9pt;font-weight:bold;">{label}</span>'
+
+
+def _standards_table_html(standards: list) -> str:
+    """Build an HTML table for standards compliance results."""
+    if not standards:
+        return ""
+
+    rows = ""
+    for item in standards:
+        if not isinstance(item, dict):
+            continue
+        standard = item.get("standard", "—")
+        category = _category_label(item)
+        status = item.get("status", "UNABLE_TO_ASSESS")
+        rationale = item.get("rationale", "—")
+        status_html = _compliance_status_label(status)
+        rows += f"""<tr>
+          <td>{standard}</td>
+          <td>{category}</td>
+          <td style="text-align:center;">{status_html}</td>
+          <td style="font-size:9pt;">{rationale}</td>
+        </tr>\n"""
+
+    return f"""<table class="standards-table">
+      <thead>
+        <tr>
+          <th>標準項目</th>
+          <th>分類</th>
+          <th>評估結果</th>
+          <th>說明</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows}
+      </tbody>
+    </table>"""
+
+
+def _dimension_section_html(
+    title: str,
+    emoji: str,
+    dimension_data: dict,
+    list_html_fn,
+) -> str:
+    """Build a standard dimension section (status + findings + strengths + concerns + recs + standards table)."""
+    if not dimension_data or not isinstance(dimension_data, dict):
+        return ""
+
+    status = dimension_data.get("status", "UNABLE_TO_ASSESS")
+    findings = dimension_data.get("findings", "未提供")
+    strengths = dimension_data.get("strengths", [])
+    concerns = dimension_data.get("concerns", [])
+    recommendations = dimension_data.get("recommendations", [])
+    standards_table = dimension_data.get("standards_table", [])
+    rag_available = dimension_data.get("rag_available", True)
+
+    # Build the standards table or a notice
+    if rag_available and standards_table:
+        table_html = f"""<h3>📊 年齡標準評估表</h3>\n{_standards_table_html(standards_table)}"""
+    elif not rag_available:
+        table_html = '<div class="no-rag-notice"><p>⚠️ 未找到該年齡層的參考標準，無法進行逐項評估。以下評估基於專業知識進行。</p></div>'
+    else:
+        table_html = ""
+
+    return f"""<div class="section">
+  <h2>{emoji} {title}</h2>
+  <p><strong>整體狀態：</strong>
+    <span class="status-badge status-{status}">
+      {_status_label(status)}
+    </span>
+  </p>
+  {table_html}
+  <h3>評估發現</h3>
+  <p>{findings}</p>
+  <h3>優勢</h3>
+  <ul>{list_html_fn(strengths)}</ul>
+  <h3>關注事項</h3>
+  <ul>{list_html_fn(concerns)}</ul>
+  <h3>改善建議</h3>
+  <ul>{list_html_fn(recommendations)}</ul>
+</div>\n"""
 
 
 def _build_html_report(report_data: Dict[str, Any], child_name: str, child_age_months: float) -> str:
@@ -37,6 +133,10 @@ def _build_html_report(report_data: Dict[str, Any], child_name: str, child_age_m
     exec_summary = report_data.get("executive_summary", "未提供摘要")
     motor = report_data.get("motor_development", {})
     language = report_data.get("language_development", {})
+    social_emotional = report_data.get("social_emotional", {})
+    cognitive = report_data.get("cognitive", {})
+    adaptive_behavior = report_data.get("adaptive_behavior", {})
+    selfcare = report_data.get("selfcare", {})
     overall_recs = report_data.get("overall_recommendations", [])
     referral_needed = report_data.get("professional_referral_needed", False)
     referral_reason = report_data.get("referral_reason", "")
@@ -47,6 +147,14 @@ def _build_html_report(report_data: Dict[str, Any], child_name: str, child_age_m
         if isinstance(items, str):
             return f"<li>{items}</li>"
         return "".join(f"<li>{item}</li>" for item in items)
+
+    # Build dimension sections using the helper
+    motor_html = _dimension_section_html("身體動作發展", "🏃", motor, _list_html)
+    language_html = _dimension_section_html("語言發展", "🗣️", language, _list_html)
+    social_html = _dimension_section_html("社交情緒發展", "👥", social_emotional, _list_html)
+    cognitive_html = _dimension_section_html("認知發展", "🧠", cognitive, _list_html)
+    adaptive_html = _dimension_section_html("適應性行為", "🔄", adaptive_behavior, _list_html)
+    selfcare_html = _dimension_section_html("自理能力", "🧹", selfcare, _list_html)
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-TW">
@@ -74,6 +182,14 @@ def _build_html_report(report_data: Dict[str, Any], child_name: str, child_age_m
   .referral {{ background: #fff5f5; border-left: 4px solid #e53e3e; padding: 12px; margin: 16px 0; border-radius: 4px; }}
   .footer {{ margin-top: 30px; padding-top: 10px; border-top: 1px solid #e2e8f0;
              font-size: 9pt; color: #a0aec0; text-align: center; }}
+  .standards-table {{ width: 100%; border-collapse: collapse; margin: 12px 0; font-size: 10pt; }}
+  .standards-table th {{ background: #edf2f7; color: #2d3748; padding: 8px 10px; text-align: left;
+                         border-bottom: 2px solid #cbd5e0; font-weight: bold; }}
+  .standards-table td {{ padding: 6px 10px; border-bottom: 1px solid #e2e8f0; vertical-align: top; }}
+  .standards-table tr:nth-child(even) {{ background: #f7fafc; }}
+  .standards-table tr:hover {{ background: #edf2f7; }}
+  .no-rag-notice {{ background: #fffbeb; border-left: 4px solid #f6ad55; padding: 10px 14px;
+                     margin: 12px 0; border-radius: 4px; font-size: 10pt; color: #744210; }}
 </style>
 </head>
 <body>
@@ -90,39 +206,12 @@ def _build_html_report(report_data: Dict[str, Any], child_name: str, child_age_m
   <p>{exec_summary}</p>
 </div>
 
-<div class="section">
-  <h2>🏃 身體動作發展</h2>
-  <p><strong>整體狀態：</strong>
-    <span class="status-badge status-{motor.get('status', 'UNABLE_TO_ASSESS')}">
-      {_status_label(motor.get('status', ''))}
-    </span>
-  </p>
-  <h3>評估發現</h3>
-  <p>{motor.get('findings', '未提供')}</p>
-  <h3>優勢</h3>
-  <ul>{_list_html(motor.get('strengths', []))}</ul>
-  <h3>關注事項</h3>
-  <ul>{_list_html(motor.get('concerns', []))}</ul>
-  <h3>改善建議</h3>
-  <ul>{_list_html(motor.get('recommendations', []))}</ul>
-</div>
-
-<div class="section">
-  <h2>🗣️ 語言發展</h2>
-  <p><strong>整體狀態：</strong>
-    <span class="status-badge status-{language.get('status', 'UNABLE_TO_ASSESS')}">
-      {_status_label(language.get('status', ''))}
-    </span>
-  </p>
-  <h3>評估發現</h3>
-  <p>{language.get('findings', '未提供')}</p>
-  <h3>優勢</h3>
-  <ul>{_list_html(language.get('strengths', []))}</ul>
-  <h3>關注事項</h3>
-  <ul>{_list_html(language.get('concerns', []))}</ul>
-  <h3>改善建議</h3>
-  <ul>{_list_html(language.get('recommendations', []))}</ul>
-</div>
+{motor_html}
+{language_html}
+{social_html}
+{cognitive_html}
+{adaptive_html}
+{selfcare_html}
 
 <div class="section">
   <h2>📌 整體建議</h2>

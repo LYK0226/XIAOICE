@@ -15,11 +15,36 @@ from . import gcp_bucket, agent
 bp = Blueprint('video', __name__)
 
 
+def _get_env_vertex_config() -> dict | None:
+    """Build Vertex AI config from .env service account credentials.
+
+    Returns dict with service_account (JSON string), project_id, location
+    or None if required env vars are missing.
+    """
+    sa_path = (
+        os.environ.get('GOOGLE_APPLICATION_CREDENTIALS')
+        or os.environ.get('GCS_CREDENTIALS_PATH')
+    )
+    project_id = os.environ.get('GOOGLE_CLOUD_PROJECT')
+    if not sa_path or not project_id:
+        return None
+    try:
+        with open(sa_path, 'r') as f:
+            sa_json = f.read()
+        return {
+            'service_account': sa_json,
+            'project_id': project_id,
+            'location': os.environ.get('GOOGLE_CLOUD_LOCATION', 'global'),
+        }
+    except Exception:
+        return None
+
+
 @bp.route('/api/upload-video', methods=['POST'])
 @jwt_required()
 def upload_video():
     """Upload a video file for transcription and analysis (stored in GCS)."""
-    from .models import db, VideoRecord, UserProfile
+    from .models import db, VideoRecord
 
     user_id = int(get_jwt_identity())
 
@@ -75,33 +100,12 @@ def upload_video():
         db.session.add(video_record)
         db.session.commit()
 
-        # Prepare auth/user settings for background work
-        user_profile = UserProfile.query.filter_by(user_id=user_id).first()
-        api_key = None
-        ai_provider = 'ai_studio'
-        vertex_config = None
-        provider_for_request = 'ai_studio'
-        if user_profile and user_profile.selected_api_key:
-            api_key = user_profile.selected_api_key.get_decrypted_key()
-
-        ai_model = user_profile.ai_model if (user_profile and user_profile.ai_model) else 'gemini-3-flash'
-        if user_profile and user_profile.ai_provider:
-            ai_provider = user_profile.ai_provider
-        if user_profile and ai_provider == 'vertex_ai':
-            from .models import VertexServiceAccount
-            vertex_account = None
-            if user_profile.selected_vertex_account_id:
-                vertex_account = VertexServiceAccount.query.filter_by(
-                    id=user_profile.selected_vertex_account_id, user_id=user_id
-                ).first()
-            elif user_profile.selected_vertex_account:
-                vertex_account = user_profile.selected_vertex_account
-            if vertex_account:
-                vertex_config = {
-                    'service_account': vertex_account.get_decrypted_credentials(),
-                    'project_id': vertex_account.project_id
-                }
-            provider_for_request = 'vertex_ai'
+        # Always use .env service account for video transcription
+        vertex_config = _get_env_vertex_config()
+        if not vertex_config:
+            return jsonify({'error': 'Server Vertex AI credentials not configured'}), 503
+        provider_for_request = 'vertex_ai'
+        ai_model = 'gemini-3-flash-preview'
         mime_type = video_file.content_type or gcp_bucket.get_content_type_from_url(gcs_url)
 
         app_obj = current_app._get_current_object()
@@ -131,7 +135,7 @@ def upload_video():
                         image_path=gcs_url,
                         image_mime_type=mime_type,
                         history=None,
-                        api_key=api_key,
+                        api_key=None,
                         model_name=ai_model,
                         user_id=str(user_id),
                         conversation_id=None,
@@ -225,7 +229,7 @@ def get_video(video_id):
 @jwt_required()
 def analyze_video(video_id):
     """Analyze video content based on transcription."""
-    from .models import db, VideoRecord, UserProfile
+    from .models import db, VideoRecord
 
     user_id = int(get_jwt_identity())
 
@@ -237,31 +241,12 @@ def analyze_video(video_id):
         if (video.transcription_status or '').lower() != 'completed' or not (video.full_transcription or '').strip():
             return jsonify({'error': 'Transcription not yet completed'}), 400
 
-        user_profile = UserProfile.query.filter_by(user_id=user_id).first()
-        api_key = None
-        ai_provider = 'ai_studio'
-        vertex_config = None
-        provider_for_request = 'ai_studio'
-        if user_profile and user_profile.selected_api_key:
-            api_key = user_profile.selected_api_key.get_decrypted_key()
-        ai_model = user_profile.ai_model if (user_profile and user_profile.ai_model) else 'gemini-3-flash'
-        if user_profile and user_profile.ai_provider:
-            ai_provider = user_profile.ai_provider
-        if user_profile and ai_provider == 'vertex_ai':
-            from .models import VertexServiceAccount
-            vertex_account = None
-            if user_profile.selected_vertex_account_id:
-                vertex_account = VertexServiceAccount.query.filter_by(
-                    id=user_profile.selected_vertex_account_id, user_id=user_id
-                ).first()
-            elif user_profile.selected_vertex_account:
-                vertex_account = user_profile.selected_vertex_account
-            if vertex_account:
-                vertex_config = {
-                    'service_account': vertex_account.get_decrypted_credentials(),
-                    'project_id': vertex_account.project_id
-                }
-            provider_for_request = 'vertex_ai'
+        # Always use .env service account for video analysis
+        vertex_config = _get_env_vertex_config()
+        if not vertex_config:
+            return jsonify({'error': 'Server Vertex AI credentials not configured'}), 503
+        provider_for_request = 'vertex_ai'
+        ai_model = 'gemini-3-flash-preview'
 
         app_obj = current_app._get_current_object()
 
@@ -287,7 +272,7 @@ def analyze_video(video_id):
                     for chunk in agent.generate_streaming_response(
                         prompt,
                         history=None,
-                        api_key=api_key,
+                        api_key=None,
                         model_name=ai_model,
                         user_id=str(user_id),
                         conversation_id=None,
@@ -681,7 +666,7 @@ def start_child_analysis(video_id):
     Start AI child-development analysis on an uploaded video.
     Requires a child_id in JSON body so the system knows age / name.
     """
-    from .models import db, VideoRecord, VideoAnalysisReport, Child, UserProfile, VertexServiceAccount
+    from .models import db, VideoRecord, VideoAnalysisReport, Child
 
     user_id = int(get_jwt_identity())
 
@@ -711,31 +696,13 @@ def start_child_analysis(video_id):
         db.session.add(report)
         db.session.commit()
 
-        # Gather provider config
-        user_profile = UserProfile.query.filter_by(user_id=user_id).first()
-        api_key = None
-        ai_provider = 'ai_studio'
-        vertex_config = None
-        if user_profile and user_profile.selected_api_key:
-            api_key = user_profile.selected_api_key.get_decrypted_key()
-        ai_model = (user_profile.ai_model if user_profile and user_profile.ai_model else 'gemini-2.0-flash')
-        if user_profile and user_profile.ai_provider:
-            ai_provider = user_profile.ai_provider
-        if user_profile and ai_provider == 'vertex_ai':
-            # Look up the VertexServiceAccount via the profile's selected ID
-            vertex_account = None
-            if user_profile.selected_vertex_account_id:
-                vertex_account = VertexServiceAccount.query.filter_by(
-                    id=user_profile.selected_vertex_account_id,
-                    user_id=user_id,
-                ).first()
-            elif user_profile.selected_vertex_account:
-                vertex_account = user_profile.selected_vertex_account
-            if vertex_account:
-                vertex_config = {
-                    'service_account': vertex_account.get_decrypted_credentials(),
-                    'project_id': vertex_account.project_id
-                }
+        # Always use .env service account + ADK pipeline for child analysis
+        vertex_config = _get_env_vertex_config()
+        if not vertex_config:
+            return jsonify({'error': 'Server Vertex AI credentials not configured. '
+                            'Set GCS_CREDENTIALS_PATH, GOOGLE_CLOUD_PROJECT in .env'}), 503
+        ai_provider = 'vertex_ai'
+        ai_model = 'gemini-3-flash-preview'
 
         mime_type = gcp_bucket.get_content_type_from_url(video.file_path)
         app_obj = current_app._get_current_object()
@@ -761,10 +728,8 @@ def start_child_analysis(video_id):
                         video_mime_type=mime_type,
                         child_name=rpt.child_name,
                         child_age_months=rpt.child_age_months,
-                        api_key=api_key,
                         model_name=ai_model,
                         user_id=str(user_id),
-                        provider=ai_provider,
                         vertex_config=vertex_config,
                     )
 
@@ -779,6 +744,15 @@ def start_child_analysis(video_id):
                     )
                     rpt.motor_analysis = results.get('motor_analysis_result')
                     rpt.language_analysis = results.get('language_analysis_result')
+
+                    # Extract behavioral/cognitive analysis results (4 sub-dimensions)
+                    bc_result = results.get('behavioral_cognitive_result', {})
+                    if isinstance(bc_result, dict):
+                        rpt.social_emotional_analysis = bc_result.get('social_emotional')
+                        rpt.cognitive_analysis = bc_result.get('cognitive')
+                        rpt.adaptive_behavior_analysis = bc_result.get('adaptive_behavior')
+                        rpt.selfcare_analysis = bc_result.get('selfcare')
+
                     final_report = results.get('final_report', {})
                     rpt.overall_assessment = final_report
                     rpt.recommendations = (

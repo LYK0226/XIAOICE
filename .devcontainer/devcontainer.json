@@ -14,7 +14,7 @@
         "ghcr.io/devcontainers/features/docker-in-docker": {}
     },
     "postStartCommand": "docker compose -f .devcontainer/docker-compose.yml up -d",
-    "postCreateCommand": "sudo apt-get update -qq && sudo apt-get install -y -qq libgl1-mesa-glx libglib2.0-0 > /dev/null 2>&1",
+    "postCreateCommand": "sudo apt-get update -qq && sudo apt-get install -y -qq libgl1-mesa-glx libglib2.0-0 libcairo2 libpango-1.0-0 libpangoft2-1.0-0 libgdk-pixbuf-2.0-0 shared-mime-info fonts-noto-cjk libcairo2-dev pkg-config > /dev/null 2>&1",
     "portsAttributes": {
         "5000": {
             "label": "webui"

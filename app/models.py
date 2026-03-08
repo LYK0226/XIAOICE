@@ -621,6 +621,10 @@ class VideoAnalysisReport(db.Model):
     # Analysis results (structured JSON)
     motor_analysis = db.Column(db.JSON, nullable=True)       # gross/fine motor results
     language_analysis = db.Column(db.JSON, nullable=True)     # speech/language results
+    social_emotional_analysis = db.Column(db.JSON, nullable=True)  # social/emotional results
+    cognitive_analysis = db.Column(db.JSON, nullable=True)         # cognitive development results
+    adaptive_behavior_analysis = db.Column(db.JSON, nullable=True) # adaptive behavior results
+    selfcare_analysis = db.Column(db.JSON, nullable=True)          # self-care development results
     overall_assessment = db.Column(db.JSON, nullable=True)    # combined summary
     recommendations = db.Column(db.JSON, nullable=True)       # improvement suggestions
     raw_transcription = db.Column(db.Text, nullable=True)     # video transcription used
@@ -667,6 +671,10 @@ class VideoAnalysisReport(db.Model):
         if include_full:
             data['motor_analysis'] = self.motor_analysis
             data['language_analysis'] = self.language_analysis
+            data['social_emotional_analysis'] = self.social_emotional_analysis
+            data['cognitive_analysis'] = self.cognitive_analysis
+            data['adaptive_behavior_analysis'] = self.adaptive_behavior_analysis
+            data['selfcare_analysis'] = self.selfcare_analysis
             data['overall_assessment'] = self.overall_assessment
             data['recommendations'] = self.recommendations
             data['raw_transcription'] = self.raw_transcription

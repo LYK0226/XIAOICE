@@ -665,7 +665,7 @@ body.vm-video-page .vm-container {
 
 .analysis-result-modal__dialog {
     position: relative;
-    width: min(760px, calc(100% - 32px));
+    width: min(900px, calc(100% - 24px));
     margin: 10vh auto 0;
     background: rgba(255, 255, 255, 0.92);
     border: 1px solid rgba(155, 138, 184, 0.25);

@@ -714,6 +714,12 @@
         const overall = report?.overall_assessment || {};
         const recs = report?.recommendations || overall?.overall_recommendations || [];
 
+        // New dimensions from behavioral_cognitive analysis
+        const socialEmotional = report?.social_emotional_analysis || overall?.social_emotional || {};
+        const cognitive = report?.cognitive_analysis || overall?.cognitive || {};
+        const adaptiveBehavior = report?.adaptive_behavior_analysis || overall?.adaptive_behavior || {};
+        const selfcare = report?.selfcare_analysis || overall?.selfcare || {};
+
         function statusBadge(s) {
             const colors = { TYPICAL: '#c6f6d5', CONCERN: '#fefcbf', NEEDS_ATTENTION: '#fed7d7' };
             const labels = {
@@ -732,9 +738,78 @@
             return items.map(i => `<li>${escapeHtml(i)}</li>`).join('');
         }
 
+        function complianceStatusLabel(s) {
+            const map = {
+                PASS: { label: t('reportStdPass'), bg: '#c6f6d5', color: '#22543d' },
+                CONCERN: { label: t('reportStdConcern'), bg: '#fefcbf', color: '#744210' },
+                UNABLE_TO_ASSESS: { label: t('reportStdUnable'), bg: '#e2e8f0', color: '#4a5568' },
+            };
+            const m = map[s] || { label: s || '—', bg: '#e2e8f0', color: '#4a5568' };
+            return `<span style="background:${m.bg};color:${m.color};padding:1px 6px;border-radius:8px;font-size:0.85em;font-weight:bold;">${escapeHtml(m.label)}</span>`;
+        }
+
+        function standardsCategoryLabel(item) {
+            return item?.category_label || item?.category || '—';
+        }
+
+        function resolveStandardsData(section, fallbackSection) {
+            const sectionStandards = Array.isArray(section?.standards_table) ? section.standards_table : [];
+            const fallbackStandards = Array.isArray(fallbackSection?.standards_compliance) ? fallbackSection.standards_compliance : [];
+
+            return {
+                standards: sectionStandards.length ? sectionStandards : fallbackStandards,
+                ragAvailable: typeof section?.rag_available === 'boolean'
+                    ? (section.rag_available === false && fallbackStandards.length ? true : section.rag_available)
+                    : fallbackSection?.rag_available
+            };
+        }
+
+        function standardsTableHtml(standards, ragAvailable) {
+            if (ragAvailable === false) {
+                return `<p style="background:#fffbeb;border-left:4px solid #f6ad55;padding:8px 12px;border-radius:4px;font-size:0.9em;color:#744210;">${escapeHtml(t('reportStandardsNoRag'))}</p>`;
+            }
+            if (!standards || !Array.isArray(standards) || standards.length === 0) return '';
+            let rows = standards.map(item => `
+                <tr>
+                    <td>${escapeHtml(item.standard || '—')}</td>
+                    <td>${escapeHtml(standardsCategoryLabel(item))}</td>
+                    <td style="text-align:center;">${complianceStatusLabel(item.status)}</td>
+                    <td style="font-size:0.85em;">${escapeHtml(item.rationale || '—')}</td>
+                </tr>`).join('');
+            return `
+                <p><strong>${escapeHtml(t('reportStandardsTable'))}</strong></p>
+                <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:8px 0;">
+                    <thead><tr style="background:#edf2f7;">
+                        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #cbd5e0;">${escapeHtml(t('reportStdHeader'))}</th>
+                        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #cbd5e0;">${escapeHtml(t('reportStdCategory'))}</th>
+                        <th style="padding:6px 8px;text-align:center;border-bottom:2px solid #cbd5e0;">${escapeHtml(t('reportStdResult'))}</th>
+                        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #cbd5e0;">${escapeHtml(t('reportStdRationale'))}</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                </div>`;
+        }
+
+        function dimensionHtml(title, section, fallbackSection) {
+            if (!section || Object.keys(section).length === 0) return '';
+            const { standards, ragAvailable } = resolveStandardsData(section, fallbackSection);
+            let html = `<h4>${escapeHtml(title)} ${statusBadge(section?.status)}</h4>`;
+            html += `<p>${escapeHtml(section?.findings || '')}</p>`;
+            html += standardsTableHtml(standards, ragAvailable);
+            if (section?.concerns?.length) html += `<p><strong>${escapeHtml(t('reportConcerns'))}</strong></p><ul>${listHtml(section.concerns)}</ul>`;
+            if (section?.recommendations?.length) html += `<p><strong>${escapeHtml(t('reportRecommendations'))}</strong></p><ul>${listHtml(section.recommendations)}</ul>`;
+            return html;
+        }
+
         const execSummary = overall?.executive_summary || t('reportCompleted');
-        const motorSection = overall?.motor_development || motor;
-        const langSection = overall?.language_development || language;
+        const pickSection = (primary, fallback) => (primary && Object.keys(primary).length ? primary : fallback);
+        const motorSection = pickSection(overall?.motor_development, motor);
+        const langSection = pickSection(overall?.language_development, language);
+        const socialSection = pickSection(overall?.social_emotional, socialEmotional);
+        const cognitiveSection = pickSection(overall?.cognitive, cognitive);
+        const adaptiveSection = pickSection(overall?.adaptive_behavior, adaptiveBehavior);
+        const selfcareSection = pickSection(overall?.selfcare, selfcare);
         const overallRecs = Array.isArray(recs) ? recs : (overall?.overall_recommendations || []);
 
                 const ageText = t('childAgeMonths', {
@@ -755,15 +830,12 @@
                 <h4>${escapeHtml(t('reportSummaryTitle'))}</h4>
             <p>${escapeHtml(execSummary)}</p>
 
-                <h4>${escapeHtml(t('reportMotorTitle'))} ${statusBadge(motorSection?.status)}</h4>
-            <p>${escapeHtml(motorSection?.findings || '')}</p>
-                ${motorSection?.concerns?.length ? '<p><strong>' + escapeHtml(t('reportConcerns')) + '</strong></p><ul>' + listHtml(motorSection.concerns) + '</ul>' : ''}
-                ${motorSection?.recommendations?.length ? '<p><strong>' + escapeHtml(t('reportRecommendations')) + '</strong></p><ul>' + listHtml(motorSection.recommendations) + '</ul>' : ''}
-
-                <h4>${escapeHtml(t('reportLanguageTitle'))} ${statusBadge(langSection?.status)}</h4>
-            <p>${escapeHtml(langSection?.findings || '')}</p>
-                ${langSection?.concerns?.length ? '<p><strong>' + escapeHtml(t('reportConcerns')) + '</strong></p><ul>' + listHtml(langSection.concerns) + '</ul>' : ''}
-                ${langSection?.recommendations?.length ? '<p><strong>' + escapeHtml(t('reportRecommendations')) + '</strong></p><ul>' + listHtml(langSection.recommendations) + '</ul>' : ''}
+            ${dimensionHtml(t('reportMotorTitle'), motorSection, motor)}
+            ${dimensionHtml(t('reportLanguageTitle'), langSection, language)}
+            ${dimensionHtml(t('reportSocialEmotionalTitle'), socialSection, socialEmotional)}
+            ${dimensionHtml(t('reportCognitiveTitle'), cognitiveSection, cognitive)}
+            ${dimensionHtml(t('reportAdaptiveBehaviorTitle'), adaptiveSection, adaptiveBehavior)}
+            ${dimensionHtml(t('reportSelfcareTitle'), selfcareSection, selfcare)}
 
                 ${overallRecs.length ? '<h4>' + escapeHtml(t('reportOverallRecommendations')) + '</h4><ul>' + listHtml(overallRecs) + '</ul>' : ''}
             ${downloadBtn}

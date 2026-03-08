@@ -339,6 +339,12 @@ class UploadsManager {
         const overall = report?.overall_assessment || {};
         const recs = report?.recommendations || overall?.overall_recommendations || [];
 
+        // New dimensions from behavioral_cognitive analysis
+        const socialEmotional = report?.social_emotional_analysis || overall?.social_emotional || {};
+        const cognitive = report?.cognitive_analysis || overall?.cognitive || {};
+        const adaptiveBehavior = report?.adaptive_behavior_analysis || overall?.adaptive_behavior || {};
+        const selfcare = report?.selfcare_analysis || overall?.selfcare || {};
+
         const statusBadge = (s) => {
             const colors = { TYPICAL: '#c6f6d5', CONCERN: '#fefcbf', NEEDS_ATTENTION: '#fed7d7' };
             const labels = { TYPICAL: '✅ 正常', CONCERN: '⚠️ 需要關注', NEEDS_ATTENTION: '🔴 需要注意' };
@@ -353,9 +359,78 @@ class UploadsManager {
             return items.map(i => `<li>${this.escapeHtml(i)}</li>`).join('');
         };
 
+        const complianceStatusLabel = (s) => {
+            const map = {
+                PASS: { label: '✅ 達標', bg: '#c6f6d5', color: '#22543d' },
+                CONCERN: { label: '⚠️ 需關注', bg: '#fefcbf', color: '#744210' },
+                UNABLE_TO_ASSESS: { label: '❓ 無法評估', bg: '#e2e8f0', color: '#4a5568' },
+            };
+            const m = map[s] || { label: s || '—', bg: '#e2e8f0', color: '#4a5568' };
+            return `<span style="background:${m.bg};color:${m.color};padding:1px 6px;border-radius:8px;font-size:0.85em;font-weight:bold;">${this.escapeHtml(m.label)}</span>`;
+        };
+
+        const standardsCategoryLabel = (item) => {
+            return item?.category_label || item?.category || '—';
+        };
+
+        const resolveStandardsData = (section, fallbackSection) => {
+            const sectionStandards = Array.isArray(section?.standards_table) ? section.standards_table : [];
+            const fallbackStandards = Array.isArray(fallbackSection?.standards_compliance) ? fallbackSection.standards_compliance : [];
+
+            return {
+                standards: sectionStandards.length ? sectionStandards : fallbackStandards,
+                ragAvailable: typeof section?.rag_available === 'boolean'
+                    ? (section.rag_available === false && fallbackStandards.length ? true : section.rag_available)
+                    : fallbackSection?.rag_available
+            };
+        };
+
+        const standardsTableHtml = (standards, ragAvailable) => {
+            if (ragAvailable === false) {
+                return '<p style="background:#fffbeb;border-left:4px solid #f6ad55;padding:8px 12px;border-radius:4px;font-size:0.9em;color:#744210;">⚠️ 未找到該年齡層的參考標準，無法進行逐項評估。</p>';
+            }
+            if (!standards || !Array.isArray(standards) || standards.length === 0) return '';
+            let rows = standards.map(item => `
+                <tr>
+                    <td>${this.escapeHtml(item.standard || '—')}</td>
+                    <td>${this.escapeHtml(standardsCategoryLabel(item))}</td>
+                    <td style="text-align:center;">${complianceStatusLabel(item.status)}</td>
+                    <td style="font-size:0.85em;">${this.escapeHtml(item.rationale || '—')}</td>
+                </tr>`).join('');
+            return `
+                <p><strong>📊 年齡標準評估表</strong></p>
+                <div style="overflow-x:auto;">
+                <table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:8px 0;">
+                    <thead><tr style="background:#edf2f7;">
+                        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #cbd5e0;">標準項目</th>
+                        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #cbd5e0;">分類</th>
+                        <th style="padding:6px 8px;text-align:center;border-bottom:2px solid #cbd5e0;">評估結果</th>
+                        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #cbd5e0;">說明</th>
+                    </tr></thead>
+                    <tbody>${rows}</tbody>
+                </table>
+                </div>`;
+        };
+
+        const dimensionHtml = (title, section, fallbackSection) => {
+            if (!section || Object.keys(section).length === 0) return '';
+            const { standards, ragAvailable } = resolveStandardsData(section, fallbackSection);
+            let html = `<h4>${title} ${statusBadge(section?.status)}</h4>`;
+            html += `<p>${this.escapeHtml(section?.findings || '')}</p>`;
+            html += standardsTableHtml(standards, ragAvailable);
+            if (section?.concerns?.length) html += '<p><strong>關注事項：</strong></p><ul>' + listHtml(section.concerns) + '</ul>';
+            if (section?.recommendations?.length) html += '<p><strong>建議：</strong></p><ul>' + listHtml(section.recommendations) + '</ul>';
+            return html;
+        };
+
         const execSummary = overall?.executive_summary || '分析已完成';
-        const motorSection = overall?.motor_development || motor;
-        const langSection = overall?.language_development || language;
+        const pickSection = (primary, fallback) => (primary && Object.keys(primary).length ? primary : fallback);
+        const motorSection = pickSection(overall?.motor_development, motor);
+        const langSection = pickSection(overall?.language_development, language);
+        const socialSection = pickSection(overall?.social_emotional, socialEmotional);
+        const cognitiveSection = pickSection(overall?.cognitive, cognitive);
+        const adaptiveSection = pickSection(overall?.adaptive_behavior, adaptiveBehavior);
+        const selfcareSection = pickSection(overall?.selfcare, selfcare);
         const overallRecs = Array.isArray(recs) ? recs : (overall?.overall_recommendations || []);
 
         const downloadBtn = report?.pdf_gcs_url
@@ -370,14 +445,12 @@ class UploadsManager {
                <strong style="margin-left:16px;">年齡：</strong>${report?.child_age_months?.toFixed(0) || '?'} 個月</p>
             <h4>📋 綜合摘要</h4>
             <p>${this.escapeHtml(execSummary)}</p>
-            <h4>🏃 身體動作發展 ${statusBadge(motorSection?.status)}</h4>
-            <p>${this.escapeHtml(motorSection?.findings || '')}</p>
-            ${motorSection?.concerns?.length ? '<p><strong>關注事項：</strong></p><ul>' + listHtml(motorSection.concerns) + '</ul>' : ''}
-            ${motorSection?.recommendations?.length ? '<p><strong>建議：</strong></p><ul>' + listHtml(motorSection.recommendations) + '</ul>' : ''}
-            <h4>🗣️ 語言發展 ${statusBadge(langSection?.status)}</h4>
-            <p>${this.escapeHtml(langSection?.findings || '')}</p>
-            ${langSection?.concerns?.length ? '<p><strong>關注事項：</strong></p><ul>' + listHtml(langSection.concerns) + '</ul>' : ''}
-            ${langSection?.recommendations?.length ? '<p><strong>建議：</strong></p><ul>' + listHtml(langSection.recommendations) + '</ul>' : ''}
+            ${dimensionHtml('🏃 身體動作發展', motorSection, motor)}
+            ${dimensionHtml('🗣️ 語言發展', langSection, language)}
+            ${dimensionHtml('👥 社交情緒發展', socialSection, socialEmotional)}
+            ${dimensionHtml('🧠 認知發展', cognitiveSection, cognitive)}
+            ${dimensionHtml('🔄 適應性行為', adaptiveSection, adaptiveBehavior)}
+            ${dimensionHtml('🧹 自理能力', selfcareSection, selfcare)}
             ${overallRecs.length ? '<h4>📌 整體建議</h4><ul>' + listHtml(overallRecs) + '</ul>' : ''}
             ${downloadBtn}
         `;
