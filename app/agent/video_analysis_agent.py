@@ -370,7 +370,7 @@ def _create_vertex_model(model_name: str, client) -> 'Gemini':
 _GENERATION_CONFIG = types.GenerateContentConfig(
     temperature=0.3,
     top_p=0.9,
-    max_output_tokens=8192,
+    max_output_tokens=65536,
     safety_settings=[
         types.SafetySetting(
             category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,

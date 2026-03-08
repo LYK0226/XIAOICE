@@ -113,13 +113,17 @@ def pose_detection_page():
         return redirect(url_for('main.login_page'))
 
     try:
-        decode_token(token)
+        data = decode_token(token)
+        from .models import User
+        user = User.query.get(data.get('sub'))
+        if not user:
+            return redirect(url_for('main.login_page'))
     except Exception:
         response = redirect(url_for('main.login_page'))
         response.delete_cookie('access_token')
         return response
 
-    return render_template('pose_detection.html')
+    return render_template('pose_detection.html', user=user)
 
 
 @bp.route('/video')
@@ -132,13 +136,17 @@ def video_management_page():
         return redirect(url_for('main.login_page'))
 
     try:
-        decode_token(token)
+        data = decode_token(token)
+        from .models import User
+        user = User.query.get(data.get('sub'))
+        if not user:
+            return redirect(url_for('main.login_page'))
     except Exception:
         response = redirect(url_for('main.login_page'))
         response.delete_cookie('access_token')
         return response
 
-    return render_template('video_access.html')
+    return render_template('video_access.html', user=user)
 
 
 @bp.route('/admin')

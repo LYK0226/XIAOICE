@@ -680,7 +680,7 @@ def _generate_vertex_streaming_response(
             generation_config={
                 'temperature': 1.0,
                 'top_p': 0.95,
-                'max_output_tokens': 8192,
+                'max_output_tokens': 65536,
             }
         )
         
