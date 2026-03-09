@@ -123,6 +123,7 @@
   "placeholder.oldPassword": "現在のパスワードを入力",
   "placeholder.newPassword": "新しいパスワードを入力",
   "placeholder.confirmPassword": "新しいパスワードを確認",
+  "placeholder.confirmDeletionPassword": "パスワードを入力",
   "stopReading": "読み上げを停止",
   "noConversations": "会話はまだありません",
   "untitledConversation": "名称未設定の会話",

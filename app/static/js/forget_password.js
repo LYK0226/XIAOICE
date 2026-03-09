@@ -1,24 +1,4 @@
-// Forget Password Page JavaScript — Firebase password reset email only.
-
-// ============================================================================
-// Firebase Initialization
-// ============================================================================
-let firebaseReady = false;
-
-async function initFirebaseForReset() {
-    try {
-        const res = await fetch('/auth/firebase-config');
-        if (!res.ok) return;
-        const config = await res.json();
-        if (!config.apiKey || !config.authDomain || !config.projectId) return;
-        firebase.initializeApp(config);
-        firebaseReady = true;
-    } catch (e) {
-        console.warn('Firebase not available for password reset:', e);
-    }
-}
-
-initFirebaseForReset();
+// Forget Password Page JavaScript — Routes through backend for verification policy.
 
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('forget-password-form');
@@ -30,11 +10,40 @@ document.addEventListener('DOMContentLoaded', function() {
     const sendBtn = document.getElementById('verify-btn');
     const resetError = document.getElementById('reset-error');
     const resetSuccess = document.getElementById('reset-success');
+    const resendBtn = document.getElementById('resend-reset-btn');
 
-    // Handle form submission — send Firebase password reset email
+    let lastEmail = '';
+
+    // Handle form submission — send reset request to backend
     form.addEventListener('submit', async function(e) {
         e.preventDefault();
         await handleSendResetEmail();
+    });
+
+    // Resend button handler
+    resendBtn?.addEventListener('click', async function() {
+        if (!lastEmail) return;
+        resendBtn.textContent = 'Sending...';
+        resendBtn.disabled = true;
+        try {
+            const res = await fetch('/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: lastEmail })
+            });
+            const data = await res.json();
+            if (res.ok && data.code === 'reset_sent') {
+                resendBtn.textContent = 'Email sent! Check your inbox.';
+            } else {
+                resendBtn.textContent = data.error || data.message || 'Failed to resend.';
+            }
+        } catch (_) {
+            resendBtn.textContent = 'Network error — try again';
+        }
+        setTimeout(() => {
+            resendBtn.textContent = 'Resend Email';
+            resendBtn.disabled = false;
+        }, 30000); // 30s cooldown
     });
 
     async function handleSendResetEmail() {
@@ -42,6 +51,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         resetError.textContent = '';
         resetError.style.display = 'none';
+        resetError.style.color = '';
 
         if (!email) {
             showError(resetError, 'Please enter your email address.');
@@ -53,30 +63,71 @@ document.addEventListener('DOMContentLoaded', function() {
             return;
         }
 
-        if (!firebaseReady) {
-            showError(resetError, 'Password reset service is not available. Please try again later.');
-            return;
-        }
-
+        lastEmail = email;
         showLoading(sendBtn, 'Sending...');
 
         try {
-            await firebase.auth().sendPasswordResetEmail(email);
-            // Show success
-            goToStep('success');
-            resetSuccess.textContent = 'A password reset email has been sent to ' + email + '. Please check your inbox (including spam folder).';
-            resetSuccess.style.display = 'block';
-        } catch (fbErr) {
-            console.error('Firebase password reset error:', fbErr.code);
-            if (fbErr.code === 'auth/user-not-found') {
-                showError(resetError, 'No account found with this email address.');
-            } else if (fbErr.code === 'auth/invalid-email') {
-                showError(resetError, 'Please enter a valid email address.');
-            } else if (fbErr.code === 'auth/too-many-requests') {
-                showError(resetError, 'Too many requests. Please try again later.');
-            } else {
-                showError(resetError, 'Failed to send reset email. Please try again.');
+            const res = await fetch('/auth/forgot-password', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email })
+            });
+            const data = await res.json();
+
+            if (!res.ok) {
+                // Error from server (e.g. Google account)
+                showError(resetError, data.error || 'Failed to process request.');
+                return;
             }
+
+            // Unverified account — needs email verification first
+            if (data.code === 'verification_needed') {
+                goToStep('success');
+                const successIcon = document.querySelector('#step-success .success-icon i');
+                if (successIcon) {
+                    successIcon.className = 'fas fa-exclamation-triangle';
+                    successIcon.style.color = '#e67e22';
+                }
+                resetSuccess.style.color = '#e67e22';
+                resetSuccess.innerHTML = '<strong>Email Not Verified</strong><br>' + data.message +
+                    '<br><small style="color: #888; margin-top: 6px; display: inline-block;"><i class="fas fa-info-circle"></i> Please sign in first to resend the verification email.</small>';
+                resetSuccess.style.display = 'block';
+                // Hide resend for verification_needed (they need to verify first via login page)
+                resendBtn.style.display = 'none';
+                return;
+            }
+
+            // Reset email sent successfully
+            if (data.code === 'reset_sent') {
+                goToStep('success');
+                const successIcon = document.querySelector('#step-success .success-icon i');
+                if (successIcon) {
+                    successIcon.className = 'fas fa-check-circle';
+                    successIcon.style.color = '';
+                }
+                resetSuccess.style.color = '';
+                resetSuccess.innerHTML = (data.message || 'A password reset email has been sent. Please check your inbox.') +
+                    '<br><small style="color: #888; margin-top: 6px; display: inline-block;"><i class="fas fa-info-circle"></i> Can\'t find it? Check your spam or junk folder.</small>';
+                resetSuccess.style.display = 'block';
+                resendBtn.style.display = 'inline-block';
+                return;
+            }
+
+            // Generic success (e.g. anti-enumeration for unknown emails)
+            goToStep('success');
+            const successIcon = document.querySelector('#step-success .success-icon i');
+            if (successIcon) {
+                successIcon.className = 'fas fa-check-circle';
+                successIcon.style.color = '';
+            }
+            resetSuccess.style.color = '';
+            resetSuccess.innerHTML = (data.message || 'If an account exists with that email, we have sent you an email. Please check your inbox.') +
+                '<br><small style="color: #888; margin-top: 6px; display: inline-block;"><i class="fas fa-info-circle"></i> Can\'t find it? Check your spam or junk folder.</small>';
+            resetSuccess.style.display = 'block';
+            resendBtn.style.display = 'inline-block';
+        } catch (err) {
+            console.error('Forgot password error:', err);
+            showError(resetError, 'Network error. Please check your connection.');
         } finally {
             hideLoading(sendBtn, 'Send Reset Link');
         }

@@ -380,12 +380,16 @@
 <div id="editEmailModal" class="modal">
     <div class="modal-content custom-modal-mini">
         <h2 data-i18n="settings.profile.edit_email">編輯電子郵件</h2>
+        <p style="text-align:center; margin-bottom:12px; color:#666; font-size:13px;">
+            <i class="fas fa-info-circle"></i>
+            <span data-i18n="settings.profile.edit_email_note">驗證電郵將發送至新地址，驗證後自動更新。</span>
+        </p>
         <div class="form-group">
             <input type="email" id="editEmailInput" class="custom-modal-input" placeholder="輸入新的電子郵件地址" required>
         </div>
         <div class="custom-modal-actions">
             <button id="saveEmailBtn" class="custom-modal-btn primary">
-                <i class="fas fa-save"></i> <span data-i18n="settings.profile.save">保存</span>
+                <i class="fas fa-paper-plane"></i> <span data-i18n="settings.profile.send_verification">發送驗證</span>
             </button>
             <button id="cancelEmailBtn" class="custom-modal-btn secondary">
                 <i class="fas fa-times"></i> <span data-i18n="settings.profile.cancel">取消</span>
@@ -414,9 +418,9 @@
 <div id="deleteAccountModal" class="modal">
     <div class="modal-content custom-modal-mini">
         <h2 data-i18n="settings.profile.delete_account">刪除帳號</h2>
-        <p style="text-align: center; margin-bottom: 12px; color: #b00020; font-size: 14px;">請輸入您的電子郵件地址以確認刪除帳號。</p>
+        <p id="deleteAccountPrompt" style="text-align: center; margin-bottom: 12px; color: #b00020; font-size: 14px;">請輸入您的密碼以確認刪除帳號。</p>
         <div class="custom-modal-input-group">
-            <input type="email" id="deleteAccountEmailInput" class="custom-modal-input" placeholder="輸入電子郵件" required>
+            <input type="password" id="deleteAccountPasswordInput" class="custom-modal-input" placeholder="輸入密碼" required>
         </div>
         <div class="custom-modal-actions">
             <button id="confirmDeleteAccountBtn" class="custom-modal-btn delete-btn" style="background-color: #b00020; color: white;">

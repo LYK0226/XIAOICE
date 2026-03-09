@@ -122,6 +122,7 @@
   "placeholder.oldPassword": "輸入舊密碼",
   "placeholder.newPassword": "輸入新密碼",
   "placeholder.confirmPassword": "再次輸入新密碼",
+  "placeholder.confirmDeletionPassword": "輸入密碼",
   "stopReading": "停止朗讀",
   "noConversations": "暫無對話",
   "untitledConversation": "未命名對話",

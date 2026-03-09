@@ -14,6 +14,7 @@ from .models import db, User, UserProfile
 from functools import wraps
 import re
 import logging
+import requests as http_requests
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -198,6 +199,42 @@ def delete_firebase_user(firebase_uid: str) -> bool:
         return False
 
 
+def _send_firebase_email(email: str, request_type: str) -> bool:
+    """Send an email via Firebase Auth REST API (sendOobCode).
+
+    This actually triggers email delivery, unlike generate_*_link().
+
+    Args:
+        email: recipient email address
+        request_type: 'PASSWORD_RESET' — sends password reset email
+
+    Returns True if the API call succeeded.
+    """
+    from flask import current_app
+    api_key = current_app.config.get('FIREBASE_API_KEY')
+    if not api_key:
+        logger.error('FIREBASE_API_KEY not configured — cannot send email')
+        return False
+
+    url = f'https://identitytoolkit.googleapis.com/v1/accounts:sendOobCode?key={api_key}'
+    payload = {
+        'requestType': request_type,
+        'email': email,
+    }
+
+    try:
+        resp = http_requests.post(url, json=payload, timeout=10)
+        if resp.status_code == 200:
+            logger.info(f'Firebase email sent: {request_type} to {email}')
+            return True
+        else:
+            logger.warning(f'Firebase sendOobCode failed ({resp.status_code}): {resp.text}')
+            return False
+    except Exception as e:
+        logger.error(f'Firebase REST API email send failed: {e}')
+        return False
+
+
 # ============================================================================
 # Section 3: JWT Token Helpers & Decorators
 # ============================================================================
@@ -300,8 +337,22 @@ def firebase_login():
         if not decoded:
             return jsonify({'error': 'Invalid or expired Firebase token'}), 401
 
-        # Find or create local user
+        # --- Email verification gate ---
+        # For email/password (non-Google) sign-ins, require verified email
+        # But always sync user to local DB first (even if unverified)
+        firebase_info = decoded.get('firebase', {})
+        sign_in_provider = firebase_info.get('sign_in_provider', 'unknown')
+        email_verified = decoded.get('email_verified', False)
+
+        # Find or create local user (always, regardless of verification status)
         user, is_new = get_or_create_user_from_firebase(decoded)
+
+        if sign_in_provider == 'password' and not email_verified:
+            return jsonify({
+                'error': 'Please verify your email address before signing in. Check your inbox for the verification link.',
+                'code': 'email_not_verified',
+                'email': decoded.get('email', '')
+            }), 403
 
         if not user.is_active:
             return jsonify({'error': 'Account is disabled'}), 403
@@ -324,6 +375,66 @@ def firebase_config():
         'authDomain': current_app.config.get('FIREBASE_AUTH_DOMAIN', ''),
         'projectId': current_app.config.get('FIREBASE_PROJECT_ID', ''),
     }), 200
+
+
+# ============================================================================
+# Email Verification
+# ============================================================================
+
+@auth_bp.route('/resend-verification', methods=['POST'])
+def resend_verification():
+    """Check if a Firebase user exists and needs verification.
+
+    Returns status so the frontend can decide whether to send
+    the verification email via Firebase client SDK.
+
+    Expects JSON: { "email": "user@example.com" }
+    """
+    try:
+        data = request.get_json() or {}
+        email = (data.get('email') or '').strip().lower()
+
+        if not email:
+            return jsonify({'error': 'Email is required'}), 400
+        if not validate_email(email):
+            return jsonify({'error': 'Invalid email format'}), 400
+
+        if not is_firebase_enabled():
+            return jsonify({'error': 'Email verification service is not available'}), 503
+
+        try:
+            from firebase_admin import auth as fb_auth
+            try:
+                fb_user = fb_auth.get_user_by_email(email)
+            except Exception:
+                # Anti-enumeration: generic response
+                return jsonify({
+                    'message': 'If an account exists with that email, please use the resend button to send a verification email.',
+                    'action': 'send_verification'
+                }), 200
+
+            if fb_user.email_verified:
+                return jsonify({
+                    'message': 'This email is already verified. You can sign in directly.',
+                    'action': 'already_verified'
+                }), 200
+
+            # User exists and is unverified — tell frontend to send via client SDK
+            return jsonify({
+                'message': 'Please click the button to send a verification email.',
+                'action': 'send_verification'
+            }), 200
+
+        except Exception as e:
+            current_app.logger.error(f'Resend verification check error: {e}')
+            return jsonify({
+                'message': 'If an account exists with that email, please use the resend button to send a verification email.',
+                'action': 'send_verification'
+            }), 200
+
+    except Exception as e:
+        current_app.logger.error(f'Resend verification error: {e}')
+        return jsonify({'error': 'An error occurred'}), 500
 
 
 # ============================================================================
@@ -370,11 +481,35 @@ def logout():
 @auth_bp.route('/me', methods=['GET'])
 @jwt_required()
 def get_current_user():
-    """Get current logged-in user information."""
+    """Get current logged-in user information.
+    
+    Also syncs email from Firebase if it has changed (e.g. after email verification).
+    """
     user_id = int(get_jwt_identity())
     user = User.query.get(user_id)
     if not user:
         return jsonify({'error': 'User not found'}), 404
+
+    # Auto-sync email from Firebase (lightweight check)
+    if user.firebase_uid and is_firebase_enabled():
+        try:
+            from firebase_admin import auth as fb_auth
+            fb_user = fb_auth.get_user(user.firebase_uid)
+            firebase_email = (fb_user.email or '').lower().strip()
+            changed = False
+            if firebase_email and firebase_email != user.email:
+                existing = User.query.filter(User.email == firebase_email, User.id != user.id).first()
+                if not existing:
+                    user.email = firebase_email
+                    changed = True
+            if fb_user.email_verified != user.email_verified:
+                user.email_verified = fb_user.email_verified
+                changed = True
+            if changed:
+                db.session.commit()
+        except Exception as e:
+            current_app.logger.warning(f'Firebase email sync in /me failed: {e}')
+
     return jsonify({
         'user': user.to_dict()
     }), 200
@@ -508,6 +643,13 @@ def update_profile():
             if not validate_email(email):
                 return jsonify({'error': 'Invalid email format'}), 400
             
+            # Firebase users must change email through Firebase verification flow
+            if user.firebase_uid:
+                return jsonify({
+                    'error': 'Email changes must go through email verification. Use the edit email button in settings.',
+                    'code': 'use_firebase_email_change'
+                }), 400
+            
             # Check if email is already taken by another user
             existing_user = User.query.filter_by(email=email).first()
             if existing_user and existing_user.id != user_id:
@@ -528,6 +670,54 @@ def update_profile():
     except Exception as e:
         db.session.rollback()
         return jsonify({'error': f'Update failed: {str(e)}'}), 500
+
+@auth_bp.route('/sync-firebase-email', methods=['POST'])
+@jwt_required()
+def sync_firebase_email():
+    """Check if the user's email has changed on Firebase and sync to local DB."""
+    try:
+        user_id = int(get_jwt_identity())
+        user = User.query.get(user_id)
+        if not user:
+            return jsonify({'error': 'User not found'}), 404
+
+        if not user.firebase_uid:
+            return jsonify({'message': 'No Firebase account linked'}), 200
+
+        # Fetch current email from Firebase
+        try:
+            from firebase_admin import auth as fb_auth
+            fb_user = fb_auth.get_user(user.firebase_uid)
+        except Exception as e:
+            current_app.logger.warning(f'Failed to fetch Firebase user: {e}')
+            return jsonify({'error': 'Failed to check Firebase account'}), 500
+
+        firebase_email = (fb_user.email or '').lower().strip()
+        if firebase_email and firebase_email != user.email:
+            # Check that the new email isn't taken by another local user
+            existing = User.query.filter(User.email == firebase_email, User.id != user.id).first()
+            if existing:
+                return jsonify({'error': 'Email already in use by another account'}), 409
+            user.email = firebase_email
+            user.email_verified = fb_user.email_verified
+            user.updated_at = datetime.utcnow()
+            db.session.commit()
+            return jsonify({
+                'message': 'Email updated',
+                'email': firebase_email,
+                'synced': True
+            }), 200
+
+        return jsonify({
+            'message': 'Email is already in sync',
+            'email': user.email,
+            'synced': False
+        }), 200
+
+    except Exception as e:
+        db.session.rollback()
+        return jsonify({'error': f'Sync failed: {str(e)}'}), 500
+
 
 @auth_bp.route('/change-password', methods=['POST'])
 @jwt_required()
@@ -573,8 +763,7 @@ def change_password():
 def delete_account():
     """Delete the current user's account and associated files.
     
-    For local users: requires confirming password.
-    For Firebase-only users: requires confirming email address.
+    Requires confirming password (verified via Firebase signInWithPassword).
     """
     try:
         user_id = int(get_jwt_identity())
@@ -584,10 +773,32 @@ def delete_account():
 
         data = request.get_json() or {}
 
-        # Verify identity before deletion — all users confirm by email
-        confirm_email = data.get('confirm_email', '').strip().lower()
-        if not confirm_email or confirm_email != user.email:
-            return jsonify({'error': 'Please enter your email address to confirm account deletion'}), 400
+        # Verify identity: password verification via Firebase REST API
+        confirm_password = data.get('confirm_password', '').strip()
+        if not confirm_password:
+            return jsonify({'error': 'Please enter your password to confirm account deletion'}), 400
+
+        # Verify the password using Firebase REST API (signInWithPassword)
+        api_key = current_app.config.get('FIREBASE_API_KEY', '')
+        if not api_key:
+            return jsonify({'error': 'Firebase not configured'}), 500
+
+        verify_url = f'https://identitytoolkit.googleapis.com/v1/accounts:signInWithPassword?key={api_key}'
+        verify_resp = http_requests.post(verify_url, json={
+            'email': user.email,
+            'password': confirm_password,
+            'returnSecureToken': False
+        }, timeout=10)
+
+        if verify_resp.status_code != 200:
+            error_data = verify_resp.json().get('error', {})
+            error_msg = error_data.get('message', '')
+            if 'INVALID_PASSWORD' in error_msg or 'INVALID_LOGIN_CREDENTIALS' in error_msg:
+                return jsonify({'error': 'Incorrect password'}), 400
+            elif 'TOO_MANY_ATTEMPTS' in error_msg:
+                return jsonify({'error': 'Too many attempts, please try again later'}), 429
+            else:
+                return jsonify({'error': 'Password verification failed'}), 400
 
         # Attempt to delete avatar if stored in GCS or locally
         try:
@@ -696,14 +907,17 @@ def delete_account():
 
 @auth_bp.route('/forgot-password', methods=['POST'])
 def forgot_password():
-    """Send a Firebase password reset email.
-    
-    All password resets are now handled by Firebase.
-    Google-only users should use Google account recovery.
+    """Handle password reset requests with email verification policy.
+
+    Policy:
+    - Unverified email/password accounts: send verification email instead of reset.
+    - Verified email/password accounts: send password reset email.
+    - Google-only accounts: reject (use Google recovery).
+    - Unknown emails: return generic message (anti-enumeration).
     """
     try:
         data = request.get_json()
-        email = data.get('email', '').strip().lower()
+        email = (data.get('email') or '').strip().lower()
 
         if not email:
             return jsonify({'error': 'Email is required'}), 400
@@ -711,30 +925,52 @@ def forgot_password():
         if not validate_email(email):
             return jsonify({'error': 'Invalid email format'}), 400
 
-        # Check if user exists
-        user = User.query.filter_by(email=email).first()
-        if not user:
-            # Return success anyway to avoid email enumeration
-            return jsonify({
-                'message': 'If an account exists with that email, a password reset email has been sent.'
-            }), 200
+        if not is_firebase_enabled():
+            return jsonify({'error': 'Password reset service is not available'}), 503
 
-        # Google-only users cannot reset password here
-        if user.auth_provider == 'google.com':
-            return jsonify({
-                'error': 'This account uses Google sign-in. Please use the Google account recovery process instead.'
-            }), 400
-
-        # Send Firebase password reset email via Admin SDK
         try:
             from firebase_admin import auth as fb_auth
-            fb_auth.generate_password_reset_link(email)
-        except Exception as e:
-            current_app.logger.warning(f'Firebase password reset failed: {e}')
 
-        return jsonify({
-            'message': 'If an account exists with that email, a password reset email has been sent.'
-        }), 200
+            # Look up Firebase user
+            try:
+                fb_user = fb_auth.get_user_by_email(email)
+            except Exception:
+                # User doesn't exist — return generic message
+                return jsonify({
+                    'message': 'If an account exists with that email, we have sent you an email. Please check your inbox.'
+                }), 200
+
+            # Determine provider
+            providers = [p.provider_id for p in (fb_user.provider_data or [])]
+            is_google_only = 'google.com' in providers and 'password' not in providers
+
+            if is_google_only:
+                return jsonify({
+                    'error': 'This account uses Google sign-in. Please use the Google account recovery process instead.',
+                    'code': 'google_account'
+                }), 400
+
+            # For email/password users — check verification status
+            if not fb_user.email_verified:
+                # Unverified — tell frontend to send verification email via client SDK
+                return jsonify({
+                    'message': 'Your email is not yet verified. Please verify your email first, then try resetting your password.',
+                    'code': 'verification_needed'
+                }), 200
+
+            # Verified — send password reset email via REST API
+            _send_firebase_email(email, 'PASSWORD_RESET')
+
+            return jsonify({
+                'message': 'A password reset email has been sent. Please check your inbox (including spam folder).',
+                'code': 'reset_sent'
+            }), 200
+
+        except Exception as e:
+            current_app.logger.error(f'Forgot password error: {e}')
+            return jsonify({
+                'message': 'If an account exists with that email, we have sent you an email. Please check your inbox.'
+            }), 200
 
     except Exception as e:
         return jsonify({'error': f'An error occurred: {str(e)}'}), 500

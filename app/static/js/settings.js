@@ -1,5 +1,45 @@
 // Settings functionality - separated from chatbox.js
 
+// ===== Firebase Init for Settings (email change, account mgmt) =====
+let _firebaseReadyForSettings = false;
+let _firebaseUser = null; // Current Firebase user object
+
+// Returns a promise that resolves to the Firebase user (or null)
+function _getFirebaseUser() {
+    if (_firebaseUser) return Promise.resolve(_firebaseUser);
+    if (!_firebaseReadyForSettings) return Promise.resolve(null);
+    return new Promise((resolve) => {
+        const unsub = firebase.auth().onAuthStateChanged((user) => {
+            unsub();
+            _firebaseUser = user;
+            resolve(user);
+        });
+        // Timeout after 3s in case auth state never fires
+        setTimeout(() => { unsub(); resolve(null); }, 3000);
+    });
+}
+
+(async function initFirebaseForSettings() {
+    if (typeof firebase === 'undefined' || !firebase.auth) return;
+    try {
+        const res = await fetch('/auth/firebase-config');
+        if (!res.ok) return;
+        const cfg = await res.json();
+        if (!cfg.apiKey) return;
+        // Only initialize if not already done
+        if (!firebase.apps.length) {
+            firebase.initializeApp(cfg);
+        }
+        _firebaseReadyForSettings = true;
+        // Listen for auth state to cache the user
+        firebase.auth().onAuthStateChanged((user) => {
+            _firebaseUser = user;
+        });
+    } catch (e) {
+        console.warn('Firebase init for settings failed:', e);
+    }
+})();
+
 // ===== Translation System for Settings =====
 
 const settingsSupportedLanguages = ['zh-TW', 'zh-CN', 'en', 'ja'];
@@ -945,88 +985,78 @@ document.getElementById('saveUsernameBtn').addEventListener('click', async () =>
     }
 });
 
-// Save email from modal
+// Save email from modal — uses Firebase verifyBeforeUpdateEmail()
 document.getElementById('saveEmailBtn').addEventListener('click', async () => {
     const input = document.getElementById('editEmailInput');
     const value = input.value.trim();
+    const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
+    const supportedLangs = settingsSupportedLanguages;
+    const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
     
     if (!value) {
-        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = settingsSupportedLanguages;
-        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
-        const errorMessages = {
-            'zh-TW': '電子郵件不能為空',
-            'en': 'Email cannot be empty',
-            'ja': 'メールアドレスは空にできません'
-        };
-        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        const msgs = { 'zh-TW': '電子郵件不能為空', 'en': 'Email cannot be empty', 'ja': 'メールアドレスは空にできません' };
+        showCustomAlert(msgs[langToUse] || msgs['en']);
         return;
     }
     
     // Email validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(value)) {
-        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = settingsSupportedLanguages;
-        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
-        const errorMessages = {
-            'zh-TW': '請輸入有效的電子郵件地址',
-            'en': 'Please enter a valid email address',
-            'ja': '有効なメールアドレスを入力してください'
-        };
-        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        const msgs = { 'zh-TW': '請輸入有效的電子郵件地址', 'en': 'Please enter a valid email address', 'ja': '有効なメールアドレスを入力してください' };
+        showCustomAlert(msgs[langToUse] || msgs['en']);
         return;
     }
-    
+
+    // Check if same as current
+    const currentEmail = document.getElementById('profileEmail').value;
+    if (value.toLowerCase() === currentEmail.toLowerCase()) {
+        const msgs = { 'zh-TW': '新電子郵件與目前相同', 'en': 'New email is the same as current', 'ja': '新しいメールアドレスは現在と同じです' };
+        showCustomAlert(msgs[langToUse] || msgs['en']);
+        return;
+    }
+
+    // Use Firebase to send verification to the new email
+    if (typeof firebase === 'undefined') {
+        const msgs = { 'zh-TW': 'Firebase 未就緒，請重新整理頁面', 'en': 'Firebase not ready, please reload the page', 'ja': 'Firebaseの準備ができていません。ページを再読み込みしてください' };
+        showCustomAlert(msgs[langToUse] || msgs['en']);
+        return;
+    }
+
+    // Wait for Firebase auth state to resolve
+    const fbUser = await _getFirebaseUser();
+    if (!fbUser) {
+        const msgs = { 'zh-TW': '請重新登入後再更改電子郵件', 'en': 'Please re-login before changing your email', 'ja': 'メールアドレスを変更する前に再ログインしてください' };
+        showCustomAlert(msgs[langToUse] || msgs['en']);
+        return;
+    }
+
     try {
-        const response = await fetch('/auth/update-profile', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-            },
-            body: JSON.stringify({ email: value })
-        });
-        
-        if (response.ok) {
-            // Update the display field
-            document.getElementById('profileEmail').value = value;
-            
-            // Close modal
-            document.getElementById('editEmailModal').style.display = 'none';
-            
-            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-            const supportedLangs = settingsSupportedLanguages;
-            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
-            const successMessages = {
-                'zh-TW': '電子郵件已更新',
-                'en': 'Email updated successfully',
-                'ja': 'メールアドレスが正常に更新されました'
-            };
-            showCustomAlert(successMessages[langToUse] || successMessages['en']);
-        } else {
-            const error = await response.json();
-            const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-            const supportedLangs = settingsSupportedLanguages;
-            const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
-            const errorMessages = {
-                'zh-TW': '更新失敗',
-                'en': 'Update failed',
-                'ja': '更新に失敗しました'
-            };
-            showCustomAlert(error.error || errorMessages[langToUse] || errorMessages['en']);
-        }
-    } catch (error) {
-        console.error('Error updating email:', error);
-        const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
-        const supportedLangs = settingsSupportedLanguages;
-        const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
-        const errorMessages = {
-            'zh-TW': '更新失敗',
-            'en': 'Update failed',
-            'ja': '更新に失敗しました'
+        await fbUser.verifyBeforeUpdateEmail(value);
+        // Close modal
+        document.getElementById('editEmailModal').style.display = 'none';
+        const msgs = {
+            'zh-TW': '驗證電郵已發送至 ' + value + '。請查看收件箱（包括垃圾郵件資料夾），驗證後電子郵件將自動更新。',
+            'en': 'Verification email sent to ' + value + '. Please check your inbox (including spam/junk folder). Your email will be updated after verification.',
+            'ja': '確認メールが ' + value + ' に送信されました。受信トレイ（迷惑メールフォルダを含む）を確認してください。'
         };
-        showCustomAlert(errorMessages[langToUse] || errorMessages['en']);
+        showCustomAlert(msgs[langToUse] || msgs['en']);
+    } catch (error) {
+        console.error('Error changing email:', error);
+        if (error.code === 'auth/requires-recent-login' || error.code === 'auth/user-token-expired') {
+            const msgs = { 'zh-TW': '基於安全原因，請重新登入後再更改電子郵件', 'en': 'For security reasons, please re-login before changing your email', 'ja': 'セキュリティ上の理由から、メールアドレスを変更する前に再ログインしてください' };
+            showCustomAlert(msgs[langToUse] || msgs['en']);
+            // Sign out stale Firebase session so next login gets a fresh token
+            try { await firebase.auth().signOut(); _firebaseUser = null; } catch (_) {}
+        } else if (error.code === 'auth/email-already-in-use') {
+            const msgs = { 'zh-TW': '此電子郵件已被使用', 'en': 'This email is already in use', 'ja': 'このメールアドレスは既に使用されています' };
+            showCustomAlert(msgs[langToUse] || msgs['en']);
+        } else if (error.code === 'auth/invalid-email') {
+            const msgs = { 'zh-TW': '無效的電子郵件格式', 'en': 'Invalid email format', 'ja': '無効なメールアドレス形式です' };
+            showCustomAlert(msgs[langToUse] || msgs['en']);
+        } else {
+            const msgs = { 'zh-TW': '更改電子郵件失敗：' + (error.message || ''), 'en': 'Failed to change email: ' + (error.message || ''), 'ja': 'メールアドレスの変更に失敗しました' };
+            showCustomAlert(msgs[langToUse] || msgs['en']);
+        }
     }
 });
 
@@ -1084,51 +1114,70 @@ if (deleteAccountBtn) {
     deleteAccountBtn.addEventListener('click', () => {
         const modal = document.getElementById('deleteAccountModal');
         const input = document.getElementById('deleteAccountPasswordInput');
-        const toggleBtn = document.getElementById('deleteAccountToggle');
+        const prompt = document.getElementById('deleteAccountPrompt');
         
         // Reset state
         input.value = '';
-
-        // For Firebase/Google users, ask for email confirmation instead of password
-        if (_currentUserAuthProvider === 'google.com') {
-            input.type = 'email';
-            input.placeholder = 'Enter your email to confirm';
-            if (toggleBtn) toggleBtn.style.display = 'none';
-        } else {
-            input.type = 'password';
-            input.placeholder = '';
-            if (toggleBtn) {
-                toggleBtn.style.display = 'inline-flex';
-                toggleBtn.querySelector('i').className = 'fas fa-eye';
-                toggleBtn.setAttribute('aria-pressed', 'false');
-            }
-        }
-        
-        modal.style.display = 'block';
+        input.type = 'password';
 
         // Update language for the modal
         const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
         const supportedLangs = settingsSupportedLanguages;
         const langToUse = supportedLangs.includes(currentLang) ? currentLang : 'en';
-        updateSettingsLanguage(langToUse);
 
+        // Set appropriate placeholder and prompt
+        const passwordPrompts = {
+            'zh-TW': '請輸入您的密碼以確認刪除帳號。',
+            'en': 'Please enter your password to confirm account deletion.',
+            'ja': 'アカウント削除を確認するためにパスワードを入力してください。'
+        };
+        const passwordPlaceholders = {
+            'zh-TW': '輸入密碼',
+            'en': 'Enter your password',
+            'ja': 'パスワードを入力'
+        };
+
+        if (prompt) prompt.textContent = passwordPrompts[langToUse] || passwordPrompts['en'];
+        input.placeholder = passwordPlaceholders[langToUse] || passwordPlaceholders['en'];
+
+        updateSettingsLanguage(langToUse);
+        modal.style.display = 'block';
         input.focus();
     });
 }
 
 // Confirm Delete Account
 document.getElementById('confirmDeleteAccountBtn').addEventListener('click', async () => {
-    const emailInput = document.getElementById('deleteAccountEmailInput');
-    const inputValue = emailInput.value.trim();
+    const passwordInput = document.getElementById('deleteAccountPasswordInput');
+    const inputValue = passwordInput.value.trim();
     const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
 
     if (!inputValue) {
-        showCustomAlert({ 'zh-TW': '請輸入電子郵件以確認刪除', 'en': 'Please enter your email to confirm deletion', 'ja': '削除を確認するためにメールアドレスを入力してください' }[currentLang] || '請輸入電子郵件以確認刪除');
+        showCustomAlert({ 'zh-TW': '請輸入密碼以確認刪除', 'en': 'Please enter your password to confirm deletion', 'ja': '削除を確認するためにパスワードを入力してください' }[currentLang] || '請輸入密碼以確認刪除');
         return;
     }
 
-    const body = { confirm_email: inputValue };
+    // Re-authenticate with Firebase using password before deletion
+    try {
+        const fbUser = await _getFirebaseUser();
+        if (fbUser) {
+            // Re-authenticate with password
+            const credential = firebase.auth.EmailAuthProvider.credential(fbUser.email, inputValue);
+            await fbUser.reauthenticateWithCredential(credential);
+        }
+    } catch (authErr) {
+        console.error('Re-authentication failed:', authErr);
+        if (authErr.code === 'auth/wrong-password' || authErr.code === 'auth/invalid-credential') {
+            showCustomAlert({ 'zh-TW': '密碼錯誤，請重試', 'en': 'Incorrect password, please try again', 'ja': 'パスワードが正しくありません' }[currentLang] || '密碼錯誤，請重試');
+        } else if (authErr.code === 'auth/too-many-requests') {
+            showCustomAlert({ 'zh-TW': '嘗試次數過多，請稍後再試', 'en': 'Too many attempts, please try again later', 'ja': '試行回数が多すぎます。しばらくしてからもう一度お試しください' }[currentLang] || '嘗試次數過多，請稍後再試');
+        } else {
+            showCustomAlert({ 'zh-TW': '驗證失敗：' + (authErr.message || ''), 'en': 'Verification failed: ' + (authErr.message || ''), 'ja': '認証に失敗しました' }[currentLang] || '驗證失敗');
+        }
+        return;
+    }
 
+    // Password verified — proceed with backend deletion
     try {
         const token = localStorage.getItem('access_token');
         const response = await fetch('/auth/delete-account', {
@@ -1137,13 +1186,22 @@ document.getElementById('confirmDeleteAccountBtn').addEventListener('click', asy
                 'Content-Type': 'application/json',
                 'Authorization': `Bearer ${token}`
             },
-            body: JSON.stringify(body)
+            body: JSON.stringify({ confirm_password: inputValue })
         });
 
         if (response.ok) {
             // Clear local tokens and cookies, then redirect to home
             localStorage.removeItem('access_token');
             localStorage.removeItem('refresh_token');
+
+            // Sign out of Firebase as well
+            try {
+                if (typeof firebase !== 'undefined' && firebase.auth) {
+                    await firebase.auth().signOut();
+                }
+            } catch (e) {
+                console.warn('Firebase signout on delete:', e);
+            }
 
             // Try to call logout to clear cookies server-side (best-effort)
             try {
@@ -3085,14 +3143,38 @@ async function saveUserProfile(settings) {
     }
 }
 
+// Sync Firebase email to local DB (call when settings opens)
+async function syncFirebaseEmail() {
+    try {
+        const token = localStorage.getItem('access_token');
+        if (!token) return;
+        const res = await fetch('/auth/sync-firebase-email', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.synced && data.email) {
+                // Update the email display on the page
+                const emailEl = document.getElementById('profileEmail');
+                if (emailEl) emailEl.value = data.email;
+            }
+        }
+    } catch (e) {
+        console.warn('Firebase email sync failed:', e);
+    }
+}
+
 // Load user profile settings when settings modal opens
 document.getElementById('settings').addEventListener('click', () => {
     // Load API keys when opening settings
     setTimeout(() => {
+        loadUserProfile(); // Re-fetch profile (syncs email from Firebase)
         loadApiKeys();
         loadUserModel();
         loadUserProfileSettings();
         loadChildren(); // Load children profiles
+        syncFirebaseEmail(); // Backup sync
     }, 100);
 })
 

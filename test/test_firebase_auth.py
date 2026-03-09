@@ -197,6 +197,247 @@ class TestFirebaseLogin:
         res = client.post('/auth/firebase-login', json={})
         assert res.status_code == 400
 
+    @patch('app.auth.is_firebase_enabled', return_value=True)
+    @patch('app.auth.verify_firebase_token')
+    @patch('app.auth.get_or_create_user_from_firebase')
+    def test_firebase_login_unverified_email_blocked(self, mock_get_or_create, mock_verify, mock_enabled, app, client, db):
+        """Unverified email/password users should be blocked with 403 but still saved to DB."""
+        from app.models import User
+        uid = _uid()
+        mock_verify.return_value = {
+            'uid': f'firebase_{uid}',
+            'email': f'{uid}@test.com',
+            'email_verified': False,
+            'name': '',
+            'picture': '',
+            'firebase': {'sign_in_provider': 'password'}
+        }
+
+        with app.app_context():
+            user = User(
+                email=f'{uid}@test.com',
+                firebase_uid=f'firebase_{uid}',
+                auth_provider='password',
+                email_verified=False
+            )
+            db.session.add(user)
+            db.session.commit()
+
+            mock_get_or_create.return_value = (user, True)
+
+            res = client.post('/auth/firebase-login', json={'id_token': 'unverified-token'})
+            assert res.status_code == 403
+            data = res.get_json()
+            assert data['code'] == 'email_not_verified'
+            assert 'verify' in data['error'].lower()
+
+            # Verify get_or_create was still called (user saved to DB)
+            mock_get_or_create.assert_called_once()
+
+            db.session.delete(user)
+            db.session.commit()
+
+    @patch('app.auth.is_firebase_enabled', return_value=True)
+    @patch('app.auth.verify_firebase_token')
+    @patch('app.auth.get_or_create_user_from_firebase')
+    def test_firebase_login_google_unverified_allowed(self, mock_get_or_create, mock_verify, mock_enabled, app, client, db):
+        """Google sign-in users bypass email verification gate."""
+        from app.models import User
+        uid = _uid()
+
+        mock_verify.return_value = {
+            'uid': f'firebase_{uid}',
+            'email': f'{uid}@gmail.com',
+            'email_verified': False,  # Even if False, Google users should pass
+            'name': 'Google User',
+            'picture': '',
+            'firebase': {'sign_in_provider': 'google.com'}
+        }
+
+        with app.app_context():
+            user = User(
+                email=f'{uid}@gmail.com',
+                firebase_uid=f'firebase_{uid}',
+                auth_provider='google.com'
+            )
+            db.session.add(user)
+            db.session.commit()
+
+            mock_get_or_create.return_value = (user, False)
+
+            res = client.post('/auth/firebase-login', json={'id_token': 'google-token'})
+            assert res.status_code == 200  # Should succeed
+            data = res.get_json()
+            assert 'access_token' in data
+
+            db.session.delete(user)
+            db.session.commit()
+
+    @patch('app.auth.is_firebase_enabled', return_value=True)
+    @patch('app.auth.verify_firebase_token')
+    @patch('app.auth.get_or_create_user_from_firebase')
+    def test_firebase_login_verified_email_allowed(self, mock_get_or_create, mock_verify, mock_enabled, app, client, db):
+        """Verified email/password users should be allowed to login."""
+        from app.models import User
+        uid = _uid()
+
+        mock_verify.return_value = {
+            'uid': f'firebase_{uid}',
+            'email': f'{uid}@test.com',
+            'email_verified': True,
+            'name': 'Verified User',
+            'picture': '',
+            'firebase': {'sign_in_provider': 'password'}
+        }
+
+        with app.app_context():
+            user = User(
+                email=f'{uid}@test.com',
+                firebase_uid=f'firebase_{uid}',
+                auth_provider='password',
+                email_verified=True
+            )
+            db.session.add(user)
+            db.session.commit()
+
+            mock_get_or_create.return_value = (user, True)
+
+            res = client.post('/auth/firebase-login', json={'id_token': 'verified-token'})
+            assert res.status_code == 201
+            data = res.get_json()
+            assert 'access_token' in data
+
+            db.session.delete(user)
+            db.session.commit()
+
+
+# ============================================================================
+# Email Verification Tests
+# ============================================================================
+
+class TestResendVerification:
+    """Test /auth/resend-verification endpoint."""
+
+    def test_resend_verification_missing_email(self, client):
+        res = client.post('/auth/resend-verification', json={})
+        assert res.status_code == 400
+
+    def test_resend_verification_invalid_email(self, client):
+        res = client.post('/auth/resend-verification', json={'email': 'not-an-email'})
+        assert res.status_code == 400
+
+    @patch('app.auth._firebase_initialized', False)
+    def test_resend_verification_firebase_disabled(self, client):
+        res = client.post('/auth/resend-verification', json={'email': 'test@test.com'})
+        assert res.status_code == 503
+
+    @patch('app.auth.is_firebase_enabled', return_value=True)
+    @patch('app.auth._firebase_initialized', True)
+    def test_resend_verification_nonexistent_user(self, mock_enabled, client):
+        """Non-existent email should return generic success (anti-enumeration)."""
+        with patch('firebase_admin.auth.get_user_by_email', side_effect=Exception('NOT_FOUND')):
+            res = client.post('/auth/resend-verification', json={'email': 'nobody@test.com'})
+            assert res.status_code == 200
+            data = res.get_json()
+            assert 'verification email' in data['message'].lower() or 'account exists' in data['message'].lower()
+
+    @patch('app.auth.is_firebase_enabled', return_value=True)
+    @patch('app.auth._firebase_initialized', True)
+    def test_resend_verification_already_verified(self, mock_enabled, client):
+        """Already-verified email should inform user they can sign in."""
+        mock_fb_user = MagicMock()
+        mock_fb_user.email_verified = True
+
+        with patch('firebase_admin.auth.get_user_by_email', return_value=mock_fb_user):
+            res = client.post('/auth/resend-verification', json={'email': 'verified@test.com'})
+            assert res.status_code == 200
+            data = res.get_json()
+            assert 'already verified' in data['message'].lower()
+
+    @patch('app.auth.is_firebase_enabled', return_value=True)
+    @patch('app.auth._firebase_initialized', True)
+    def test_resend_verification_sends_email(self, mock_enabled, client):
+        """Unverified email should return send_verification action."""
+        mock_fb_user = MagicMock()
+        mock_fb_user.email_verified = False
+
+        with patch('firebase_admin.auth.get_user_by_email', return_value=mock_fb_user):
+            res = client.post('/auth/resend-verification', json={'email': 'unverified@test.com'})
+            assert res.status_code == 200
+            data = res.get_json()
+            assert data['action'] == 'send_verification'
+
+
+class TestForgotPasswordVerification:
+    """Test /auth/forgot-password with email verification policy."""
+
+    def test_forgot_password_missing_email(self, client):
+        res = client.post('/auth/forgot-password', json={})
+        assert res.status_code == 400
+
+    def test_forgot_password_invalid_email(self, client):
+        res = client.post('/auth/forgot-password', json={'email': 'bad'})
+        assert res.status_code == 400
+
+    @patch('app.auth.is_firebase_enabled', return_value=True)
+    @patch('app.auth._firebase_initialized', True)
+    def test_forgot_password_nonexistent_email(self, mock_enabled, client):
+        """Non-existent email returns generic message."""
+        with patch('firebase_admin.auth.get_user_by_email', side_effect=Exception('NOT_FOUND')):
+            res = client.post('/auth/forgot-password', json={'email': 'nobody@test.com'})
+            assert res.status_code == 200
+
+    @patch('app.auth.is_firebase_enabled', return_value=True)
+    @patch('app.auth._firebase_initialized', True)
+    def test_forgot_password_google_account_rejected(self, mock_enabled, client):
+        """Google-only accounts should be rejected."""
+        mock_fb_user = MagicMock()
+        mock_fb_user.email_verified = True
+        mock_provider = MagicMock()
+        mock_provider.provider_id = 'google.com'
+        mock_fb_user.provider_data = [mock_provider]
+
+        with patch('firebase_admin.auth.get_user_by_email', return_value=mock_fb_user):
+            res = client.post('/auth/forgot-password', json={'email': 'google@test.com'})
+            assert res.status_code == 400
+            data = res.get_json()
+            assert data['code'] == 'google_account'
+
+    @patch('app.auth.is_firebase_enabled', return_value=True)
+    @patch('app.auth._firebase_initialized', True)
+    def test_forgot_password_unverified_sends_verification(self, mock_enabled, client):
+        """Unverified email/password user should get verification_needed, not reset."""
+        mock_fb_user = MagicMock()
+        mock_fb_user.email_verified = False
+        mock_provider = MagicMock()
+        mock_provider.provider_id = 'password'
+        mock_fb_user.provider_data = [mock_provider]
+
+        with patch('firebase_admin.auth.get_user_by_email', return_value=mock_fb_user):
+            res = client.post('/auth/forgot-password', json={'email': 'unverified@test.com'})
+            assert res.status_code == 200
+            data = res.get_json()
+            assert data['code'] == 'verification_needed'
+            assert 'not yet verified' in data['message'].lower()
+
+    @patch('app.auth.is_firebase_enabled', return_value=True)
+    @patch('app.auth._firebase_initialized', True)
+    def test_forgot_password_verified_sends_reset(self, mock_enabled, client):
+        """Verified email/password user should receive reset email via REST API."""
+        mock_fb_user = MagicMock()
+        mock_fb_user.email_verified = True
+        mock_provider = MagicMock()
+        mock_provider.provider_id = 'password'
+        mock_fb_user.provider_data = [mock_provider]
+
+        with patch('firebase_admin.auth.get_user_by_email', return_value=mock_fb_user), \
+             patch('app.auth._send_firebase_email', return_value=True) as mock_send:
+            res = client.post('/auth/forgot-password', json={'email': 'verified@test.com'})
+            assert res.status_code == 200
+            data = res.get_json()
+            assert data['code'] == 'reset_sent'
+            mock_send.assert_called_once_with('verified@test.com', 'PASSWORD_RESET')
+
 
 # ============================================================================
 # Firebase Auth Module Tests

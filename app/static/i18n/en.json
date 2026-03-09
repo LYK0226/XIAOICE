@@ -121,6 +121,7 @@
   "placeholder.oldPassword": "Enter old password",
   "placeholder.newPassword": "Enter new password",
   "placeholder.confirmPassword": "Confirm new password",
+  "placeholder.confirmDeletionPassword": "Enter your password",
   "stopReading": "Stop reading",
   "noConversations": "No conversations yet",
   "untitledConversation": "Untitled conversation",
