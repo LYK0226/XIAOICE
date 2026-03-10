@@ -210,7 +210,7 @@ class ChatAgentManager:
         
         # Configure generation settings
         generation_config = types.GenerateContentConfig(
-            temperature=1.0,
+            temperature=0.4,
             top_p=0.95,
             max_output_tokens=8192,
             safety_settings=[
@@ -678,7 +678,7 @@ def _generate_vertex_streaming_response(
             content_parts,
             stream=True,
             generation_config={
-                'temperature': 1.0,
+                'temperature': 0.4,
                 'top_p': 0.95,
                 'max_output_tokens': 65536,
             }
