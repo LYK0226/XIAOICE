@@ -136,7 +136,7 @@ document.addEventListener('DOMContentLoaded', function() {
     function goToStep(step) {
         stepVerify.style.display = step === 'verify' ? 'flex' : 'none';
         stepSuccess.style.display = step === 'success' ? 'flex' : 'none';
-        backLink.style.display = step === 'success' ? 'none' : 'flex';
+        backLink.style.display = 'flex';
     }
 
     function showError(el, msg) {
