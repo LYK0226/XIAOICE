@@ -2,8 +2,6 @@
 
 XIAOICE is an intelligent chat assistant with multimodal support (text, images, videos) and real-time pose detection capabilities.
 
-### ⚠️ **重要**：建立一個名為「.credentials」的新資料夾，並將 GCP 憑證放入其中。！
-
 ## Features
 
 - 🤖 **Multi-agent AI System**: Powered by Google ADK with specialized agents for text and media
@@ -15,8 +13,9 @@ XIAOICE is an intelligent chat assistant with multimodal support (text, images, 
 - 🎨 **Customizable**: User preferences for themes, language, and AI models
  
 ### 安裝依賴並啟動應用
-
+##  ⚠️ 將資料夾「.credentials」和文件「.env」複製到根目錄中
 ```bash
+
 # 建立並啟動虛擬環境
 python -m venv .venv && source .venv/bin/activate
 # windows
@@ -30,20 +29,18 @@ flask db init
 flask db migrate 
 flask db upgrade
 
-# 啟動應用
-python run.py
-flask --debug run --host=0.0.0.0
-```
-
-### 設定.env
-```bash
+# 設定.env
 # 產生安全金鑰值：
-# 安全 Flask / JWT 金鑰：
+# SECRET_KEY / JWT_SECRET_KEY：
 python -c "import secrets; print(secrets.token_urlsafe(48))"
 
 # 產生ENCRYPTION_KEY
 # ENCRYPTION_KEY:
 python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+
+# 啟動應用
+python run.py
+flask --debug run --host=0.0.0.0
 ```
 
 ### 賦予管理員權限
@@ -53,7 +50,7 @@ python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().d
 python create_admin.py
 
 username = 'admin@gmail.com'
-password = 'admin'
+password = 'admin123'
 ```
 
 ### Docker 伺服器
@@ -231,3 +228,4 @@ XIAOICE/
 ├── .env.example / .env               # 環境變數範本與 (本地) .env
 └── view_database.py                  # DB 查詢 / 檢視小工具
 ```
+
