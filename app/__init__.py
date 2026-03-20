@@ -1,6 +1,8 @@
 import os
 import logging
+from datetime import datetime
 from typing import Literal
+from zoneinfo import ZoneInfo
 from flask import Flask, send_from_directory
 from dotenv import load_dotenv
 from flask_migrate import Migrate
@@ -20,10 +22,12 @@ from flask_socketio import SocketIO
 
 
 def _get_socketio_async_mode() -> Literal['threading', 'eventlet', 'gevent', 'gevent_uwsgi']:
-    raw_mode = (os.environ.get('SOCKETIO_ASYNC_MODE') or 'threading').strip().lower()
     allowed = {'threading', 'eventlet', 'gevent', 'gevent_uwsgi'}
-    if raw_mode in allowed:
-        return raw_mode  # type: ignore[return-value]
+    raw_mode = os.environ.get('SOCKETIO_ASYNC_MODE')
+    if raw_mode is not None:
+        normalized_mode = raw_mode.strip().lower()
+        if normalized_mode in allowed:
+            return normalized_mode  # type: ignore[return-value]
     return 'threading'
 
 
@@ -51,10 +55,29 @@ class _LiteLLMNoiseFilter(logging.Filter):
         return not any(noise in msg for noise in self._NOISY_MESSAGES)
 
 
+def _build_timezone_converter(timezone_name: str):
+    """Return a logging converter function for the requested timezone."""
+    try:
+        tz = ZoneInfo(timezone_name)
+    except Exception:
+        tz = ZoneInfo('UTC')
+
+    def _converter(*args):
+        # logging may call this as converter(created) or as a bound method.
+        timestamp = args[-1]
+        return datetime.fromtimestamp(timestamp, tz).timetuple()
+
+    return _converter
+
+
 def _configure_logging() -> None:
     """Configure consistent logging across all startup modes."""
     app_log_level = os.environ.get('APP_LOG_LEVEL', 'INFO').upper()
     rag_log_level = os.environ.get('RAG_LOG_LEVEL', 'DEBUG').upper()
+    log_timezone = os.environ.get('APP_LOG_TIMEZONE', 'Asia/Hong_Kong')
+
+    # Apply timezone globally for all standard logging formatters.
+    logging.Formatter.converter = _build_timezone_converter(log_timezone)
 
     logging.basicConfig(
         level=getattr(logging, app_log_level, logging.INFO),

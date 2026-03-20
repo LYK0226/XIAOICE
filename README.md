@@ -73,9 +73,9 @@ gcloud run deploy xiaoice \
 	--project fyp-project-4f3b7 \
 	--region us-central1 \
 	--platform managed \
-    --source . \
+	--source . \
 	--cpu 2 \
-  	--memory 4Gi \
+	--memory 4Gi \
 	--min-instances 0 \
 	--allow-unauthenticated \
 	--service-account xiaoice-cloud-run@fyp-project-4f3b7.iam.gserviceaccount.com \
