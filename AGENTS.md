@@ -9,7 +9,7 @@ Flask + SocketIO web app with ADK multi-agent backend, multimodal chat, and brow
 
 ## STRUCTURE
 ```
-XIAOICE/
+Steup Growth/
 ├── app/                 # Flask app, AI agents, static assets
 ├── docs/                # Feature and deployment guides
 ├── migrations/          # Alembic/Flask-Migrate setup
@@ -65,7 +65,7 @@ cd .devcontainer && docker-compose up -d
 - migrations/versions is currently empty; schema lives in models.py.
 - .venv and __pycache__ should remain ignored.
 
-# XIAOICE Agent Guidelines
+# Steup Growth Agent Guidelines
 
 **Last Updated:** 2026-02-18
 

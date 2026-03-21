@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test script for XIAOICE Multi-Agent System
+Test script for Steup Growth Multi-Agent System
 
 This script demonstrates how the multi-agent architecture routes different
 types of requests to specialized agents.
@@ -121,7 +121,7 @@ def test_chinese_conversation(api_key, user_id):
 def main():
     """Run all tests."""
     print("\n" + "="*80)
-    print("XIAOICE Multi-Agent System Test Suite")
+    print("Steup Growth Multi-Agent System Test Suite")
     print("="*80)
     print("\nThis test demonstrates the multi-agent architecture:")
     print("- Coordinator Agent: Routes requests to specialized agents")

@@ -1,5 +1,5 @@
 {
-    "name": "XiaoIce Dev Environment",
+    "name": "Steup Growth Dev Environment",
     "image": "mcr.microsoft.com/devcontainers/base:ubuntu-22.04",
     "features": {
         "ghcr.io/devcontainers/features/python:1": {

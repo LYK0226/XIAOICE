@@ -28,7 +28,7 @@ ENV JWT_COOKIE_SAMESITE=Lax
 ENV JWT_COOKIE_CSRF_PROTECT=false
 
 # Google Cloud configuration
-ENV GCS_BUCKET_NAME=xiaoice-cloud-run
+ENV GCS_BUCKET_NAME=steup-growth
 ENV GOOGLE_CLOUD_LOCATION=global
 ENV GEMINI_MODEL=gemini-3-flash-preview
 # IMPORTANT: Set GOOGLE_CLOUD_PROJECT via Cloud Run environment variables.

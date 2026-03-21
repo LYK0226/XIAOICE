@@ -23,7 +23,7 @@ def main():
     
     with app.app_context():
         print("\n" + "="*80)
-        print("XIAOICE Database API Keys")
+        print("Steup Growth Database API Keys")
         print("="*80 + "\n")
         
         # Get all API keys

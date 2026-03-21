@@ -1,7 +1,7 @@
 # docs/ — Project Documentation
 
 ## OVERVIEW
-Feature specs + deployment guides. Architecture, video assessments, PDF handling, API key flows, and deployment checklists for XIAOICE.
+Feature specs + deployment guides. Architecture, video assessments, PDF handling, API key flows, and deployment checklists for Steup Growth.
 
 ## WHERE TO LOOK
 

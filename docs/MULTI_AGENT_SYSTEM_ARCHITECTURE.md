@@ -1,8 +1,8 @@
-# XIAOICE Multi-Agent System Architecture
+# Steup Growth Multi-Agent System Architecture
 
 ## Overview
 
-XIAOICE uses Google's Agent Development Kit (ADK) to implement a sophisticated multi-agent system. The architecture consists of a coordinator agent that manages conversations with users and delegates specialized tasks to sub-agents for PDF and media analysis.
+Steup Growth uses Google's Agent Development Kit (ADK) to implement a sophisticated multi-agent system. The architecture consists of a coordinator agent that manages conversations with users and delegates specialized tasks to sub-agents for PDF and media analysis.
 
 ## Architecture Diagram
 
@@ -38,7 +38,7 @@ XIAOICE uses Google's Agent Development Kit (ADK) to implement a sophisticated m
 │  │                    │                                      │  │
 │  │  ┌─────────────────▼───────────────────────────────┐    │  │
 │  │  │         COORDINATOR AGENT                       │    │  │
-│  │  │        (xiaoice_coordinator)                    │    │  │
+│  │  │        (steup_growth_coordinator)                │    │  │
 │  │  │                                                  │    │  │
 │  │  │  Role: Main conversation manager                │    │  │
 │  │  │  - Interacts directly with users               │    │  │
@@ -180,7 +180,7 @@ Streams friendly response to user
 - `ensure_session_exists()`: Session initialization
 - `clear_conversation_session()`: Session cleanup
 
-### 2. Coordinator Agent (xiaoice_coordinator)
+### 2. Coordinator Agent (steup_growth_coordinator)
 
 **Model**: `gemini-3-flash` or `gemini-3-pro` (user-configurable)
 
@@ -193,7 +193,7 @@ Streams friendly response to user
 
 **Instruction Philosophy**:
 - Friendly and conversational tone
-- Acts as the "face" of XIAOICE
+- Acts as the "face" of Steup Growth
 - Presents specialist results in natural, engaging language
 - Adds personal commentary and insights
 
@@ -384,5 +384,5 @@ Passed to appropriate specialist agent
 - [Google ADK Documentation](https://github.com/google/adk-python)
 - [ADK Multi-Agent Systems](https://github.com/google/adk-docs/blob/main/docs/agents/multi-agents.md)
 - [Gemini Models Documentation](https://ai.google.dev/gemini-api/docs)
-- [XIAOICE Project README](../README.md)
+- [Steup Growth Project README](../README.md)
 - [API Key Flow Diagram](./API_KEY_FLOW_DIAGRAM.md)

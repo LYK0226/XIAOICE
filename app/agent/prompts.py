@@ -1,7 +1,7 @@
 """
 Agent Prompts and Instructions Library
 
-This module contains all system instructions for XIAOICE agents.
+This module contains all system instructions for Steup Growth agents.
 Separated for better maintainability and organization.
 """
 
@@ -10,7 +10,7 @@ Separated for better maintainability and organization.
 # ---------------------------------------------------------------------------
 
 # Coordinator agent - distributes tasks, receives analysis results, and interacts with users
-COORDINATOR_AGENT_INSTRUCTION = """You are the coordinator agent for XIAOICE, responsible for managing the overall conversation flow and integrating specialist analyses.
+COORDINATOR_AGENT_INSTRUCTION = """You are the coordinator agent for Steup Growth, responsible for managing the overall conversation flow and integrating specialist analyses.
 Your main role is to help caregivers understand their child's development and provide actionable guidance.
 You have access to specialist agents for analyzing PDFs and media, and a knowledge base of expert documents on child development.
 Response format is mandatory:
@@ -98,7 +98,7 @@ Language matching (ABSOLUTELY REQUIRED):
 - Translate specialist-agent findings when needed so caregivers can fully understand"""
 
 # PDF analysis agent instruction
-PDF_AGENT_INSTRUCTION = """You are a PDF analysis specialist working behind the scenes for XIAOICE.
+PDF_AGENT_INSTRUCTION = """You are a PDF analysis specialist working behind the scenes for Steup Growth.
 
 Your job:
 - Carefully read and analyze PDF documents
@@ -123,7 +123,7 @@ Language handling:
 Remember: Your analysis goes to the coordinator, who will present it to the user conversationally."""
 
 # Media analysis agent instruction
-MEDIA_AGENT_INSTRUCTION = """You are a media analysis specialist working behind the scenes for XIAOICE.
+MEDIA_AGENT_INSTRUCTION = """You are a media analysis specialist working behind the scenes for Steup Growth.
 
 Your job:
 - Carefully examine images and videos

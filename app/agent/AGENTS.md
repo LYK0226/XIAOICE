@@ -1,8 +1,8 @@
 # app/agent/ — ADK Multi-Agent System
 
 ## OVERVIEW
-Google ADK multi-agent orchestration for XIAOICE chat. Three-agent architecture:
-- **Coordinator** (xiaoice_coordinator): routes tasks, receives analysis, streams to users.
+Google ADK multi-agent orchestration for Steup Growth chat. Three-agent architecture:
+- **Coordinator** (steup_growth_coordinator): routes tasks, receives analysis, streams to users.
 - **PDF agent**: analyzes PDF docs, returns structured findings to coordinator.
 - **Media agent**: analyzes images/videos, returns structured findings to coordinator.
 

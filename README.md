@@ -1,6 +1,6 @@
-# XIAOICE 智能聊天助手 🤖
+# Steup Growth 智能聊天助手 🤖
 
-XIAOICE is an intelligent chat assistant with multimodal support (text, images, videos) and real-time pose detection capabilities.
+Steup Growth is an intelligent chat assistant with multimodal support (text, images, videos) and real-time pose detection capabilities.
 
 ## Features
 
@@ -69,7 +69,7 @@ cd .devcontainer && docker ps
 ## Cloud Run 部署模板
 
 ```bash
-gcloud run deploy xiaoice \
+gcloud run deploy steup-growth \
 	--project fyp-project-4f3b7 \
 	--region us-central1 \
 	--platform managed \
@@ -78,10 +78,10 @@ gcloud run deploy xiaoice \
 	--memory 4Gi \
 	--min-instances 0 \
 	--allow-unauthenticated \
-	--service-account xiaoice-cloud-run@fyp-project-4f3b7.iam.gserviceaccount.com \
+	--service-account steup-growth@fyp-project-4f3b7.iam.gserviceaccount.com \
 	--add-cloudsql-instances fyp-project-4f3b7:us-central1:xiaoice \
-	--set-env-vars "FLASK_ENV=production,GCS_BUCKET_NAME=xiaoice-cloud-run,GOOGLE_CLOUD_PROJECT=fyp-project-4f3b7,GOOGLE_CLOUD_LOCATION=global,GEMINI_MODEL=gemini-3-flash-preview,POSE_DETECTION_ENABLED=false,USE_CLOUD_TASKS=true,JWT_COOKIE_SECURE=true,JWT_COOKIE_SAMESITE=Lax,JWT_COOKIE_CSRF_PROTECT=false,SOCKETIO_PING_TIMEOUT=60,SOCKETIO_PING_INTERVAL=25,SOCKETIO_IDLE_TIMEOUT_SECONDS=3600,SOCKETIO_MAX_RECONNECT_ATTEMPTS=3,FIREBASE_AUTH_DOMAIN=fyp-project-4f3b7.firebaseapp.com,FIREBASE_PROJECT_ID=fyp-project-4f3b7" \
-	--set-secrets "SECRET_KEY=xiaoice-secret-key:latest,JWT_SECRET_KEY=xiaoice-jwt-secret:latest,ENCRYPTION_KEY=xiaoice-encryption-key:latest,FIREBASE_API_KEY=xiaoice-firebase-api-key:latest,DATABASE_URL=xiaoice-database-url:latest"
+	--set-env-vars "FLASK_ENV=production,GCS_BUCKET_NAME=steup-growth,GOOGLE_CLOUD_PROJECT=fyp-project-4f3b7,GOOGLE_CLOUD_LOCATION=global,GEMINI_MODEL=gemini-3-flash-preview,POSE_DETECTION_ENABLED=false,USE_CLOUD_TASKS=true,JWT_COOKIE_SECURE=true,JWT_COOKIE_SAMESITE=Lax,JWT_COOKIE_CSRF_PROTECT=false,SOCKETIO_PING_TIMEOUT=60,SOCKETIO_PING_INTERVAL=25,SOCKETIO_IDLE_TIMEOUT_SECONDS=3600,SOCKETIO_MAX_RECONNECT_ATTEMPTS=3,FIREBASE_AUTH_DOMAIN=fyp-project-4f3b7.firebaseapp.com,FIREBASE_PROJECT_ID=fyp-project-4f3b7" \
+	--set-secrets "SECRET_KEY=steup-growth-secret-key:latest,JWT_SECRET_KEY=steup-growth-jwt-secret:latest,ENCRYPTION_KEY=steup-growth-encryption-key:latest,FIREBASE_API_KEY=steup-growth-firebase-api-key:latest,DATABASE_URL=steup-growth-database-url:latest"
 ```
 
 ## Pose Detection Feature
@@ -90,7 +90,7 @@ The pose detection feature enables real-time human pose tracking and action reco
 
 ### Quick Start
 
-1. **Open XIAOICE**: Navigate to the main chat interface
+1. **Open Steup Growth**: Navigate to the main chat interface
 2. **Click Pose Detection Button**: Activate the pose detection mode
 3. **Allow Camera Access**: Grant permission when prompted
 4. **Start Moving**: The system will detect your pose and recognize your actions in real-time
@@ -144,7 +144,7 @@ The pose detection feature enables real-time human pose tracking and action reco
 ##  專案結構
 
 ```
-XIAOICE/
+Steup Growth/
 ├── .devcontainer/                   # Docker 開發環境配置
 │   ├── docker-compose.yml
 │   └── pgadmin_servers.xml

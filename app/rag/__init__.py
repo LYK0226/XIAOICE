@@ -1,5 +1,5 @@
 """
-RAG (Retrieval-Augmented Generation) Module for XIAOICE.
+RAG (Retrieval-Augmented Generation) Module for Steup Growth.
 
 Provides a full-featured RAG pipeline:
   1. Document processing: PDF (ZeroX), TXT, Markdown -> heading-based chunks

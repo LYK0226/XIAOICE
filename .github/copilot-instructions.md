@@ -1,4 +1,4 @@
-# XIAOICE — Copilot Quick Reference (for AI coding agents)
+# Steup Growth — Copilot Quick Reference (for AI coding agents)
 
 1. In any process, task, or dialogue, user feedback must be requested using the askQuestions tool after each stage is completed.
 

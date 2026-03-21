@@ -1,5 +1,5 @@
 """
-ADK Agent module for XIAOICE chatbot.
+ADK Agent module for Steup Growth chatbot.
 This module provides a multi-agent chat system using Google Agent Development Kit (ADK)
 and Vertex AI support.
 
@@ -253,9 +253,9 @@ class ChatAgentManager:
         
         # Create the coordinator agent (routes tasks, receives results, interacts with users)
         coordinator_agent = Agent(
-            name="xiaoice_coordinator",
+            name="steup_growth_coordinator",
             model=model_name,
-            description="XIAOICE coordinator that manages conversations, delegates analysis tasks, receives results from specialists, and interacts directly with users",
+            description="Steup Growth coordinator that manages conversations, delegates analysis tasks, receives results from specialists, and interacts directly with users",
             instruction=COORDINATOR_AGENT_INSTRUCTION,
             generate_content_config=generation_config,
             tools=[_make_retrieve_knowledge_tool()],  # RAG knowledge retrieval tool (Vertex AI service account)

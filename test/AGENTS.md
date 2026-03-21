@@ -1,7 +1,7 @@
 # TEST DIRECTORY
 
 ## OVERVIEW
-Pytest-based test suite for XIAOICE. Tests verify pose detection JS modules, multi-agent AI system, and API key management. No pytest.ini—tests are file-based with manual/integration components.
+Pytest-based test suite for Steup Growth. Tests verify pose detection JS modules, multi-agent AI system, and API key management. No pytest.ini—tests are file-based with manual/integration components.
 
 ## WHERE TO LOOK
 | Task | File | Notes |

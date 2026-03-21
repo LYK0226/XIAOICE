@@ -4,7 +4,7 @@
 **Location:** /workspaces/XIAOICE/app/static/css
 
 ## OVERVIEW
-Page-specific stylesheets for XIAOICE Flask app. No global CSS — each page loads its dedicated file. Lavender/purple gradient theme with dark mode support. video_management.css is substantially larger (1158 lines) with scoped --vm-* CSS variables.
+Page-specific stylesheets for Steup Growth Flask app. No global CSS — each page loads its dedicated file. Lavender/purple gradient theme with dark mode support. video_management.css is substantially larger (1158 lines) with scoped --vm-* CSS variables.
 
 ## WHERE TO LOOK
 | Page/Feature | CSS File | Purpose |
