@@ -498,6 +498,16 @@ class UploadsManager {
             : '';
 
         const fileIcon = isVideo ? 'fa-video' : this.getFileIcon(upload.file_type || upload.filename);
+        const fallbackViewUrl = isVideo ? `/api/videos/${upload.id}/view` : null;
+        const viewUrl = upload.signed_url || fallbackViewUrl;
+        const canViewVideo = Boolean(viewUrl);
+        const viewVideoBtnHtml = isVideo
+            ? `<button class="view-upload-btn" ${canViewVideo ? `onclick="window.open('${viewUrl}', '_blank')"` : 'disabled title="影片連結暫時不可用"'}>
+                        <i class="fas fa-play"></i> ${this.t('uploads.viewVideo')}
+                    </button>`
+            : (upload.signed_url ? `<button class="view-upload-btn" onclick="window.open('${upload.signed_url}', '_blank')">
+                        <i class="fas fa-play"></i> ${this.t('uploads.viewVideo')}
+                    </button>` : '');
         
         return `
             <div class="upload-card" data-upload-id="${upload.id}">
@@ -510,9 +520,7 @@ class UploadsManager {
                     ${reportButtons}
                 </div>
                 <div class="upload-actions">
-                    ${upload.signed_url ? `<button class="view-upload-btn" onclick="window.open('${upload.signed_url}', '_blank')">
-                        <i class="fas fa-play"></i> ${this.t('uploads.viewVideo')}
-                    </button>` : ''}
+                    ${viewVideoBtnHtml}
                     <button class="delete-upload-btn" data-upload-id="${upload.id}">
                         <i class="fas fa-trash"></i> ${this.t('uploads.delete')}
                     </button>

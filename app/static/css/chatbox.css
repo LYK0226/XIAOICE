@@ -781,13 +781,6 @@ body.dark-theme .model-dropdown-item:hover {
     background: rgba(124, 58, 237, 0.1);
 }
 
-.mdi-icon {
-    font-size: 20px;
-    flex-shrink: 0;
-    width: 32px;
-    text-align: center;
-}
-
 .mdi-info {
     display: flex;
     flex-direction: column;

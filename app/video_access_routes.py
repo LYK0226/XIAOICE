@@ -10,6 +10,7 @@ def hk_now() -> datetime:
     return datetime.now(_HK_TZ).replace(tzinfo=None)
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from werkzeug.utils import secure_filename
+import mimetypes
 import os
 import tempfile
 import threading
@@ -668,6 +669,49 @@ def delete_video_record(video_id):
         db.session.rollback()
         current_app.logger.error(f"Error deleting video: {e}")
         return jsonify({'error': str(e)}), 500
+
+
+@bp.route('/api/videos/<int:video_id>/view', methods=['GET'])
+@jwt_required()
+def view_video_record(video_id):
+    """Return a playable video URL or stream bytes directly when signed URLs are unavailable."""
+    from .models import VideoRecord
+
+    user_id = int(get_jwt_identity())
+    video = VideoRecord.query.filter_by(id=video_id, user_id=user_id).first()
+    if not video:
+        return jsonify({'error': 'Video not found or access denied'}), 404
+
+    if video.storage_key:
+        try:
+            signed_url = gcp_bucket.generate_signed_url(video.storage_key)
+            if signed_url:
+                return redirect(signed_url)
+        except Exception as e:
+            current_app.logger.warning(
+                f"Signed URL unavailable for video {video.id}; fallback to direct stream: {e}"
+            )
+
+    if not video.file_path:
+        return jsonify({'error': 'Video source is unavailable'}), 404
+
+    try:
+        file_data = gcp_bucket.download_file_from_gcs(video.file_path)
+    except Exception as e:
+        current_app.logger.error(f"Failed to stream video {video.id} from GCS: {e}")
+        return jsonify({'error': 'Failed to load video'}), 500
+
+    guessed_type, _ = mimetypes.guess_type(video.original_filename or video.filename)
+    content_type = guessed_type or 'video/mp4'
+    safe_name = secure_filename(video.original_filename or video.filename or f'video_{video.id}.mp4')
+    return Response(
+        file_data,
+        mimetype=content_type,
+        headers={
+            'Content-Disposition': f'inline; filename="{safe_name}"',
+            'Cache-Control': 'private, max-age=300',
+        },
+    )
 
 # ---------------------------------------------------------------------------
 #  Child Development Video Analysis (AI multi-agent)

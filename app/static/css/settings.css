@@ -1578,6 +1578,11 @@ body.dark-theme .custom-modal-toggle {
     color: white;
 }
 
+.view-upload-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
 .delete-upload-btn:hover {
     background: #e74c3c;
     border-color: #e74c3c;
