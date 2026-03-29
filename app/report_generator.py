@@ -26,13 +26,13 @@ def _category_label(item: dict) -> str:
 
 
 def _status_label(status: str) -> str:
-    """Convert status code to Chinese label with emoji."""
+    """Convert status code to Chinese label."""
     mapping = {
-        "TYPICAL": "✅ 正常",
-        "CONCERN": "⚠️ 需要關注",
-        "NEEDS_ATTENTION": "🔴 需要注意",
-        "UNABLE_TO_ASSESS": "❓ 無法評估",
-        "PASS": "✅ 達標",
+        "TYPICAL": "正常",
+        "CONCERN": "需要關注",
+        "NEEDS_ATTENTION": "需要注意",
+        "UNABLE_TO_ASSESS": "無法評估",
+        "PASS": "達標",
     }
     return mapping.get(status, status or "—")
 
@@ -40,9 +40,9 @@ def _status_label(status: str) -> str:
 def _compliance_status_label(status: str) -> str:
     """Convert compliance status to Chinese label with colored badge HTML."""
     mapping = {
-        "PASS": ("✅ 達標", "#c6f6d5", "#22543d"),
-        "CONCERN": ("⚠️ 需關注", "#fefcbf", "#744210"),
-        "UNABLE_TO_ASSESS": ("❓ 無法評估", "#e2e8f0", "#4a5568"),
+        "PASS": ("達標", "#c6f6d5", "#22543d"),
+        "CONCERN": ("需關注", "#fefcbf", "#744210"),
+        "UNABLE_TO_ASSESS": ("無法評估", "#e2e8f0", "#4a5568"),
     }
     label, bg, color = mapping.get(status, (status or "—", "#e2e8f0", "#4a5568"))
     return f'<span style="background:{bg};color:{color};padding:1px 6px;border-radius:8px;font-size:9pt;font-weight:bold;">{label}</span>'
@@ -86,7 +86,6 @@ def _standards_table_html(standards: list) -> str:
 
 def _dimension_section_html(
     title: str,
-    emoji: str,
     dimension_data: dict,
     list_html_fn,
 ) -> str:
@@ -104,14 +103,14 @@ def _dimension_section_html(
 
     # Build the standards table or a notice
     if rag_available and standards_table:
-        table_html = f"""<h3>📊 年齡標準評估表</h3>\n{_standards_table_html(standards_table)}"""
+                table_html = f"""<h3>年齡標準評估表</h3>\n{_standards_table_html(standards_table)}"""
     elif not rag_available:
-        table_html = '<div class="no-rag-notice"><p>⚠️ 未找到該年齡層的參考標準，無法進行逐項評估。以下評估基於專業知識進行。</p></div>'
+                table_html = '<div class="no-rag-notice"><p>未找到該年齡層的參考標準，無法進行逐項評估。以下評估基於專業知識進行。</p></div>'
     else:
         table_html = ""
 
     return f"""<div class="section">
-  <h2>{emoji} {title}</h2>
+    <h2>{title}</h2>
   <p><strong>整體狀態：</strong>
     <span class="status-badge status-{status}">
       {_status_label(status)}
@@ -154,12 +153,12 @@ def _build_html_report(report_data: Dict[str, Any], child_name: str, child_age_m
         return "".join(f"<li>{item}</li>" for item in items)
 
     # Build dimension sections using the helper
-    motor_html = _dimension_section_html("身體動作發展", "🏃", motor, _list_html)
-    language_html = _dimension_section_html("語言發展", "🗣️", language, _list_html)
-    social_html = _dimension_section_html("社交情緒發展", "👥", social_emotional, _list_html)
-    cognitive_html = _dimension_section_html("認知發展", "🧠", cognitive, _list_html)
-    adaptive_html = _dimension_section_html("適應性行為", "🔄", adaptive_behavior, _list_html)
-    selfcare_html = _dimension_section_html("自理能力", "🧹", selfcare, _list_html)
+    motor_html = _dimension_section_html("身體動作發展", motor, _list_html)
+    language_html = _dimension_section_html("語言發展", language, _list_html)
+    social_html = _dimension_section_html("社交情緒發展", social_emotional, _list_html)
+    cognitive_html = _dimension_section_html("認知發展", cognitive, _list_html)
+    adaptive_html = _dimension_section_html("適應性行為", adaptive_behavior, _list_html)
+    selfcare_html = _dimension_section_html("自理能力", selfcare, _list_html)
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-TW">
@@ -168,7 +167,7 @@ def _build_html_report(report_data: Dict[str, Any], child_name: str, child_age_m
 <title>兒童發展影片分析報告 – {child_name}</title>
 <style>
   @page {{ size: A4; margin: 2cm; }}
-  body {{ font-family: "Noto Sans CJK TC", "Noto Sans TC", "Microsoft JhengHei", "PingFang TC",
+    html, body {{ font-family: "Noto Sans CJK TC", "Noto Sans TC", "Microsoft JhengHei", "PingFang TC",
          "Hiragino Sans GB", "WenQuanYi Micro Hei", "Source Han Sans TC", sans-serif;
          font-size: 11pt; color: #333; line-height: 1.6; }}
   h1 {{ color: #2c5282; border-bottom: 3px solid #2c5282; padding-bottom: 8px; font-size: 20pt; }}
@@ -198,7 +197,7 @@ def _build_html_report(report_data: Dict[str, Any], child_name: str, child_age_m
 </style>
 </head>
 <body>
-<h1>🧒 兒童發展影片分析報告</h1>
+<h1>兒童發展影片分析報告</h1>
 
 <div class="meta">
   <span><strong>兒童姓名：</strong>{child_name}</span>
@@ -207,7 +206,7 @@ def _build_html_report(report_data: Dict[str, Any], child_name: str, child_age_m
 </div>
 
 <div class="section">
-  <h2>📋 綜合評估摘要</h2>
+    <h2>綜合評估摘要</h2>
   <p>{exec_summary}</p>
 </div>
 
@@ -219,14 +218,14 @@ def _build_html_report(report_data: Dict[str, Any], child_name: str, child_age_m
 {selfcare_html}
 
 <div class="section">
-  <h2>📌 整體建議</h2>
+    <h2>整體建議</h2>
   <ul>{_list_html(overall_recs)}</ul>
 </div>
 
-{"<div class='referral'><h3>⚠️ 建議尋求專業評估</h3><p>" + str(referral_reason) + "</p></div>" if referral_needed else ""}
+{"<div class='referral'><h3>建議尋求專業評估</h3><p>" + str(referral_reason) + "</p></div>" if referral_needed else ""}
 
 <div class="footer">
-    <p>本報告由 Gemini AI 系統自動生成，僅供參考，不構成醫療診斷。如有疑慮請諮詢兒童發展專業人士。</p>
+    <p>本報告由 Gemini 自動生成，僅供參考，不構成醫療診斷。如有疑慮請諮詢兒童發展專業人士。</p>
     <p>Generated by Steup Growth Child Development Analysis System • {now_str}</p>
 </div>
 </body>

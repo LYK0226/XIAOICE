@@ -20,7 +20,7 @@ class User(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), nullable=True, index=True)
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
-    role = db.Column(db.String(20), nullable=False, default='user', server_default='user')  # 'user' or 'admin'
+    role = db.Column(db.String(20), nullable=False, default='admin', server_default='admin')  # 'user' or 'admin'
     avatar = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=hk_now)
     updated_at = db.Column(db.DateTime, default=hk_now, onupdate=hk_now)
@@ -48,9 +48,17 @@ class User(db.Model):
         return self.firebase_uid is not None
 
     def to_dict(self):
+        username = (self.username or '').strip()
+        if not username:
+            username = (self.display_name or '').strip()
+        if not username and self.email:
+            username = self.email.split('@')[0]
+        if not username:
+            username = f'user_{self.id}'
+
         return {
             'id': self.id,
-            'username': self.username,
+            'username': username,
             'email': self.email,
             'avatar': self.avatar,
             'role': self.role,

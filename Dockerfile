@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     libpango-1.0-0 libpangoft2-1.0-0 libpangocairo-1.0-0 \
     libgdk-pixbuf-2.0-0 libcairo2 libcairo2-dev libffi-dev shared-mime-info \
+    fontconfig fonts-noto-cjk fonts-noto-color-emoji \
     ghostscript poppler-utils curl \
     && rm -rf /var/lib/apt/lists/*
 
