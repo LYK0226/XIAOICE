@@ -1049,49 +1049,83 @@ def generate_streaming_response(
         username: User's display name for personalization
         file_attachments: Optional list of files ({path, mime_type})
         provider: 'ai_studio' or 'vertex_ai'
-        vertex_config: Vertex AI configuration (service_account, project_id, location)
+        vertex_config: Vertex AI configuration.
+            - service_account mode: {'auth_mode': 'service_account', 'service_account', 'project_id', 'location'}
+            - api_key mode: {'auth_mode': 'api_key', 'api_key', 'location'}
         
     Yields:
         Text chunks as they are generated
     """
+    _saved_vertex_env: Dict[str, Optional[str]] = {}
+
     # Route to the appropriate provider
     if provider == 'vertex_ai' and vertex_config:
         # Configure ADK to use Vertex AI as backend via environment variables.
-        # ADK's genai Client auto-detects the backend from these env vars.
+        # Supports both service-account auth and Vertex express-mode API key auth.
+        auth_mode = (vertex_config.get('auth_mode') or '').strip().lower()
         service_account_json = vertex_config.get('service_account')
+        vertex_api_key = vertex_config.get('api_key')
         project_id = vertex_config.get('project_id')
-        # Always use 'global' endpoint for best availability and Gemini 3+ compatibility.
-        location = 'global'
+        location = vertex_config.get('location') or 'global'
 
-        if not project_id:
-            yield "Error: Vertex AI project ID is required."
+        if auth_mode not in {'service_account', 'api_key'}:
+            auth_mode = 'api_key' if vertex_api_key else 'service_account'
+
+        if auth_mode == 'service_account' and not project_id:
+            yield "Error: Vertex AI project ID is required for service account mode."
+            return
+        if auth_mode == 'api_key' and not vertex_api_key:
+            yield "Error: Vertex AI API key is required for API key mode."
             return
 
         _sa_tmp = None
         try:
-            os.environ['GOOGLE_GENAI_USE_VERTEXAI'] = 'true'
-            os.environ['GOOGLE_CLOUD_PROJECT'] = project_id
-            os.environ['GOOGLE_CLOUD_LOCATION'] = location
+            # Snapshot current env and restore in finally to avoid cross-request pollution.
+            for _var in (
+                'GOOGLE_GENAI_USE_VERTEXAI',
+                'GOOGLE_CLOUD_PROJECT',
+                'GOOGLE_CLOUD_LOCATION',
+                'GOOGLE_APPLICATION_CREDENTIALS',
+                'GOOGLE_GENAI_API_KEY',
+                'GOOGLE_API_KEY',
+                'GEMINI_API_KEY',
+            ):
+                _saved_vertex_env[_var] = os.environ.get(_var)
 
-            # Local / custom SA path: keep existing temp-file behavior.
-            # Cloud Run ADC path: service_account_json can be None.
-            if service_account_json:
-                _sa_tmp = tempfile.NamedTemporaryFile(
-                    mode='w', suffix='.json', prefix='vertex_sa_', delete=False
-                )
-                _sa_tmp.write(service_account_json if isinstance(service_account_json, str)
-                              else json.dumps(service_account_json))
-                _sa_tmp.flush()
-                _sa_tmp.close()
-                os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = _sa_tmp.name
+            os.environ['GOOGLE_GENAI_USE_VERTEXAI'] = 'true'
+
+            if auth_mode == 'service_account':
+                os.environ['GOOGLE_CLOUD_PROJECT'] = project_id
+                os.environ['GOOGLE_CLOUD_LOCATION'] = location
+                os.environ.pop('GOOGLE_GENAI_API_KEY', None)
+                os.environ.pop('GOOGLE_API_KEY', None)
+                os.environ.pop('GEMINI_API_KEY', None)
+
+                # Local / custom SA path: keep existing temp-file behavior.
+                # Cloud Run ADC path: service_account_json can be None.
+                if service_account_json:
+                    _sa_tmp = tempfile.NamedTemporaryFile(
+                        mode='w', suffix='.json', prefix='vertex_sa_', delete=False
+                    )
+                    _sa_tmp.write(service_account_json if isinstance(service_account_json, str)
+                                  else json.dumps(service_account_json))
+                    _sa_tmp.flush()
+                    _sa_tmp.close()
+                    os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = _sa_tmp.name
+                else:
+                    os.environ.pop('GOOGLE_APPLICATION_CREDENTIALS', None)
             else:
+                # Vertex express-mode auth via API key. For the ADK/google-genai
+                # stack in this code path, GOOGLE_API_KEY is the credential env var.
+                os.environ['GOOGLE_API_KEY'] = vertex_api_key
+                os.environ.pop('GOOGLE_GENAI_API_KEY', None)
+                os.environ.pop('GEMINI_API_KEY', None)
+                os.environ.pop('GOOGLE_CLOUD_PROJECT', None)
+                os.environ.pop('GOOGLE_CLOUD_LOCATION', None)
                 os.environ.pop('GOOGLE_APPLICATION_CREDENTIALS', None)
 
-            # Remove AI Studio key so ADK doesn't accidentally use it
-            _saved_api_key = os.environ.pop('GOOGLE_API_KEY', None)
-
-            logger.info("Vertex AI ADK mode: project=%s  location=%s  model=%s",
-                        project_id, location, model_name)
+            logger.info("Vertex AI ADK mode: auth_mode=%s project=%s location=%s model=%s",
+                        auth_mode, project_id, location, model_name)
         except Exception as exc:
             logger.error("Failed to configure Vertex AI env: %s", exc)
             yield f"Error configuring Vertex AI: {exc}"
@@ -1108,7 +1142,6 @@ def generate_streaming_response(
             pass
     else:
         vertex_user_id = None
-        _saved_api_key = None
         _sa_tmp = None
 
     # AI Studio / ADK path (also used by Vertex AI now)
@@ -1340,12 +1373,20 @@ def generate_streaming_response(
     finally:
         # --- Vertex AI env-var cleanup ---
         if _is_vertex:
-            for _var in ('GOOGLE_GENAI_USE_VERTEXAI', 'GOOGLE_CLOUD_PROJECT',
-                         'GOOGLE_CLOUD_LOCATION', 'GOOGLE_APPLICATION_CREDENTIALS'):
-                os.environ.pop(_var, None)
-            # Restore the original AI Studio API key if one was saved
-            if _saved_api_key is not None:
-                os.environ['GOOGLE_API_KEY'] = _saved_api_key
+            for _var in (
+                'GOOGLE_GENAI_USE_VERTEXAI',
+                'GOOGLE_CLOUD_PROJECT',
+                'GOOGLE_CLOUD_LOCATION',
+                'GOOGLE_APPLICATION_CREDENTIALS',
+                'GOOGLE_GENAI_API_KEY',
+                'GOOGLE_API_KEY',
+                'GEMINI_API_KEY',
+            ):
+                _original_value = _saved_vertex_env.get(_var)
+                if _original_value is None:
+                    os.environ.pop(_var, None)
+                else:
+                    os.environ[_var] = _original_value
             # Delete temporary service-account file
             if _sa_tmp is not None:
                 try:

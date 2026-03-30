@@ -80,12 +80,14 @@ class UserProfile(db.Model):
     ai_model = db.Column(db.String(50), default='gemini-3-flash')  # Add AI model selection
     ai_provider = db.Column(db.String(20), default='ai_studio')  # 'ai_studio' or 'vertex_ai'
     selected_vertex_account_id = db.Column(db.Integer, db.ForeignKey('vertex_service_accounts.id'), nullable=True)
+    selected_vertex_api_key_id = db.Column(db.Integer, db.ForeignKey('user_api_keys.id'), nullable=True)
     vertex_location = db.Column(db.String(50), default='us-central1')
     created_at = db.Column(db.DateTime, default=hk_now)
     updated_at = db.Column(db.DateTime, default=hk_now, onupdate=hk_now)
     user = db.relationship('User', backref='profile')
     selected_api_key = db.relationship('UserApiKey', foreign_keys=[selected_api_key_id])
     selected_vertex_account = db.relationship('VertexServiceAccount', foreign_keys=[selected_vertex_account_id])
+    selected_vertex_api_key = db.relationship('UserApiKey', foreign_keys=[selected_vertex_api_key_id])
     
     def __repr__(self):
         return f'<UserProfile {self.user_id}>'
@@ -101,6 +103,7 @@ class UserProfile(db.Model):
             'ai_model': self.ai_model,
             'ai_provider': self.ai_provider,
             'selected_vertex_account_id': self.selected_vertex_account_id,
+            'selected_vertex_api_key_id': self.selected_vertex_api_key_id,
             'vertex_location': self.vertex_location
         }
 
