@@ -216,29 +216,48 @@ class ChatAgentManager:
         if api_key and api_key != "vertex-ai-backend":
             os.environ['GOOGLE_API_KEY'] = api_key
         
-        # Configure generation settings
-        generation_config = types.GenerateContentConfig(
-            temperature=0.4,
+        def _build_generation_config(
+            temperature: float,
+            top_p: float,
+            max_output_tokens: int = 65536,
+        ) -> types.GenerateContentConfig:
+            """Return a fresh generation config instance for each sub-agent."""
+            return types.GenerateContentConfig(
+                temperature=temperature,
+                top_p=top_p,
+                max_output_tokens=max_output_tokens,
+                safety_settings=[
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                        threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                    ),
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                        threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                    ),
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                        threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                    ),
+                    types.SafetySetting(
+                        category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                        threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
+                    ),
+                ],
+            )
+
+        # Keep specialists more deterministic, while coordinator remains conversational.
+        pdf_generation_config = _build_generation_config(
+            temperature=0.2,
+            top_p=0.85,
+        )
+        media_generation_config = _build_generation_config(
+            temperature=0.55,
+            top_p=0.9,
+        )
+        coordinator_generation_config = _build_generation_config(
+            temperature=0.8,
             top_p=0.95,
-            max_output_tokens=8192,
-            safety_settings=[
-                types.SafetySetting(
-                    category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                    threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                ),
-                types.SafetySetting(
-                    category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-                    threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                ),
-                types.SafetySetting(
-                    category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-                    threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                ),
-                types.SafetySetting(
-                    category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
-                    threshold=types.HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE,
-                ),
-            ],
         )
         
         # Create the PDF analysis agent (analyzes PDFs, returns results to coordinator)
@@ -247,7 +266,7 @@ class ChatAgentManager:
             model=model_name,
             description="Specialist for analyzing PDF documents and returning structured analysis results to the coordinator",
             instruction=PDF_AGENT_INSTRUCTION,
-            generate_content_config=generation_config,
+            generate_content_config=pdf_generation_config,
         )
         
         # Create the media analysis agent (analyzes images/videos, returns results to coordinator)
@@ -256,7 +275,7 @@ class ChatAgentManager:
             model=model_name,
             description="Specialist for analyzing images and videos and returning structured analysis results to the coordinator",
             instruction=MEDIA_AGENT_INSTRUCTION,
-            generate_content_config=generation_config,
+            generate_content_config=media_generation_config,
         )
         
         # Create the coordinator agent (routes tasks, receives results, interacts with users)
@@ -265,7 +284,7 @@ class ChatAgentManager:
             model=model_name,
             description="Steup Growth coordinator that manages conversations, delegates analysis tasks, receives results from specialists, and interacts directly with users",
             instruction=COORDINATOR_AGENT_INSTRUCTION,
-            generate_content_config=generation_config,
+            generate_content_config=coordinator_generation_config,
             tools=[_make_retrieve_knowledge_tool()],  # RAG knowledge retrieval tool (Vertex AI service account)
             sub_agents=[pdf_agent, media_agent],  # Register sub-agents
         )
@@ -849,7 +868,7 @@ def _generate_vertex_streaming_response(
             content_parts,
             stream=True,
             generation_config={
-                'temperature': 0.4,
+                'temperature': 1.0,
                 'top_p': 0.95,
                 'max_output_tokens': 65536,
             }
@@ -1279,10 +1298,6 @@ def generate_streaming_response(
         def run_in_thread():
             """Run the async generator in a separate thread with its own event loop."""
             try:
-                # Create a new event loop for this thread
-                thread_loop = asyncio.new_event_loop()
-                asyncio.set_event_loop(thread_loop)
-                
                 async def stream_chunks():
                     """Async function to stream chunks into the queue."""
 
@@ -1321,10 +1336,9 @@ def generate_streaming_response(
                         exception_holder[0] = primary_err
                     finally:
                         chunk_queue.put(None)
-                
-                # Run the async streaming function
-                thread_loop.run_until_complete(stream_chunks())
-                thread_loop.close()
+
+                # Let asyncio handle loop lifecycle and pending-task cleanup.
+                asyncio.run(stream_chunks())
                 
             except Exception as e:
                 exception_holder[0] = e

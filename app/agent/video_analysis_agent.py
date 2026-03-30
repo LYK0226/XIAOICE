@@ -375,29 +375,35 @@ def _create_vertex_model(model_name: str, client) -> 'Gemini':
 # ADK generation config
 # ---------------------------------------------------------------------------
 
-_GENERATION_CONFIG = types.GenerateContentConfig(
-    temperature=0.0,
-    top_p=0.9,
-    max_output_tokens=65536,
-    safety_settings=[
-        types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-            threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        ),
-        types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
-            threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        ),
-        types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
-            threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        ),
-        types.SafetySetting(
-            category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
-            threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
-        ),
-    ],
-)
+def _build_generation_config(
+    temperature: float = 0.4,
+    top_p: float = 0.9,
+    max_output_tokens: int = 65536,
+) -> types.GenerateContentConfig:
+    """Return a fresh generation config instance for each pipeline agent."""
+    return types.GenerateContentConfig(
+        temperature=temperature,
+        top_p=top_p,
+        max_output_tokens=max_output_tokens,
+        safety_settings=[
+            types.SafetySetting(
+                category=types.HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+            ),
+            types.SafetySetting(
+                category=types.HarmCategory.HARM_CATEGORY_DANGEROUS_CONTENT,
+                threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+            ),
+            types.SafetySetting(
+                category=types.HarmCategory.HARM_CATEGORY_SEXUALLY_EXPLICIT,
+                threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+            ),
+            types.SafetySetting(
+                category=types.HarmCategory.HARM_CATEGORY_HARASSMENT,
+                threshold=types.HarmBlockThreshold.BLOCK_ONLY_HIGH,
+            ),
+        ],
+    )
 
 
 # ---------------------------------------------------------------------------
@@ -420,13 +426,28 @@ def _create_video_pipeline(
                               output_key -> "final_report"
     """
     client = _create_vertex_client(vertex_config)
+    transcription_generation_config = _build_generation_config(
+        temperature=0.1,
+        top_p=0.8,
+        max_output_tokens=32768,
+    )
+    analysis_generation_config = _build_generation_config(
+        temperature=0.3,
+        top_p=0.9,
+        max_output_tokens=65536,
+    )
+    report_generation_config = _build_generation_config(
+        temperature=0.6,
+        top_p=0.95,
+        max_output_tokens=32768,
+    )
 
     transcription_agent = Agent(
         name="video_transcription",
         model=_create_vertex_model(model_name, client),
         instruction=VIDEO_TRANSCRIPTION_INSTRUCTION,
         output_key="transcription",
-        generate_content_config=_GENERATION_CONFIG,
+        generate_content_config=transcription_generation_config,
     )
 
     analysis_agent = Agent(
@@ -434,7 +455,7 @@ def _create_video_pipeline(
         model=_create_vertex_model(model_name, client),
         instruction=VIDEO_ANALYSIS_INSTRUCTION,
         output_key="analysis_result",
-        generate_content_config=_GENERATION_CONFIG,
+        generate_content_config=analysis_generation_config,
     )
 
     report_agent = Agent(
@@ -442,7 +463,7 @@ def _create_video_pipeline(
         model=_create_vertex_model(model_name, client),
         instruction=VIDEO_REPORT_INSTRUCTION,
         output_key="final_report",
-        generate_content_config=_GENERATION_CONFIG,
+        generate_content_config=report_generation_config,
     )
 
     pipeline = SequentialAgent(
