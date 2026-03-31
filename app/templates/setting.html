@@ -298,16 +298,16 @@
                 <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="config_modal.vertex.auth_mode">驗證方式</label>
                 <div id="configVertexAuthToggle" style="display: flex; gap: 8px; border-bottom: 2px solid #e0e0e0; margin-bottom: 12px;">
                     <button type="button" class="config-vertex-auth-btn active" data-auth-mode="service_account" style="flex: 1; padding: 10px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid #8B7AA8; font-weight: 600; color: #8B7AA8;">
-                        <span data-i18n="config_modal.vertex.auth_mode.service_account">服務帳號</span>
+                        <span>Service Account</span>
                     </button>
                     <button type="button" class="config-vertex-auth-btn" data-auth-mode="api_key" style="flex: 1; padding: 10px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 500; color: #666;">
-                        <span data-i18n="config_modal.vertex.auth_mode.api_key">API Key</span>
+                        <span>API Key</span>
                     </button>
                 </div>
             </div>
 
             <div class="form-group" id="configVertexServiceAccountGroup">
-                <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="config_modal.vertex.service_account">服務帳戶 JSON</label>
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Service Account JSON</label>
                 <div style="display: flex; gap: 8px; margin-bottom: 8px;">
                     <button type="button" id="configVertexUploadBtn" class="add-api-key-btn" style="flex: 1; margin: 0; padding: 10px;">
                         <i class="fas fa-upload"></i> <span data-i18n="config_modal.vertex.upload">上傳檔案</span>
@@ -318,7 +318,7 @@
                 </div>
                 <input type="file" id="configVertexServiceAccountFile" accept=".json" style="display: none;">
                 <input type="hidden" id="configVertexServiceAccount">
-                <small class="form-hint" style="display: block; margin-top: 8px; color: #666; font-size: 12px;" data-i18n="config_modal.vertex.hint">從 GCP 主控台下載的服務帳戶 JSON 金鑰文件</small>
+                <small class="form-hint" style="display: block; margin-top: 8px; color: #666; font-size: 12px;" data-i18n="config_modal.vertex.hint">從 GCP 主控台下載的 Service Account JSON 金鑰文件</small>
                 <div id="configVertexProjectIdDisplay" style="display: none; margin-top: 8px; padding: 8px; background: #f0f0f0; border-radius: 4px;">
                     <small style="color: #666; font-size: 12px;"><strong data-i18n="config_modal.vertex.detected_project">檢測到的專案 ID</strong>: <span id="configDetectedProjectId" style="color: #333; font-weight: 600;"></span></small>
                 </div>
