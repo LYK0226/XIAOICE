@@ -1,388 +1,398 @@
-# Steup Growth Multi-Agent System Architecture
+# Steup Growth Multi-Agent Chat System Architecture
 
 ## Overview
 
-Steup Growth uses Google's Agent Development Kit (ADK) to implement a sophisticated multi-agent system. The architecture consists of a coordinator agent that manages conversations with users and delegates specialized tasks to sub-agents for PDF and media analysis.
+Steup Growth uses Google ADK to run a provider-aware, multi-agent chat system.
+The runtime supports two backends:
 
-## Architecture Diagram
+- AI Studio mode (user-selected AI Studio key)
+- Vertex AI mode (user-selected Vertex service account or Vertex API key)
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                         USER INTERFACE                          │
-│                    (Web Browser / Client)                       │
-└────────────────────────────┬────────────────────────────────────┘
-                             │
-                             │ HTTP/WebSocket
-                             │
-┌────────────────────────────▼────────────────────────────────────┐
-│                      FLASK APPLICATION                          │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │              Socket Events / REST API                     │  │
-│  │         (socket_events.py / routes.py)                    │  │
-│  └──────────────────┬───────────────────────────────────────┘  │
-│                     │                                           │
-│                     │ Calls                                     │
-│                     │                                           │
-│  ┌──────────────────▼───────────────────────────────────────┐  │
-│  │            ADK Chat Agent System                         │  │
-│  │           (app/agent/chat_agent.py)                      │  │
-│  │                                                           │  │
-│  │  ┌─────────────────────────────────────────────────┐    │  │
-│  │  │      ChatAgentManager                           │    │  │
-│  │  │  - Manages agent instances per user             │    │  │
-│  │  │  - Handles session persistence                  │    │  │
-│  │  │  - API key and model management                 │    │  │
-│  │  └─────────────────┬───────────────────────────────┘    │  │
-│  │                    │                                      │  │
-│  │                    │ Creates & Manages                    │  │
-│  │                    │                                      │  │
-│  │  ┌─────────────────▼───────────────────────────────┐    │  │
-│  │  │         COORDINATOR AGENT                       │    │  │
-│  │  │        (steup_growth_coordinator)                │    │  │
-│  │  │                                                  │    │  │
-│  │  │  Role: Main conversation manager                │    │  │
-│  │  │  - Interacts directly with users               │    │  │
-│  │  │  - Delegates tasks to specialists               │    │  │
-│  │  │  - Integrates analysis results                  │    │  │
-│  │  │  - Manages chat history & context               │    │  │
-│  │  │  - Handles plain text conversations             │    │  │
-│  │  │                                                  │    │  │
-  │  │  │  Model: gemini-3-flash / gemini-3-pro      │    │  │
-│  │  └──────────────┬──────────────┬───────────────────┘    │  │
-│  │                 │              │                          │  │
-│  │      Delegates  │              │  Delegates               │  │
-│  │      PDF tasks  │              │  Media tasks             │  │
-│  │                 │              │                          │  │
-│  │  ┌──────────────▼─────────┐ ┌─▼──────────────────────┐  │  │
-│  │  │    PDF AGENT           │ │    MEDIA AGENT         │  │  │
-│  │  │   (pdf_agent)          │ │   (media_agent)        │  │  │
-│  │  │                        │ │                        │  │  │
-│  │  │  Specialization:       │ │  Specialization:       │  │  │
-│  │  │  - Analyzes PDFs       │ │  - Analyzes images     │  │  │
-│  │  │  - Extracts text       │ │  - Analyzes videos     │  │  │
-│  │  │  - Summarizes docs     │ │  - Describes visuals   │  │  │
-│  │  │  - Multi-language      │ │  - OCR text detection  │  │  │
-│  │  │                        │ │  - Scene recognition   │  │  │
-│  │  │  Returns: Natural      │ │  Returns: Natural      │  │  │
-│  │  │  language analysis     │ │  language description  │  │  │
-│  │  │  to coordinator        │ │  to coordinator        │  │  │
-│  │  │                        │ │                        │  │  │
-│  │  │  Does NOT interact     │ │  Does NOT interact     │  │  │
-│  │  │  with users directly   │ │  with users directly   │  │  │
-│  │  └────────────────────────┘ └────────────────────────┘  │  │
-│  └───────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-                             │
-                             │ Reads/Writes
-                             │
-┌────────────────────────────▼────────────────────────────────────┐
-│                    PERSISTENT STORAGE                           │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  SQLAlchemy Database (app/models.py)                     │  │
-│  │  - Users, UserProfiles, UserApiKeys                      │  │
-│  │  - Conversations, Messages                               │  │
-│  │  - FileUploads (references to GCS)                       │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  Google Cloud Storage (app/gcp_bucket.py)                │  │
-│  │  - PDF files                                             │  │
-│  │  - Image files                                           │  │
-│  │  - Video files                                           │  │
-│  └──────────────────────────────────────────────────────────┘  │
-│  ┌──────────────────────────────────────────────────────────┐  │
-│  │  ADK Session Storage (InMemorySessionService)            │  │
-│  │  - Conversation context per session                      │  │
-│  │  - Agent state and history                               │  │
-│  └──────────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────────┘
-```
+The chat runtime keeps one coordinator agent as the user-facing entry point and delegates document or media analysis to specialist agents. It exposes two streaming surfaces: HTTP SSE and Socket.IO.
 
-## Agent Communication Flow
-
-### Flow 1: Text-Only Conversation
+## Architecture Diagram (Agent-Level Task Flow)
 
 ```
-User Message (text only)
-    │
-    ▼
-Coordinator Agent
-    │
-    ├─> Processes directly with Gemini
-    │
-    ▼
-Streams response back to user
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                                USER CLIENTS                                 │
+│                      Web Chat UI / Socket.IO Frontend                       │
+└───────────────────────────────┬──────────────────────────────────────────────┘
+                                │
+                    HTTP POST /chat/stream  |  Socket send_message
+                                │
+┌───────────────────────────────▼──────────────────────────────────────────────┐
+│                            FLASK API + SOCKET.IO                            │
+│             app/routes.py (SSE) + app/socket_events.py (WS)                │
+│  - resolve attachments/provider/model                                        │
+│  - call generate_streaming_response(...)                                     │
+│  - stream cleaned chunks to client                                           │
+└───────────────────────────────┬──────────────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                 RUNTIME ORCHESTRATION (chat_agent.py)                       │
+│  ChatAgentManager: cache runner/agent, ensure session, isolate provider      │
+└───────────────────────────────┬──────────────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│               steup_growth_coordinator (user-facing agent)                  │
+│  Tasks:                                                                       │
+│  - understand user intent                                                     │
+│  - choose whether to delegate                                                 │
+│  - call tools (retrieve_knowledge, optional google_search)                   │
+│  - compose final conversational response                                      │
+└───────────────┬───────────────────────────────┬──────────────────────────────┘
+                │                               │
+      delegates PDF tasks             delegates media tasks
+                │                               │
+                ▼                               ▼
+┌──────────────────────────────┐     ┌────────────────────────────────────────┐
+│ pdf_agent                    │     │ media_agent                            │
+│ Tasks:                       │     │ Tasks:                                 │
+│ - parse/read PDF context     │     │ - analyze image/media context          │
+│ - summarize key information  │     │ - extract visual/textual cues          │
+│ - return specialist findings │     │ - return specialist findings            │
+└───────────────┬──────────────┘     └──────────────────────┬─────────────────┘
+                │                                           │
+                └─────────────── specialist results ────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                         Coordinator final response                           │
+│                 -> SSE / Socket chunk stream back to user                    │
+└───────────────────────────────┬──────────────────────────────────────────────┘
+                                │
+                                ▼
+┌──────────────────────────────────────────────────────────────────────────────┐
+│                              PERSISTENT LAYERS                              │
+│  SQLAlchemy: Users/Profiles/Keys/Conversations/Messages/FileUploads         │
+│  GCS: uploaded files                                                         │
+│  ADK Session Service: InMemorySessionService                                 │
+└──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Flow 2: PDF Upload and Analysis
+## Mermaid Diagram (Agent-Level Task Flow)
 
-```
-User uploads PDF + message
-    │
-    ▼
-Coordinator Agent
-    │
-    ├─> Detects PDF file type
-    │
-    ├─> Delegates to PDF Agent
-    │       │
-    │       ├─> Analyzes PDF content
-    │       ├─> Extracts key information
-    │       └─> Returns natural language analysis
-    │
-    ├─> Receives analysis results
-    │
-    ├─> Integrates into conversational response
-    │
-    ▼
-Streams friendly response to user
+```mermaid
+flowchart TD
+  U[User Clients\nWeb Chat UI / Socket.IO] --> A[Flask API + Socket.IO\nroutes.py + socket_events.py\nResolve provider/attachments/model]
+  A --> O[Runtime Orchestration\nChatAgentManager\nCache runner/agent + ensure session]
+
+  O --> C[steup_growth_coordinator\nUnderstand intent\nDelegate + compose final response]
+  C --> T[Tools\nretrieve_knowledge\noptional google_search]
+  C --> P[pdf_agent\nPDF parsing/summarization\nReturn specialist findings]
+  C --> M[media_agent\nImage/media analysis\nReturn specialist findings]
+
+  P --> C
+  M --> C
+  T --> C
+
+  C --> S[Stream Response\nSSE or Socket chunks]
+  S --> U
+
+  O --> D[(Persistent Layers\nSQLAlchemy + GCS + ADK Session Service)]
 ```
 
-### Flow 3: Image/Video Upload and Analysis
+## Runtime Modes and Provider Routing
 
-```
-User uploads image/video + message
-    │
-    ▼
-Coordinator Agent
-    │
-    ├─> Detects media file type
-    │
-    ├─> Delegates to Media Agent
-    │       │
-    │       ├─> Analyzes visual content
-    │       ├─> Identifies objects, scenes, text
-    │       └─> Returns natural language description
-    │
-    ├─> Receives analysis results
-    │
-    ├─> Integrates into conversational response
-    │
-    ▼
-Streams friendly response to user
-```
+### Mode A: AI Studio
 
-## Key Components
+- Credential source: selected `UserApiKey` where `provider = ai_studio`
+- Primary execution: ADK multi-agent runner
+- Video handling note: uploaded video attachments are not sent to AI Studio as video parts. The server first runs Vertex fallback transcription and injects transcript text into the coordinator prompt.
+
+### Mode B: Vertex AI
+
+- Credential source:
+  - selected `VertexServiceAccount` (service account mode), or
+  - selected `UserApiKey` where `provider = vertex_ai` (API key mode)
+- Execution: ADK multi-agent runner configured through Vertex environment variables during request scope
+- Isolation: Vertex requests use a distinct cache namespace (`{user_id}_vertex`) so AI Studio and Vertex runners are not mixed.
+
+## Core Components
 
 ### 1. ChatAgentManager
-**File**: `app/agent/chat_agent.py`
 
-**Responsibilities**:
-- Creates and manages ADK Agent instances per user
-- Handles per-user API keys and model preferences
-- Manages persistent sessions tied to conversation IDs
-- Caches agents and runners for performance
-- Provides session lifecycle management
+File: `app/agent/chat_agent.py`
 
-**Key Methods**:
-- `_create_agent()`: Creates multi-agent hierarchy
-- `get_or_create_agent()`: User-specific agent retrieval
-- `get_or_create_runner()`: ADK Runner management
-- `ensure_session_exists()`: Session initialization
-- `clear_conversation_session()`: Session cleanup
+Responsibilities:
 
-### 2. Coordinator Agent (steup_growth_coordinator)
+- Build coordinator + specialist hierarchy (`_create_agent`)
+- Cache per-user/per-model agent and runner instances (`get_or_create_agent`, `get_or_create_runner`)
+- Create stable session IDs tied to DB conversation IDs (`get_session_id`)
+- Ensure sessions exist in ADK session service (`ensure_session_exists`, `ensure_session_exists_async`)
 
-**Model**: `gemini-3-flash` or `gemini-3-pro` (user-configurable)
+Session ID format:
 
-**Capabilities**:
-- **Direct User Interaction**: Primary interface for all conversations
-- **Task Routing**: Intelligently delegates to specialist agents
-- **Result Integration**: Combines specialist analysis with conversational context
-- **Context Management**: Maintains conversation history across sessions
-- **Multi-language Support**: Handles Chinese and English naturally
+- `conv_{user_id}_{conversation_id}` for persisted chat threads
+- `temp_{user_id}` when conversation ID is not present
 
-**Instruction Philosophy**:
-- Friendly and conversational tone
-- Acts as the "face" of Steup Growth
-- Presents specialist results in natural, engaging language
-- Adds personal commentary and insights
+### 2. Coordinator Agent
 
-### 3. PDF Agent (pdf_agent)
+Name: `steup_growth_coordinator`
 
-**Model**: Same as coordinator (shared model)
+Role:
 
-**Capabilities**:
-- PDF document parsing and analysis
-- Multi-language text extraction (Chinese, English, etc.)
-- Content summarization
-- Key information identification
-- Document structure understanding
+- Main user-facing conversation agent
+- Routes analysis work to `pdf_agent` and `media_agent`
+- Integrates specialist outputs into final conversational responses
+- Applies tool calls when needed (`retrieve_knowledge`, optional `google_search`)
 
-**Output Style**:
-- Natural language descriptions (no structured headers)
-- Conversational analysis format
-- Returns results to coordinator only
-- Does not interact with users directly
+Generation profile:
 
-**Supported MIME Types**:
-- `application/pdf`
+- Temperature `0.8`, top_p `0.95`
 
-### 4. Media Agent (media_agent)
+### 3. PDF Agent
 
-**Model**: Same as coordinator (shared model)
+Name: `pdf_agent`
 
-**Capabilities**:
-- Image analysis and description
-- Video content analysis
-- Object and scene recognition
-- OCR text detection
-- Color, composition, and context analysis
-- Temporal sequence understanding (for videos)
+Role:
 
-**Output Style**:
-- Natural language descriptions (no "Visual Overview" headers)
-- Flowing, conversational analysis
-- Returns results to coordinator only
-- Does not interact with users directly
+- Analyze PDF content and return specialist output to coordinator
 
-**Supported MIME Types**:
-- **Images**: `image/jpeg`, `image/png`, `image/webp`, `image/heic`, `image/heif`
-- **Videos**: `video/mp4`, `video/mpeg`, `video/mov`, `video/avi`, `video/x-flv`, `video/mpg`, `video/webm`, `video/wmv`, `video/3gpp`
+Generation profile:
 
-## Session Management
+- Temperature `0.2`, top_p `0.85`
 
-### Session Persistence
-- **Session ID Format**: `conv_{user_id}_{conversation_id}`
-- **Tied to Database**: Each conversation in the database has a corresponding ADK session
-- **State Storage**: `InMemorySessionService` (can be replaced with persistent storage)
-- **Context Retention**: Conversation history maintained across user sessions
+### 4. Media Agent
 
-### Session Lifecycle
-1. **Creation**: Session created when conversation starts
-2. **Usage**: Attached to every agent run for context
-3. **Persistence**: Maintained throughout conversation lifetime
-4. **Cleanup**: Deleted when conversation is removed from database
+Name: `media_agent`
 
-## File Handling
+Role:
 
-### Upload Flow
+- Analyze image and media content and return specialist output to coordinator
+
+Generation profile:
+
+- Temperature `0.55`, top_p `0.9`
+
+## Agent Responsibility Matrix
+
+The matrix below clarifies which tasks are owned by which runtime component.
+
+| Component | Primary responsibilities | Trigger conditions | Expected output | Explicitly out of scope |
+| --- | --- | --- | --- | --- |
+| `steup_growth_coordinator` | user-facing conversation, intent interpretation, specialist delegation, tool invocation, final response composition | every user request enters coordinator path | conversational text streamed to user | low-level file parsing, direct storage operations |
+| `pdf_agent` | PDF-oriented content understanding (document reading, summarization, key-point extraction) | request includes PDF attachment or PDF-focused question | specialist analysis returned to coordinator | direct user messaging, routing decisions, API/provider selection |
+| `media_agent` | image/media understanding, visual context extraction, OCR-style observations where applicable | request includes image/media content; in AI Studio video path, uses transcript context prepared by runtime | specialist analysis returned to coordinator | direct user messaging, session/provider management |
+| `ChatAgentManager` (runtime orchestrator, non-LLM agent) | agent/runner cache management, session creation, per-user model-key scoping | called by streaming wrapper before runner execution | ready-to-run ADK agent/runner/session context | semantic analysis or end-user response generation |
+
+### Agent Boundaries and Hand-off Rules
+
+1. User-visible output ownership belongs to coordinator only.
+2. Specialists return analysis to coordinator and do not communicate with users directly.
+3. File preparation and validation happens in runtime wrapper before specialist reasoning.
+4. Provider routing (AI Studio vs Vertex) is resolved before agent execution and is not an agent concern.
+5. Session lifecycle and cache invalidation are orchestration responsibilities, not specialist responsibilities.
+
+### Task-to-Agent Mapping
+
+| Task | Primary owner | Supporting owner(s) | Notes |
+| --- | --- | --- | --- |
+| Plain text conversation | `steup_growth_coordinator` | `ChatAgentManager` | coordinator handles intent and response style |
+| RAG-backed knowledge answer | `steup_growth_coordinator` | `retrieve_knowledge` tool | coordinator decides when to call tool |
+| PDF summarization | `pdf_agent` | `steup_growth_coordinator` | specialist analyzes; coordinator presents result |
+| PDF key information extraction | `pdf_agent` | `steup_growth_coordinator` | includes structure/key-point understanding |
+| Image description and visual reasoning | `media_agent` | `steup_growth_coordinator` | specialist handles visual analysis |
+| OCR-like text observation from image/media | `media_agent` | `steup_growth_coordinator` | returned as specialist analysis |
+| Video request in AI Studio mode | runtime fallback (`_transcribe_videos_with_vertex_fallback`) | `steup_growth_coordinator`, `media_agent` | runtime converts video into transcript context before coordinator response |
+| Provider selection and credential mode resolution | route/socket layer | `ChatAgentManager` | not handled by specialist agents |
+| Session creation and runner reuse | `ChatAgentManager` | ADK `InMemorySessionService` | runtime orchestration concern |
+| Stream prefix cleanup and transport framing | route/socket layer | streaming wrapper | applies to SSE and Socket.IO outputs |
+
+## Supported Inputs and Validation
+
+File validation is enforced in `chat_agent.py`:
+
+- Maximum file size: 500 MB
+- Supported MIME categories:
+  - PDF: `application/pdf`
+  - Images: `image/jpeg`, `image/png`, `image/webp`, `image/heic`, `image/heif`
+  - Videos: `video/mp4`, `video/mpeg`, `video/mov`, `video/quicktime`, `video/avi`, `video/x-msvideo`, `video/x-flv`, `video/mpg`, `video/webm`, `video/wmv`, `video/x-ms-wmv`, `video/3gpp`, `video/x-matroska`
+- MIME fallback behavior: unknown but `video/*` types are accepted to remain browser/container tolerant.
+
+## Attachment Payload Formats
+
+`/chat/stream` supports both new and legacy payloads:
+
+### New multi-file payload
+
+- `file_urls`: JSON array of URLs
+- `file_mime_types`: JSON array of MIME strings
+
+### Legacy single-file payload
+
+- `image_url` + `image_mime_type`, or
+- multipart file `image`
+
+Normalization and deduplication:
+
+- `_normalize_file_attachments(...)` accepts dict/string entries, normalizes path + MIME, and deduplicates by path.
+
+Follow-up file reuse:
+
+- If no new files are provided and a conversation ID exists, the route inspects recent user messages (up to 30) and reuses the latest uploaded attachments.
+
+## Chat Flows
+
+### Flow 1: Text-only
+
 ```
-User uploads file
-    │
-    ▼
-File sent to Flask endpoint
-    │
-    ▼
-Uploaded to Google Cloud Storage (GCS)
-    │
-    ▼
-GCS URL stored in database (FileUpload model)
-    │
-    ▼
-File downloaded from GCS for agent processing
-    │
-    ▼
-Converted to bytes and attached to ADK Content
-    │
-    ▼
-Passed to appropriate specialist agent
+User text -> Coordinator -> ADK stream -> SSE/Socket chunk stream -> Client
 ```
 
-### File Validation
-- **Size Limit**: 500MB maximum
-- **Type Validation**: Only supported MIME types allowed
-- **Error Handling**: User-friendly error messages for invalid files
+### Flow 2: PDF/Image with prompt
 
-## API Key Management
+```
+User message + attachment(s)
+  -> attachment normalization + validation
+  -> coordinator delegates specialist work as needed
+  -> coordinator integrates specialist output
+  -> chunked streaming response to client
+```
 
-### Per-User API Keys
-- Encrypted at rest using Fernet encryption
-- Stored in `user_api_keys` table
-- Users can have multiple keys (selects one as active)
-- Decrypted only when needed for agent operations
+### Flow 3: Video with AI Studio provider
 
-### Model Selection
-- Users choose model via `UserProfile.ai_model`
-- Options: `gemini-3-flash`, `gemini-3-pro`, etc.
-- Applied to all agents (coordinator and specialists)
-- Fallback to environment variable if not set
+```
+User message + video attachment(s)
+  -> detect video MIME
+  -> server-side Vertex fallback transcription (_transcribe_videos_with_vertex_fallback)
+  -> remove video binary parts from AI Studio request
+  -> append transcript summary to text prompt
+  -> coordinator responds using transcript + context
+```
 
-## Streaming Response
+Fallback controls:
 
-### Async Streaming
-- `generate_streaming_response_async()`: Native async implementation
-- Event-based streaming from ADK Runner
-- Real-time token streaming to WebSocket
+- `CHAT_VIDEO_VERTEX_FALLBACK` (default true)
+- `CHAT_VIDEO_FALLBACK_TIMEOUT_SECONDS` (default 120)
+- `CHAT_VIDEO_FALLBACK_MODEL` (default `gemini-3-flash-preview`)
 
-### Sync Streaming
-- `generate_streaming_response()`: Synchronous wrapper
-- Uses thread-based async-to-sync bridge
-- Queue-based chunk passing
-- Compatible with Flask routes
+### Flow 4: Vertex provider request
 
-## Error Handling
+```
+User request
+  -> resolve vertex_config (service account or API key)
+  -> configure env for Vertex scoped to request
+  -> run ADK multi-agent streaming
+  -> restore environment in finally block
+```
 
-### Common Error Scenarios
-1. **Invalid API Key**: User-friendly message to check settings
-2. **Regional Restrictions**: Suggests VPN or alternative service
-3. **Quota Exceeded**: Advises waiting or checking limits
-4. **File Errors**: Specific validation error messages
-5. **Analysis Failures**: Graceful fallback responses
+## Streaming Implementation
 
-## Design Principles
+### Shared entry point
 
-### 1. Natural Conversation
-- Agents respond conversationally, not with structured formats
-- Coordinator presents specialist results in friendly language
-- No visible "routing" or "delegation" to users
+- `generate_streaming_response(...)` is the sync wrapper used by both SSE and Socket.IO surfaces.
 
-### 2. Separation of Concerns
-- Coordinator: User interaction and conversation management
-- Specialists: Focused analysis without user awareness
-- Clean delegation pattern with result integration
+### Internal bridge model
 
-### 3. User Privacy
-- Per-user agent instances
-- Isolated API keys and preferences
-- No cross-user data leakage
+- The sync wrapper starts a background thread.
+- Inside that thread, `asyncio.run(...)` executes async ADK streaming.
+- Chunks are pushed to a queue and consumed in the main sync generator.
+- Main loop uses short queue timeouts and cooperative yielding to avoid blocking concurrent requests.
 
-### 4. Scalability
-- Agent and runner caching
-- Session-based context management
-- Efficient file handling via GCS
+### Surface 1: HTTP SSE
 
-### 5. Extensibility
-- Easy to add new specialist agents
-- Pluggable session storage backends
-- Configurable models per user
+File: `app/routes.py`
+
+- Endpoint: `POST /chat/stream`
+- Chunk post-processing:
+  - `strip()`
+  - remove prefixes: `Assistant:`, `AI:`, `Bot:`, `System:`, `Human:`
+- Chunk framing:
+  - JSON-encode each chunk, then emit as `data: <json>\n\n`
+
+### Surface 2: Socket.IO
+
+File: `app/socket_events.py`
+
+- Event flow: `send_message` -> stream chunks via `ai_response_chunk`
+- Uses the same prefix-stripping list before emit.
+
+## Session Lifecycle
+
+1. Conversation exists in SQL table.
+2. Request resolves `session_id = conv_{user_id}_{conversation_id}`.
+3. Session is created lazily in ADK `InMemorySessionService` if not already tracked.
+4. Runner uses same session across subsequent messages in that conversation.
+5. On conversation deletion, route-level cleanup can clear associated ADK session state.
+
+## Error Handling and Recovery
+
+### User-facing mapping
+
+`_format_error_message(...)` maps internal errors to friendly responses for:
+
+- unsupported region / precondition failures
+- invalid API key / unauthorized
+- quota and rate limit failures
+- backend 5xx transient failures
+
+### Stream safety
+
+- If primary ADK stream fails, cached runner and agent entries for that key are removed to prevent stale state reuse.
+
+### Vertex env safety
+
+- Vertex mode snapshots and restores environment variables in a `finally` block.
+- Temporary service-account files are removed after request completion.
+
+## Data and Storage Layers
+
+### SQLAlchemy models involved
+
+- `User`, `UserProfile`
+- `UserApiKey`, `VertexServiceAccount`
+- `Conversation`, `Message`
+- `FileUpload`
+
+### GCS usage
+
+- Upload helper: `gcp_bucket.upload_image_to_gcs(...)` and `upload_file_to_gcs(...)`
+- Download helper: `gcp_bucket.download_file_from_gcs(...)`
+- Storage key pattern: `{user_id}/{category}/{filename_timestamp.ext}`
+
+## Security and Isolation
+
+- JWT-protected routes for chat APIs.
+- Per-user key ownership checks before provider execution.
+- API keys and service-account credentials stored encrypted (Fernet) and decrypted only when needed.
+- Provider-specific runner cache namespace separation to reduce cross-mode contamination.
+
+## Design Principles (Current Implementation)
+
+1. Single user-facing coordinator with specialist delegation.
+2. Multi-provider runtime while preserving one streaming API shape.
+3. Graceful degradation for unsupported media/provider combinations.
+4. Request-scoped credential setup with cleanup.
+5. Operational continuity via queue-based sync/async streaming bridge.
 
 ## Technology Stack
 
-- **Agent Framework**: Google Agent Development Kit (ADK)
-- **LLM Models**: Gemini 3 Flash / Pro
-- **Backend**: Flask with SocketIO
-- **Database**: SQLAlchemy (SQLite/PostgreSQL)
-- **File Storage**: Google Cloud Storage
-- **Authentication**: JWT tokens
-- **Encryption**: Fernet (for API keys)
+- Agent framework: Google ADK
+- LLM runtime: Gemini models via AI Studio and Vertex AI
+- Backend: Flask + Socket.IO
+- Database: SQLAlchemy
+- Storage: Google Cloud Storage
+- Auth: JWT
+- Encryption: Fernet for credential-at-rest protection
 
 ## Future Enhancements
 
-### Potential Additions
-1. **More Specialist Agents**:
-   - Code analysis agent
-   - Web search agent
-   - Data analysis agent
-
-2. **Advanced Features**:
-   - Multi-step reasoning workflows
-   - Agent-to-agent collaboration
-   - Memory service for long-term context
-
-3. **Performance**:
-   - Distributed session storage
-   - Agent result caching
-   - Parallel specialist invocation
-
-4. **Observability**:
-   - Agent performance metrics
-   - Decision logging
-   - User interaction analytics
+1. Replace `InMemorySessionService` with durable distributed session storage.
+2. Add observability for routing decisions, tool usage, and stream latency.
+3. Expand specialist set with code-analysis and web-research specialists.
+4. Add deterministic integration tests for provider matrix and fallback paths.
+5. Introduce policy-based routing (model/provider) by task type.
 
 ## References
 
+- `app/agent/chat_agent.py`
+- `app/routes.py`
+- `app/socket_events.py`
+- `app/models.py`
+- `app/gcp_bucket.py`
+- `docs/VIDEO_ANALYSIS_AGENT_ARCHITECTURE.md`
 - [Google ADK Documentation](https://github.com/google/adk-python)
-- [ADK Multi-Agent Systems](https://github.com/google/adk-docs/blob/main/docs/agents/multi-agents.md)
 - [Gemini Models Documentation](https://ai.google.dev/gemini-api/docs)
-- [Steup Growth Project README](../README.md)
-- [API Key Flow Diagram](./API_KEY_FLOW_DIAGRAM.md)
