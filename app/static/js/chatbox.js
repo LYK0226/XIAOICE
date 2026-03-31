@@ -20,7 +20,7 @@ const filePreviewContainer = document.getElementById('filePreviewContainer');
 
 /**
  * Lightweight Markdown → HTML renderer.
- * Handles: headings, bold, italic, numbered/bullet lists, code blocks, inline code, line breaks.
+ * Handles: headings, bold, italic, links, numbered/bullet lists, code blocks, inline code, line breaks.
  * HTML entities are escaped first to prevent XSS.
  */
 function renderMarkdown(text) {
@@ -30,7 +30,9 @@ function renderMarkdown(text) {
     let html = text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 
     // 2. Fenced code blocks (```...```)
     html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) => {
@@ -49,7 +51,13 @@ function renderMarkdown(text) {
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-    // 6. Lists — convert blocks of consecutive list lines
+    // 6. Markdown links: [label](https://example.com)
+    html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_m, label, url) => {
+        const safeUrl = url.replace(/"/g, '%22').replace(/'/g, '%27');
+        return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    });
+
+    // 7. Lists — convert blocks of consecutive list lines
     // Numbered lists: lines starting with "1. ", "2. ", etc.
     html = html.replace(/(^|\n)((?:\d+\.\s.+(?:\n|$))+)/g, (_m, pre, block) => {
         const items = block.trim().split('\n').map(line =>
@@ -66,7 +74,7 @@ function renderMarkdown(text) {
         return `${pre}<ul>${items}</ul>`;
     });
 
-    // 7. Remaining newlines → <br> (but not inside <pre> or after block elements)
+    // 8. Remaining newlines → <br> (but not inside <pre> or after block elements)
     html = html.replace(/\n/g, '<br>');
 
     // Clean up extra <br> around block elements

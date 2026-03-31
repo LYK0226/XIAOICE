@@ -752,6 +752,33 @@ function showChildrenReminder() {
 // Load user profile information
 let _currentUserAuthProvider = 'local'; // Track auth provider for UI adaptation
 
+function resolveAvatarDisplayUrl(avatarPath, token) {
+    if (!avatarPath || typeof avatarPath !== 'string') {
+        return null;
+    }
+
+    const normalizedPath = avatarPath.trim();
+    if (!normalizedPath) {
+        return null;
+    }
+
+    // Keep GCS files behind authenticated proxy.
+    if (normalizedPath.startsWith('https://storage.googleapis.com/') || normalizedPath.startsWith('gs://')) {
+        return `/serve_file?url=${encodeURIComponent(normalizedPath)}&token=${encodeURIComponent(token || '')}`;
+    }
+
+    // External absolute URLs (e.g., Google profile photos) should be used directly.
+    if (normalizedPath.startsWith('https://') || normalizedPath.startsWith('http://')) {
+        return normalizedPath;
+    }
+
+    if (normalizedPath.startsWith('/')) {
+        return normalizedPath;
+    }
+
+    return `/static/${normalizedPath}`;
+}
+
 async function loadUserProfile() {
     try {
         const response = await fetch('/auth/me', {
@@ -782,14 +809,7 @@ async function loadUserProfile() {
             // Load user avatar if available
             if (user.avatar) {
                 const token = localStorage.getItem('access_token');
-                // If it's a GCS (or absolute) URL, use the serve_file endpoint to proxy with token
-                if (user.avatar.startsWith('https://storage.googleapis.com/') || user.avatar.startsWith('gs://')) {
-                    userAvatar = `/serve_file?url=${encodeURIComponent(user.avatar)}&token=${encodeURIComponent(token)}`;
-                } else if (user.avatar.startsWith('/')) {
-                    userAvatar = user.avatar;
-                } else {
-                    userAvatar = `/static/${user.avatar}`;
-                }
+                userAvatar = resolveAvatarDisplayUrl(user.avatar, token);
 
                 userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
                 userAvatarPreview.style.backgroundSize = 'cover';
@@ -3224,13 +3244,7 @@ async function saveAvatarToServer(file) {
             if (result.avatar_path) {
                 const avatarPath = result.avatar_path;
                 const token = localStorage.getItem('access_token');
-                if (avatarPath.startsWith('https://storage.googleapis.com/') || avatarPath.startsWith('gs://')) {
-                    userAvatar = `/serve_file?url=${encodeURIComponent(avatarPath)}&token=${encodeURIComponent(token)}`;
-                } else if (avatarPath.startsWith('/')) {
-                    userAvatar = avatarPath;
-                } else {
-                    userAvatar = `/static/${avatarPath}`;
-                }
+                userAvatar = resolveAvatarDisplayUrl(avatarPath, token);
                 userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
                 userAvatarPreview.style.backgroundSize = 'cover';
                 userAvatarPreview.style.backgroundPosition = 'center';

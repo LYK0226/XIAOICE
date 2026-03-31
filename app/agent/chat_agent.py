@@ -46,6 +46,7 @@ logging.getLogger('google_genai.types').setLevel(logging.ERROR)
 from google.adk.agents import Agent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
+from google.adk.tools import google_search
 from google.genai import types
 
 from app import gcp_bucket
@@ -175,6 +176,13 @@ VIDEO_VERTEX_FALLBACK_TIMEOUT_SECONDS = int(
 VIDEO_VERTEX_FALLBACK_MODEL = os.environ.get('CHAT_VIDEO_FALLBACK_MODEL', 'gemini-3-flash-preview')
 
 
+def _is_google_search_enabled() -> bool:
+    """Return whether official Google Search tool should be exposed to coordinator."""
+    return os.environ.get('GOOGLE_SEARCH_ENABLED', 'true').strip().lower() in {
+        '1', 'true', 'yes', 'on'
+    }
+
+
 class ChatAgentManager:
     """
     Manages ADK chat agents for user sessions.
@@ -195,6 +203,15 @@ class ChatAgentManager:
         self._runners: Dict[str, Runner] = {}
         self._api_keys: Dict[str, str] = {}  # Cache API keys per user to avoid global env pollution
         self._created_sessions: set = set()  # Track created sessions
+
+    def _build_coordinator_tools(self) -> List[Any]:
+        """Assemble coordinator tools with optional web search capability."""
+        tools: List[Any] = [_make_retrieve_knowledge_tool()]
+
+        if _is_google_search_enabled():
+            tools.append(google_search)
+
+        return tools
     
     def _create_agent(self, api_key: str, model_name: str = "gemini-3-flash") -> Agent:
         """
@@ -259,6 +276,7 @@ class ChatAgentManager:
             temperature=0.8,
             top_p=0.95,
         )
+        coordinator_tools = self._build_coordinator_tools()
         
         # Create the PDF analysis agent (analyzes PDFs, returns results to coordinator)
         pdf_agent = Agent(
@@ -285,7 +303,7 @@ class ChatAgentManager:
             description="Steup Growth coordinator that manages conversations, delegates analysis tasks, receives results from specialists, and interacts directly with users",
             instruction=COORDINATOR_AGENT_INSTRUCTION,
             generate_content_config=coordinator_generation_config,
-            tools=[_make_retrieve_knowledge_tool()],  # RAG knowledge retrieval tool (Vertex AI service account)
+            tools=coordinator_tools,
             sub_agents=[pdf_agent, media_agent],  # Register sub-agents
         )
         
