@@ -317,22 +317,31 @@ document.addEventListener('DOMContentLoaded', () => {
 			const statusLabel = u.is_active ? '活躍' : '停用';
 			const statusClass = u.is_active ? 'active' : 'inactive';
 			const createdDate = u.created_at ? new Date(u.created_at).toLocaleDateString('zh-TW') : '-';
+			const rawUsername = typeof u.username === 'string' ? u.username.trim() : '';
+			const displayName = rawUsername || u.display_name || u.email || `User ${u.id}`;
+			const avatarInitial = displayName.charAt(0).toUpperCase();
+			const safeDisplayName = escapeHtml(displayName);
+			const safeEmail = escapeHtml(u.email || '-');
+			const editUsernameArg = JSON.stringify(rawUsername || displayName);
+			const editEmailArg = JSON.stringify(u.email || '');
+			const editRoleArg = JSON.stringify(u.role || 'user');
+			const isActiveArg = u.is_active ? 'true' : 'false';
 
 			return `
 				<tr data-user-id="${u.id}">
 					<td><input type="checkbox"></td>
 					<td>
 						<div class="user-cell">
-							<div class="user-avatar ${roleClass}">${u.username.charAt(0).toUpperCase()}</div>
-							<span>${u.username}</span>
+							<div class="user-avatar ${roleClass}">${escapeHtml(avatarInitial)}</div>
+							<span>${safeDisplayName}</span>
 						</div>
 					</td>
-					<td>${u.email}</td>
+					<td>${safeEmail}</td>
 					<td><span class="role-badge ${roleClass}">${roleLabel}</span></td>
 					<td>${createdDate}</td>
 					<td><span class="status-badge ${statusClass}">${statusLabel}</span></td>
 					<td>
-						<button class="table-btn edit" onclick="openEditUser(${u.id}, '${u.username}', '${u.email}', '${u.role}', ${u.is_active})"><i class="fas fa-edit"></i></button>
+						<button class="table-btn edit" onclick='openEditUser(${u.id}, ${editUsernameArg}, ${editEmailArg}, ${editRoleArg}, ${isActiveArg})'><i class="fas fa-edit"></i></button>
 						<button class="table-btn delete" onclick="deleteUser(${u.id})"><i class="fas fa-trash"></i></button>
 					</td>
 				</tr>
@@ -405,10 +414,10 @@ document.addEventListener('DOMContentLoaded', () => {
 	// Global functions for table buttons
 	window.openEditUser = function (id, username, email, role, isActive) {
 		document.getElementById('editUserId').value = id;
-		document.getElementById('editUsername').value = username;
-		document.getElementById('editEmail').value = email;
+		document.getElementById('editUsername').value = username || '';
+		document.getElementById('editEmail').value = email || '';
 		document.getElementById('editPassword').value = '';
-		document.getElementById('editRole').value = role;
+		document.getElementById('editRole').value = role || 'user';
 		document.getElementById('editStatus').value = isActive ? 'active' : 'inactive';
 		editModal.classList.add('active');
 	};

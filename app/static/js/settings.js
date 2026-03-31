@@ -752,6 +752,33 @@ function showChildrenReminder() {
 // Load user profile information
 let _currentUserAuthProvider = 'local'; // Track auth provider for UI adaptation
 
+function resolveAvatarDisplayUrl(avatarPath, token) {
+    if (!avatarPath || typeof avatarPath !== 'string') {
+        return null;
+    }
+
+    const normalizedPath = avatarPath.trim();
+    if (!normalizedPath) {
+        return null;
+    }
+
+    // Keep GCS files behind authenticated proxy.
+    if (normalizedPath.startsWith('https://storage.googleapis.com/') || normalizedPath.startsWith('gs://')) {
+        return `/serve_file?url=${encodeURIComponent(normalizedPath)}&token=${encodeURIComponent(token || '')}`;
+    }
+
+    // External absolute URLs (e.g., Google profile photos) should be used directly.
+    if (normalizedPath.startsWith('https://') || normalizedPath.startsWith('http://')) {
+        return normalizedPath;
+    }
+
+    if (normalizedPath.startsWith('/')) {
+        return normalizedPath;
+    }
+
+    return `/static/${normalizedPath}`;
+}
+
 async function loadUserProfile() {
     try {
         const response = await fetch('/auth/me', {
@@ -782,14 +809,7 @@ async function loadUserProfile() {
             // Load user avatar if available
             if (user.avatar) {
                 const token = localStorage.getItem('access_token');
-                // If it's a GCS (or absolute) URL, use the serve_file endpoint to proxy with token
-                if (user.avatar.startsWith('https://storage.googleapis.com/') || user.avatar.startsWith('gs://')) {
-                    userAvatar = `/serve_file?url=${encodeURIComponent(user.avatar)}&token=${encodeURIComponent(token)}`;
-                } else if (user.avatar.startsWith('/')) {
-                    userAvatar = user.avatar;
-                } else {
-                    userAvatar = `/static/${user.avatar}`;
-                }
+                userAvatar = resolveAvatarDisplayUrl(user.avatar, token);
 
                 userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
                 userAvatarPreview.style.backgroundSize = 'cover';
@@ -1503,6 +1523,8 @@ const advancedConfigState = {
     selectedApiKeyId: null,
     vertexAccounts: [],
     selectedVertexAccountId: null,
+    selectedVertexApiKeyId: null,
+    vertexAuthMode: 'service_account',
     vertexProjectId: null
 };
 
@@ -1538,6 +1560,11 @@ function getActiveProvider() {
 
 function filterApiKeysForProvider(apiKeys, provider) {
     return apiKeys.filter(key => key.provider === provider);
+}
+
+function getSelectedVertexApiKey() {
+    const vertexKeys = filterApiKeysForProvider(advancedConfigState.apiKeys || [], 'vertex_ai');
+    return vertexKeys.find(key => key.id === advancedConfigState.selectedVertexApiKeyId) || null;
 }
 
 function getModelLabel(modelValue, provider) {
@@ -1615,7 +1642,7 @@ function updateSummaryApiKeyOptions(apiKeys, selectedId) {
     const placeholder = document.createElement('option');
     placeholder.value = '';
     if (provider === 'vertex_ai') {
-        placeholder.textContent = t['settings.advanced.summary.vertex_account_placeholder'] || 'Select a service account';
+        placeholder.textContent = t['settings.advanced.summary.vertex_credential_placeholder'] || 'Select a Vertex credential';
     } else {
         placeholder.textContent = t['settings.advanced.summary.api_key_placeholder'] || 'Select an API key';
     }
@@ -1623,15 +1650,28 @@ function updateSummaryApiKeyOptions(apiKeys, selectedId) {
 
     if (provider === 'vertex_ai') {
         const accounts = advancedConfigState.vertexAccounts || [];
+        const vertexApiKeys = filterApiKeysForProvider(apiKeys, 'vertex_ai');
+        const serviceAccountLabel = 'Service Account';
+        const apiKeyLabel = t['settings.advanced.vertex.auth_mode.api_key'] || 'API Key';
+
         accounts.forEach(account => {
             const option = document.createElement('option');
-            const projectId = account.project_id ? account.project_id : 'project';
-            option.value = String(account.id);
-            option.textContent = `${account.name} (${projectId})`;
+            option.value = `account:${String(account.id)}`;
+            option.textContent = `${account.name} (${serviceAccountLabel})`;
             summaryApiKeySelect.appendChild(option);
         });
+
+        vertexApiKeys.forEach(key => {
+            const option = document.createElement('option');
+            option.value = `key:${String(key.id)}`;
+            option.textContent = `${key.name} (${apiKeyLabel})`;
+            summaryApiKeySelect.appendChild(option);
+        });
+
         if (advancedConfigState.selectedVertexAccountId && accounts.some(account => account.id === advancedConfigState.selectedVertexAccountId)) {
-            summaryApiKeySelect.value = String(advancedConfigState.selectedVertexAccountId);
+            summaryApiKeySelect.value = `account:${String(advancedConfigState.selectedVertexAccountId)}`;
+        } else if (advancedConfigState.selectedVertexApiKeyId && vertexApiKeys.some(key => key.id === advancedConfigState.selectedVertexApiKeyId)) {
+            summaryApiKeySelect.value = `key:${String(advancedConfigState.selectedVertexApiKeyId)}`;
         } else {
             summaryApiKeySelect.value = '';
         }
@@ -1776,9 +1816,11 @@ function updateAdvancedSummary() {
     listEl.innerHTML = '';
     const items = [];
 
-    if (advancedConfigState.apiKeys.length > 0) {
+    const aiStudioKeys = filterApiKeysForProvider(advancedConfigState.apiKeys || [], 'ai_studio');
+
+    if (aiStudioKeys.length > 0) {
         const selectedLabel = t['api_key.in_use'] || 'In Use';
-        const keyNames = advancedConfigState.apiKeys.map(key => {
+        const keyNames = aiStudioKeys.map(key => {
             const isSelected = key.id === advancedConfigState.selectedApiKeyId;
             return `${key.name}${isSelected ? ` (${selectedLabel})` : ''}`;
         });
@@ -1790,15 +1832,22 @@ function updateAdvancedSummary() {
 
     if (advancedConfigState.provider === 'vertex_ai') {
         const selectedAccount = (advancedConfigState.vertexAccounts || []).find(account => account.id === advancedConfigState.selectedVertexAccountId);
+        const selectedVertexApiKey = getSelectedVertexApiKey();
+
         if (selectedAccount) {
             items.push({
                 label: t['settings.advanced.summary.vertex'] || 'Vertex AI',
-                value: `${selectedAccount.name} - ${selectedAccount.project_id}`
+                value: `${selectedAccount.name} - Service Account`
+            });
+        } else if (selectedVertexApiKey) {
+            items.push({
+                label: t['settings.advanced.summary.vertex'] || 'Vertex AI',
+                value: `${selectedVertexApiKey.name} - ${(t['settings.advanced.vertex.auth_mode.api_key'] || 'API Key')}`
             });
         } else if (advancedConfigState.vertexProjectId) {
             items.push({
                 label: t['settings.advanced.summary.vertex'] || 'Vertex AI',
-                value: `${advancedConfigState.vertexProjectId}`
+                value: 'Service Account'
             });
         }
     }
@@ -1885,16 +1934,28 @@ if (summaryModelSelect) {
 
 if (summaryApiKeySelect) {
     summaryApiKeySelect.addEventListener('change', async (event) => {
-        const selectedId = Number(event.target.value);
-        if (!Number.isFinite(selectedId)) {
-            return;
-        }
-        if (!selectedId) {
+        const selectedValue = String(event.target.value || '').trim();
+        if (!selectedValue) {
             return;
         }
 
         if (getActiveProvider() === 'vertex_ai') {
-            await activateVertexAccount(selectedId);
+            if (selectedValue.startsWith('account:')) {
+                const selectedAccountId = Number(selectedValue.split(':')[1]);
+                if (Number.isFinite(selectedAccountId) && selectedAccountId) {
+                    await activateVertexAccount(selectedAccountId);
+                }
+            } else if (selectedValue.startsWith('key:')) {
+                const selectedKeyId = Number(selectedValue.split(':')[1]);
+                if (Number.isFinite(selectedKeyId) && selectedKeyId) {
+                    await activateVertexApiKey(selectedKeyId);
+                }
+            }
+            return;
+        }
+
+        const selectedId = Number(selectedValue);
+        if (!Number.isFinite(selectedId) || !selectedId) {
             return;
         }
 
@@ -2030,6 +2091,10 @@ async function loadApiKeys() {
             const data = await response.json();
             advancedConfigState.apiKeys = data.api_keys || [];
             advancedConfigState.selectedApiKeyId = data.selected_api_key_id || null;
+            advancedConfigState.selectedVertexApiKeyId = data.selected_vertex_api_key_id || null;
+            if (advancedConfigState.selectedVertexApiKeyId) {
+                advancedConfigState.vertexAuthMode = 'api_key';
+            }
             renderApiKeys(data.api_keys || [], data.selected_api_key_id);
             updateSummaryApiKeyOptions(advancedConfigState.apiKeys, advancedConfigState.selectedApiKeyId);
             updateAdvancedSummary();
@@ -2077,14 +2142,48 @@ async function activateVertexAccount(accountId) {
             const result = await response.json();
             const account = result.account || {};
             advancedConfigState.selectedVertexAccountId = accountId;
+            advancedConfigState.selectedVertexApiKeyId = null;
+            advancedConfigState.vertexAuthMode = 'service_account';
             advancedConfigState.vertexProjectId = account.project_id || null;
             updateSummaryApiKeyOptions(advancedConfigState.apiKeys, advancedConfigState.selectedApiKeyId);
             updateAdvancedSummary();
         } else {
             console.error('Failed to activate Vertex account');
+            const t = getSettingsTranslations();
+            showCustomAlert(t['settings.advanced.config_activate_failed'] || 'Failed to activate configuration');
         }
     } catch (error) {
         console.error('Error activating Vertex account:', error);
+        const t = getSettingsTranslations();
+        showCustomAlert(t['settings.advanced.config_activate_failed'] || 'Failed to activate configuration');
+    }
+}
+
+// Activate Vertex API key
+async function activateVertexApiKey(keyId) {
+    try {
+        const response = await fetch(`/api/vertex/api-keys/${keyId}/activate`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+            }
+        });
+
+        if (response.ok) {
+            advancedConfigState.selectedVertexApiKeyId = keyId;
+            advancedConfigState.selectedVertexAccountId = null;
+            advancedConfigState.vertexAuthMode = 'api_key';
+            updateSummaryApiKeyOptions(advancedConfigState.apiKeys, advancedConfigState.selectedApiKeyId);
+            updateAdvancedSummary();
+        } else {
+            console.error('Failed to activate Vertex API key');
+            const t = getSettingsTranslations();
+            showCustomAlert(t['settings.advanced.config_activate_failed'] || 'Failed to activate configuration');
+        }
+    } catch (error) {
+        console.error('Error activating Vertex API key:', error);
+        const t = getSettingsTranslations();
+        showCustomAlert(t['settings.advanced.config_activate_failed'] || 'Failed to activate configuration');
     }
 }
 
@@ -2104,10 +2203,13 @@ function renderApiKeys(apiKeys, selectedId) {
     const provider = getActiveProvider();
 
     if (provider === 'vertex_ai') {
+        const vertexModeMessage = advancedConfigState.vertexAuthMode === 'api_key'
+            ? (t['settings.advanced.vertex.using_api_key'] || 'Using API key authentication for Vertex AI')
+            : (t['settings.advanced.vertex.using_service_account'] || 'Using service account for Vertex AI');
         apiKeyList.innerHTML = `
             <div style="text-align: center; color: #666; padding: 20px; background: #f8f9fa; border-radius: 8px; border: 1px solid #e0e0e0;">
                 <i class="fas fa-shield-alt" style="font-size: 24px; color: #ccc; margin-bottom: 10px;"></i>
-                <p style="margin: 0; font-size: 14px;">${t['settings.advanced.vertex.using_service_account'] || 'Using service account for Vertex AI'}</p>
+                <p style="margin: 0; font-size: 14px;">${vertexModeMessage}</p>
             </div>
         `;
         return;
@@ -2285,7 +2387,7 @@ function renderConfigurationList() {
     
     // Add AI Studio configurations
     advancedConfigState.apiKeys.forEach(key => {
-        if (key.provider !== 'vertex_ai') {
+        if (key.provider === 'ai_studio') {
             allConfigs.push({
                 type: 'ai_studio',
                 id: key.id,
@@ -2294,12 +2396,22 @@ function renderConfigurationList() {
                 isActive: key.id === advancedConfigState.selectedApiKeyId && getActiveProvider() === 'ai_studio'
             });
         }
+
+        if (key.provider === 'vertex_ai') {
+            allConfigs.push({
+                type: 'vertex_api_key',
+                id: key.id,
+                name: key.name,
+                maskedKey: key.masked_key,
+                isActive: key.id === advancedConfigState.selectedVertexApiKeyId && getActiveProvider() === 'vertex_ai'
+            });
+        }
     });
     
     // Add Vertex AI configurations
     advancedConfigState.vertexAccounts.forEach(account => {
         allConfigs.push({
-            type: 'vertex_ai',
+            type: 'vertex_account',
             id: account.id,
             name: account.name,
             projectId: account.project_id,
@@ -2320,10 +2432,15 @@ function renderConfigurationList() {
     }
     
     configListContainer.innerHTML = allConfigs.map(config => {
-        const providerLabel = config.type === 'ai_studio' ? 
-            (t['settings.advanced.provider.ai_studio'] || 'AI Studio') : 
-            'Service Account';
-        const providerColor = config.type === 'ai_studio' ? '#ea4335' : '#4285f4';
+        let providerLabel = t['settings.advanced.provider.ai_studio'] || 'AI Studio';
+        let providerColor = '#ea4335';
+        if (config.type === 'vertex_account') {
+            providerLabel = 'Vertex AI - Service Account';
+            providerColor = '#4285f4';
+        } else if (config.type === 'vertex_api_key') {
+            providerLabel = `Vertex AI - ${t['settings.advanced.vertex.auth_mode.api_key'] || 'API Key'}`;
+            providerColor = '#1a73e8';
+        }
         
         const statusBadge = config.isActive ? 
             `<span style="display: inline-block; padding: 4px 12px; background: #4caf50; color: white; border-radius: 12px; font-size: 11px; font-weight: 600; margin-left: 8px;">${t['api_key.in_use'] || '使用中'}</span>` : 
@@ -2332,8 +2449,10 @@ function renderConfigurationList() {
         let detailInfo = '';
         if (config.type === 'ai_studio') {
             detailInfo = `<div style="color: #666; font-size: 13px; margin-top: 4px;">${config.maskedKey}</div>`;
+        } else if (config.type === 'vertex_account') {
+            detailInfo = `<div style="color: #666; font-size: 13px; margin-top: 4px;">Project: ${config.projectId || '-'}</div>`;
         } else {
-            detailInfo = `<div style="color: #666; font-size: 13px; margin-top: 4px;">Project: ${config.projectId} | Location: ${config.location}</div>`;
+            detailInfo = `<div style="color: #666; font-size: 13px; margin-top: 4px;">${config.maskedKey}</div>`;
         }
         
         return `
@@ -2366,6 +2485,9 @@ async function activateConfig(type, id) {
     if (type === 'ai_studio') {
         await applyProviderSelection('ai_studio', { persist: true });
         await toggleApiKey(id);
+    } else if (type === 'vertex_api_key') {
+        await applyProviderSelection('vertex_ai', { persist: true });
+        await activateVertexApiKey(id);
     } else {
         await applyProviderSelection('vertex_ai', { persist: true });
         await activateVertexAccount(id);
@@ -2383,7 +2505,7 @@ async function deleteConfig(type, id, name) {
         
         try {
             let response;
-            if (type === 'ai_studio') {
+            if (type === 'ai_studio' || type === 'vertex_api_key') {
                 response = await fetch(`/api/keys/${id}`, {
                     method: 'DELETE',
                     headers: {
@@ -2483,6 +2605,7 @@ function switchConfigTab(provider) {
         } else {
             aiStudioForm.style.display = 'none';
             vertexAiForm.style.display = 'block';
+            setConfigVertexAuthMode(advancedConfigState.vertexAuthMode || 'service_account');
         }
     }
 }
@@ -2502,6 +2625,42 @@ const configVertexServiceAccountFile = document.getElementById('configVertexServ
 const configVertexServiceAccount = document.getElementById('configVertexServiceAccount');
 const configVertexProjectIdDisplay = document.getElementById('configVertexProjectIdDisplay');
 const configDetectedProjectId = document.getElementById('configDetectedProjectId');
+const configVertexAuthToggle = document.getElementById('configVertexAuthToggle');
+const configVertexServiceAccountGroup = document.getElementById('configVertexServiceAccountGroup');
+const configVertexApiKeyGroup = document.getElementById('configVertexApiKeyGroup');
+const configVertexApiKey = document.getElementById('configVertexApiKey');
+
+function setConfigVertexAuthMode(mode) {
+    const normalizedMode = mode === 'api_key' ? 'api_key' : 'service_account';
+    advancedConfigState.vertexAuthMode = normalizedMode;
+
+    if (configVertexAuthToggle) {
+        const buttons = configVertexAuthToggle.querySelectorAll('.config-vertex-auth-btn');
+        buttons.forEach(btn => {
+            const isActive = btn.dataset.authMode === normalizedMode;
+            btn.classList.toggle('active', isActive);
+            btn.style.borderBottom = isActive ? '3px solid #8B7AA8' : '3px solid transparent';
+            btn.style.color = isActive ? '#8B7AA8' : '#666';
+            btn.style.fontWeight = isActive ? '600' : '500';
+        });
+    }
+
+    if (configVertexServiceAccountGroup) {
+        configVertexServiceAccountGroup.style.display = normalizedMode === 'service_account' ? 'block' : 'none';
+    }
+    if (configVertexApiKeyGroup) {
+        configVertexApiKeyGroup.style.display = normalizedMode === 'api_key' ? 'block' : 'none';
+    }
+}
+
+if (configVertexAuthToggle) {
+    const authButtons = configVertexAuthToggle.querySelectorAll('.config-vertex-auth-btn');
+    authButtons.forEach(btn => {
+        btn.addEventListener('click', () => {
+            setConfigVertexAuthMode(btn.dataset.authMode || 'service_account');
+        });
+    });
+}
 
 if (configVertexUploadBtn && configVertexServiceAccountFile) {
     configVertexUploadBtn.addEventListener('click', () => {
@@ -2609,20 +2768,64 @@ async function saveAiStudioConfig() {
 async function saveVertexAiConfig() {
     const nameInput = document.getElementById('configVertexName');
     const serviceAccountInput = document.getElementById('configVertexServiceAccount');
+    const apiKeyInput = document.getElementById('configVertexApiKey');
     const t = getSettingsTranslations();
     
     const name = nameInput.value.trim();
+    const authMode = advancedConfigState.vertexAuthMode === 'api_key' ? 'api_key' : 'service_account';
+
+    if (authMode === 'api_key') {
+        const vertexApiKey = apiKeyInput ? apiKeyInput.value.trim() : '';
+
+        if (!name || !vertexApiKey) {
+            showCustomAlert(t['settings.advanced.fill_all_fields'] || '請填寫所有必填欄位');
+            return;
+        }
+
+        try {
+            const response = await fetch('/api/keys', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${localStorage.getItem('access_token')}`
+                },
+                body: JSON.stringify({
+                    name: name,
+                    api_key: vertexApiKey,
+                    provider: 'vertex_ai'
+                })
+            });
+
+            if (response.ok) {
+                addConfigModal.style.display = 'none';
+                resetAddConfigForm();
+                await loadApiKeys();
+                await loadUserModel();
+                renderConfigurationList();
+                showCustomAlert(t['settings.advanced.config_added'] || '配置已添加');
+            } else {
+                const error = await response.json();
+                console.error('Error adding Vertex API key config:', error);
+                showCustomAlert(t['settings.advanced.config_add_failed'] || '添加配置失敗');
+            }
+        } catch (error) {
+            console.error('Error adding Vertex API key config:', error);
+            showCustomAlert(t['settings.advanced.config_add_failed'] || '添加配置失敗');
+        }
+        return;
+    }
+
     const serviceAccount = serviceAccountInput.value.trim();
-    
+
     if (!name || !serviceAccount) {
         showCustomAlert(t['settings.advanced.fill_all_fields'] || '請填寫所有必填欄位');
         return;
     }
-    
+
     try {
         // Validate JSON
         JSON.parse(serviceAccount);
-        
+
         const response = await fetch('/api/vertex/accounts', {
             method: 'POST',
             headers: {
@@ -2634,16 +2837,18 @@ async function saveVertexAiConfig() {
                 service_account_json: serviceAccount
             })
         });
-        
+
         if (response.ok) {
             addConfigModal.style.display = 'none';
             resetAddConfigForm();
             await loadVertexAccounts();
+            await loadUserModel();
             renderConfigurationList();
             showCustomAlert(t['settings.advanced.config_added'] || '配置已添加');
         } else {
             const error = await response.json();
-            showCustomAlert(error.error || (t['settings.advanced.config_add_failed'] || '添加配置失敗'));
+            console.error('Error adding Vertex service account config:', error);
+            showCustomAlert(t['settings.advanced.config_add_failed'] || '添加配置失敗');
         }
     } catch (error) {
         if (error instanceof SyntaxError) {
@@ -2666,11 +2871,13 @@ function resetAddConfigForm() {
     // Vertex AI fields
     const vertexName = document.getElementById('configVertexName');
     if (vertexName) vertexName.value = '';
+    if (configVertexApiKey) configVertexApiKey.value = '';
     
     if (configVertexServiceAccount) configVertexServiceAccount.value = '';
     if (configVertexServiceAccountFile) configVertexServiceAccountFile.value = '';
     if (configVertexProjectIdDisplay) configVertexProjectIdDisplay.style.display = 'none';
     if (configVertexClearBtn) configVertexClearBtn.style.display = 'none';
+    setConfigVertexAuthMode('service_account');
 }
 
 // ===== AI Model Management =====
@@ -2737,7 +2944,10 @@ async function loadUserModel() {
             advancedConfigState.provider = activeProvider;
             advancedConfigState.model = data.ai_model || (summaryModelSelect ? summaryModelSelect.value : null);
             advancedConfigState.selectedVertexAccountId = data.selected_vertex_account_id || null;
+            advancedConfigState.selectedVertexApiKeyId = data.selected_vertex_api_key_id || null;
+            advancedConfigState.vertexAuthMode = data.vertex_auth_mode || (advancedConfigState.selectedVertexApiKeyId ? 'api_key' : 'service_account');
             advancedConfigState.vertexProjectId = data.vertex_account ? data.vertex_account.project_id : null;
+            setConfigVertexAuthMode(advancedConfigState.vertexAuthMode);
             updateAuthModeVisibility();
             updateAdvancedSummary();
 
@@ -3034,13 +3244,7 @@ async function saveAvatarToServer(file) {
             if (result.avatar_path) {
                 const avatarPath = result.avatar_path;
                 const token = localStorage.getItem('access_token');
-                if (avatarPath.startsWith('https://storage.googleapis.com/') || avatarPath.startsWith('gs://')) {
-                    userAvatar = `/serve_file?url=${encodeURIComponent(avatarPath)}&token=${encodeURIComponent(token)}`;
-                } else if (avatarPath.startsWith('/')) {
-                    userAvatar = avatarPath;
-                } else {
-                    userAvatar = `/static/${avatarPath}`;
-                }
+                userAvatar = resolveAvatarDisplayUrl(avatarPath, token);
                 userAvatarPreview.style.backgroundImage = `url(${userAvatar})`;
                 userAvatarPreview.style.backgroundSize = 'cover';
                 userAvatarPreview.style.backgroundPosition = 'center';

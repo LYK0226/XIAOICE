@@ -20,7 +20,7 @@ const filePreviewContainer = document.getElementById('filePreviewContainer');
 
 /**
  * Lightweight Markdown → HTML renderer.
- * Handles: headings, bold, italic, numbered/bullet lists, code blocks, inline code, line breaks.
+ * Handles: headings, bold, italic, links, numbered/bullet lists, code blocks, inline code, line breaks.
  * HTML entities are escaped first to prevent XSS.
  */
 function renderMarkdown(text) {
@@ -30,7 +30,9 @@ function renderMarkdown(text) {
     let html = text
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;');
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 
     // 2. Fenced code blocks (```...```)
     html = html.replace(/```(\w*)\n([\s\S]*?)```/g, (_m, _lang, code) => {
@@ -49,7 +51,13 @@ function renderMarkdown(text) {
     html = html.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
     html = html.replace(/\*(.+?)\*/g, '<em>$1</em>');
 
-    // 6. Lists — convert blocks of consecutive list lines
+    // 6. Markdown links: [label](https://example.com)
+    html = html.replace(/\[([^\]]+)\]\((https?:\/\/[^\s)]+)\)/g, (_m, label, url) => {
+        const safeUrl = url.replace(/"/g, '%22').replace(/'/g, '%27');
+        return `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${label}</a>`;
+    });
+
+    // 7. Lists — convert blocks of consecutive list lines
     // Numbered lists: lines starting with "1. ", "2. ", etc.
     html = html.replace(/(^|\n)((?:\d+\.\s.+(?:\n|$))+)/g, (_m, pre, block) => {
         const items = block.trim().split('\n').map(line =>
@@ -66,7 +74,7 @@ function renderMarkdown(text) {
         return `${pre}<ul>${items}</ul>`;
     });
 
-    // 7. Remaining newlines → <br> (but not inside <pre> or after block elements)
+    // 8. Remaining newlines → <br> (but not inside <pre> or after block elements)
     html = html.replace(/\n/g, '<br>');
 
     // Clean up extra <br> around block elements
@@ -90,6 +98,51 @@ let botAvatar = null; // Will store bot avatar URL
 let selectedFiles = [];
 let webcamStream = null;
 let capturedPhoto = null;
+
+const FILE_EXTENSION_MIME_MAP = {
+    '.pdf': 'application/pdf',
+    '.jpg': 'image/jpeg',
+    '.jpeg': 'image/jpeg',
+    '.png': 'image/png',
+    '.webp': 'image/webp',
+    '.heic': 'image/heic',
+    '.heif': 'image/heif',
+    '.mp4': 'video/mp4',
+    '.mpeg': 'video/mpeg',
+    '.mpg': 'video/mpeg',
+    '.mov': 'video/quicktime',
+    '.avi': 'video/x-msvideo',
+    '.flv': 'video/x-flv',
+    '.webm': 'video/webm',
+    '.wmv': 'video/x-ms-wmv',
+    '.3gp': 'video/3gpp',
+    '.mkv': 'video/x-matroska'
+};
+
+function inferMimeTypeFromFileName(fileName) {
+    const lower = (fileName || '').toLowerCase();
+    const dotIndex = lower.lastIndexOf('.');
+    if (dotIndex < 0) {
+        return '';
+    }
+    const ext = lower.slice(dotIndex);
+    return FILE_EXTENSION_MIME_MAP[ext] || '';
+}
+
+function getEffectiveMimeType(file) {
+    const directType = (file && file.type ? file.type : '').toLowerCase();
+    if (directType && directType !== 'application/octet-stream') {
+        return directType;
+    }
+    return inferMimeTypeFromFileName(file && file.name ? file.name : '');
+}
+
+function isAnalyzableMimeType(mimeType) {
+    if (!mimeType) {
+        return false;
+    }
+    return mimeType === 'application/pdf' || mimeType.startsWith('image/') || mimeType.startsWith('video/');
+}
 
 // Voice recognition
 let recognition = null;
@@ -925,13 +978,9 @@ fileInput.addEventListener('change', (e) => {
     const MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB
 
     files.forEach(file => {
-        // Check for allowed file types (Image, Video, PDF)
-        const fileName = file.name.toLowerCase();
-        const isImage = file.type.startsWith('image/');
-        const isVideo = file.type.startsWith('video/');
-        const isPDF = file.type === 'application/pdf' || fileName.endsWith('.pdf');
-        
-        if (!isImage && !isVideo && !isPDF) {
+        const effectiveMimeType = getEffectiveMimeType(file);
+
+        if (!isAnalyzableMimeType(effectiveMimeType)) {
             showCustomAlert(`File "${file.name}" is not supported. Please upload PDF documents, Images, or Videos.`);
             return;
         }
@@ -948,8 +997,50 @@ fileInput.addEventListener('change', (e) => {
     fileInput.value = ''; // Reset input
 });
 
+function getFilePreviewType(file) {
+    const mimeType = getEffectiveMimeType(file);
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType === 'application/pdf') return 'pdf';
+    return 'file';
+}
+
+function getFilePreviewIconClass(fileType, fileName) {
+    const lowerName = (fileName || '').toLowerCase();
+    if (fileType === 'pdf') return 'fas fa-file-pdf';
+    if (fileType === 'image') return 'fas fa-image';
+    if (fileType === 'video') return 'fas fa-file-video';
+    if (/\.(doc|docx)$/i.test(lowerName)) return 'fas fa-file-word';
+    if (/\.(xls|xlsx|csv)$/i.test(lowerName)) return 'fas fa-file-excel';
+    if (/\.(ppt|pptx)$/i.test(lowerName)) return 'fas fa-file-powerpoint';
+    if (/\.(zip|rar|7z|tar|gz)$/i.test(lowerName)) return 'fas fa-file-archive';
+    return 'fas fa-file-alt';
+}
+
+function getFilePreviewLabel(fileType) {
+    if (fileType === 'pdf') return 'PDF';
+    if (fileType === 'image') return 'IMAGE';
+    if (fileType === 'video') return 'VIDEO';
+    return 'FILE';
+}
+
+function getFileObjectUrl(file) {
+    if (!file.__previewUrl) {
+        file.__previewUrl = URL.createObjectURL(file);
+    }
+    return file.__previewUrl;
+}
+
+function revokeFileObjectUrl(file) {
+    if (file && file.__previewUrl) {
+        URL.revokeObjectURL(file.__previewUrl);
+        delete file.__previewUrl;
+    }
+}
+
 function updateFilePreview() {
     if (selectedFiles.length === 0) {
+        filePreviewContainer.innerHTML = '';
         filePreviewContainer.style.display = 'none';
         return;
     }
@@ -958,82 +1049,83 @@ function updateFilePreview() {
     filePreviewContainer.innerHTML = '';
     
     selectedFiles.forEach((file, index) => {
+        const fileType = getFilePreviewType(file);
+        const previewUrl = getFileObjectUrl(file);
+
         let previewItem;
-        
-        if (file.type.startsWith('image/')) {
-            // Image preview with square container
+
+        if (fileType === 'image' || fileType === 'video') {
             previewItem = document.createElement('div');
             previewItem.className = 'file-preview-item';
-            
-            const img = document.createElement('img');
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                img.src = e.target.result;
-                // Add click handler to open preview modal
-                img.addEventListener('click', () => {
-                    openDocumentPreviewModal(img.src, file.name);
-                });
-            };
-            reader.readAsDataURL(file);
-            previewItem.appendChild(img);
-        } else if (file.type.startsWith('video/')) {
-            // Video preview with square container
-            previewItem = document.createElement('div');
-            previewItem.className = 'file-preview-item';
-            
-            const video = document.createElement('video');
-            video.style.width = '100%';
-            video.style.height = '100%';
-            video.style.objectFit = 'cover';
-            video.style.borderRadius = '8px';
-            video.muted = true; // Mute by default
-            
-            const videoUrl = URL.createObjectURL(file);
-            video.src = videoUrl;
-            
-            // Add click handler to open preview modal
-            video.addEventListener('click', () => {
-                openDocumentPreviewModal(videoUrl, file.name);
+            previewItem.title = file.name;
+
+            const media = document.createElement(fileType === 'image' ? 'img' : 'video');
+            media.className = 'file-preview-thumb';
+            media.src = previewUrl;
+
+            if (fileType === 'video') {
+                media.muted = true;
+                media.playsInline = true;
+                media.preload = 'metadata';
+            }
+
+            previewItem.appendChild(media);
+
+            previewItem.addEventListener('click', () => {
+                openDocumentPreviewModal(previewUrl, file.name);
             });
-            
-            previewItem.appendChild(video);
         } else {
-            // File name only - simplified without square container
             previewItem = document.createElement('div');
-            previewItem.className = 'file-preview-simple';
-            
-            // Add file icon
+            previewItem.className = 'file-preview-attachment';
+            previewItem.title = file.name;
+            previewItem.addEventListener('click', () => {
+                openDocumentPreviewModal(previewUrl, file.name);
+            });
+
+            const visual = document.createElement('div');
+            visual.className = 'file-preview-visual';
+
             const fileIcon = document.createElement('i');
-            fileIcon.className = 'fas fa-file-pdf'; // Default to PDF for now
-            if (file.type.includes('pdf')) fileIcon.className = 'fas fa-file-pdf';
-            else if (file.type.includes('word')) fileIcon.className = 'fas fa-file-word';
-            else if (file.type.includes('excel')) fileIcon.className = 'fas fa-file-excel';
-            else fileIcon.className = 'fas fa-file-alt';
-            fileIcon.style.fontSize = '20px';
-            fileIcon.style.color = '#A89BC5';
-            previewItem.appendChild(fileIcon);
+            fileIcon.className = `${getFilePreviewIconClass(fileType, file.name)} file-preview-icon`;
+            visual.appendChild(fileIcon);
+
+            const fileBadge = document.createElement('span');
+            fileBadge.className = 'file-preview-badge';
+            fileBadge.textContent = getFilePreviewLabel(fileType);
+            visual.appendChild(fileBadge);
+
+            const meta = document.createElement('div');
+            meta.className = 'file-preview-meta';
 
             const fileName = document.createElement('div');
-            fileName.className = 'file-name-simple';
+            fileName.className = 'file-preview-name';
             fileName.textContent = file.name;
-            fileName.title = file.name;
-            
-            // Create blob URL and add click handler for preview
-            const fileUrl = URL.createObjectURL(file);
-            fileName.addEventListener('click', () => {
-                openDocumentPreviewModal(fileUrl, file.name);
-            });
-            fileName.style.cursor = 'pointer'; // Show it's clickable
-            
-            previewItem.appendChild(fileName);
+
+            const fileTypeLabel = document.createElement('div');
+            fileTypeLabel.className = 'file-preview-type';
+            fileTypeLabel.textContent = getFilePreviewLabel(fileType);
+
+            meta.appendChild(fileName);
+            meta.appendChild(fileTypeLabel);
+
+            previewItem.appendChild(visual);
+            previewItem.appendChild(meta);
         }
-        
-        // Remove button
+
         const removeBtn = document.createElement('button');
+        removeBtn.type = 'button';
         removeBtn.className = 'remove-file';
         removeBtn.innerHTML = '<i class="fas fa-times"></i>';
-        removeBtn.onclick = () => {
-            selectedFiles.splice(index, 1);
+        removeBtn.setAttribute('aria-label', 'Remove file');
+        removeBtn.onclick = (event) => {
+            event.stopPropagation();
+
+            const removedFile = selectedFiles[index];
+            if (removedFile) {
+                revokeFileObjectUrl(removedFile);
+                selectedFiles.splice(index, 1);
+            }
+
             updateFilePreview();
             
             // Close preview panel if it's open
@@ -1311,6 +1403,13 @@ async function sendMessageWithFiles() {
     streamWasStopped = false; // reset stopped flag for this new message
 
     const attachmentsSnapshot = [...selectedFiles];
+
+    const previewPanel = document.getElementById('preview-panel');
+    if (previewPanel && previewPanel.style.display === 'flex') {
+        closeDocumentPreview();
+    }
+
+    attachmentsSnapshot.forEach((file) => revokeFileObjectUrl(file));
     
     // Generate unique temp_id for optimistic UI
     const tempId = `temp_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
@@ -1350,7 +1449,7 @@ async function sendMessageWithFiles() {
         const attachmentsMetadata = attachmentsSnapshot.length
             ? attachmentsSnapshot.map((file) => ({
                 name: file.name,
-                type: file.type,
+                type: getEffectiveMimeType(file),
                 size: file.size
             }))
             : null;
@@ -1374,7 +1473,13 @@ async function sendMessageWithFiles() {
         //     updateMessageWithServerFiles(userMessageElement, userMessageResponse.message.uploaded_files);
         // }
 
-        const mediaFile = attachmentsSnapshot.find((file) => file.type.startsWith('image/') || file.type.startsWith('video/'));
+        const analyzableFiles = attachmentsSnapshot
+            .map((file, index) => ({
+                file,
+                index,
+                mimeType: getEffectiveMimeType(file)
+            }))
+            .filter(({ mimeType }) => isAnalyzableMimeType(mimeType));
         
         // Create bot message element with typing indicator
         const botMessageElement = createMessage('', false);
@@ -1391,20 +1496,30 @@ async function sendMessageWithFiles() {
         showStopButton();
         typewriterStart(botMessageContent);
         
-        if (mediaFile) {
-            // For images/videos, use the uploaded URL
-            // Find the index to get the correct URL from uploaded_files
-            const mediaIndex = attachmentsSnapshot.indexOf(mediaFile);
-            const mediaUrl = userMessageResponse.message.uploaded_files[mediaIndex];
-            const mediaMimeType = mediaFile.type;
+        if (analyzableFiles.length > 0) {
+            const uploadedFiles = Array.isArray(userMessageResponse?.message?.uploaded_files)
+                ? userMessageResponse.message.uploaded_files
+                : [];
+            const fileItems = analyzableFiles
+                .map(({ index, mimeType }) => ({
+                    url: uploadedFiles[index],
+                    mime_type: mimeType
+                }))
+                .filter((item) => item.url);
+            const primaryMimeType = fileItems.length > 0 ? (fileItems[0].mime_type || '') : '';
+            const analysisPrompt = primaryMimeType.startsWith('video/')
+                ? (t.analyzeVideo || 'Please analyze this video')
+                : (primaryMimeType === 'application/pdf'
+                    ? (t.analyzePdf || 'Please analyze this PDF document')
+                    : (t.analyzeImage || 'Please analyze this image'));
 
             let pendingText = '';
             
             await chatAPI.streamChatMessage(
-                messageText || (mediaFile.type.startsWith('video/') ? (t.analyzeVideo || 'Please analyze this video') : t.analyzeImage),
+                messageText || analysisPrompt,
                 null,
-                mediaUrl,
-                mediaMimeType,
+                null,
+                null,
                 currentLanguage,
                 conversationHistory,
                 (chunk) => {
@@ -1437,7 +1552,8 @@ async function sendMessageWithFiles() {
                     speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
                     botMessageElement.querySelector('.message-content').appendChild(speakBtn);
                 },
-                conversationId
+                conversationId,
+                fileItems
             );
         } else {
             // Use streaming for text messages
@@ -1480,7 +1596,8 @@ async function sendMessageWithFiles() {
                     speakBtn.onclick = () => speakMessage(fullResponse, speakBtn);
                     botMessageElement.querySelector('.message-content').appendChild(speakBtn);
                 },
-                conversationId
+                conversationId,
+                null
             );
         }
         

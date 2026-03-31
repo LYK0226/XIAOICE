@@ -108,16 +108,35 @@ class ChatAPI {
      * @param {function} onError - 錯誤時的回調函數
      * @returns {Promise} - 可取消的 Promise
      */
-    async streamChatMessage(userMessage, imageFile = null, imageUrl = null, imageMimeType = null, currentLanguage = 'zh-TW', history = null, onChunk, onComplete, onError, conversationId = null) {
+    async streamChatMessage(userMessage, imageFile = null, imageUrl = null, imageMimeType = null, currentLanguage = 'zh-TW', history = null, onChunk, onComplete, onError, conversationId = null, fileItems = null) {
         const formData = new FormData();
         formData.append('message', userMessage);
+
+        const normalizedItems = Array.isArray(fileItems)
+            ? fileItems.filter((item) => item && item.url)
+            : [];
+
+        if (normalizedItems.length > 0) {
+            const fileUrls = normalizedItems.map((item) => item.url);
+            const fileMimeTypes = normalizedItems.map((item) => item.mime_type || item.mimeType || null);
+            formData.append('file_urls', JSON.stringify(fileUrls));
+            formData.append('file_mime_types', JSON.stringify(fileMimeTypes));
+
+            // Legacy compatibility for older backend paths expecting single-file fields.
+            if (!imageUrl && fileUrls.length === 1) {
+                formData.append('image_url', fileUrls[0]);
+                if (fileMimeTypes[0]) {
+                    formData.append('image_mime_type', fileMimeTypes[0]);
+                }
+            }
+        }
         
-        if (imageUrl) {
+        if (imageUrl && normalizedItems.length === 0) {
             formData.append('image_url', imageUrl);
             if (imageMimeType) {
                 formData.append('image_mime_type', imageMimeType);
             }
-        } else if (imageFile) {
+        } else if (imageFile && normalizedItems.length === 0) {
             formData.append('image', imageFile);
         }
 
@@ -412,6 +431,8 @@ class ChatAPI {
             this.streamChatMessage(
                 message,
                 null, // no image file
+                null,
+                null,
                 language,
                 history,
                 (chunk) => {

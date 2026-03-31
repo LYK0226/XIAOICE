@@ -48,10 +48,6 @@ __pycache__/
 *.pyo
 *.pyd
 
-# Migration files (Flask-Migrate / Alembic)
-migrations/
-migrations/*
-
 # Local SQLite DB and DB files
 app.db
 *.db

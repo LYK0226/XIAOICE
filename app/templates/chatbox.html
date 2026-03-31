@@ -89,58 +89,59 @@
             
             <div id="input-container">
                 <div class="input-wrapper">
-                    <!-- Plus button + its popup (wrapped so popup is always above button) -->
-                    <div class="btn-popup-wrapper">
-                        <div id="plusMenu" class="plus-menu" style="display:none;">
-                            <button type="button" class="plus-menu-item" id="fileUploadBtn">
-                                <span class="pmi-icon"><i class="fas fa-paperclip"></i></span>
-                                <span class="pmi-label">上載文件</span>
-                            </button>
-                            <button type="button" class="plus-menu-item" id="voiceInputBtn">
-                                <span class="pmi-icon"><i class="fas fa-microphone"></i></span>
-                                <span class="pmi-label">語音輸入</span>
-                            </button>
-                            <button type="button" class="plus-menu-item" id="webcamBtn">
-                                <span class="pmi-icon"><i class="fas fa-camera"></i></span>
-                                <span class="pmi-label">攝影機</span>
+                    <div id="filePreviewContainer" class="file-preview-container" style="display: none;"></div>
+
+                    <div class="input-main-row">
+                        <!-- Plus button + its popup (wrapped so popup is always above button) -->
+                        <div class="btn-popup-wrapper">
+                            <div id="plusMenu" class="plus-menu" style="display:none;">
+                                <button type="button" class="plus-menu-item" id="fileUploadBtn">
+                                    <span class="pmi-icon"><i class="fas fa-paperclip"></i></span>
+                                    <span class="pmi-label">上載文件</span>
+                                </button>
+                                <button type="button" class="plus-menu-item" id="voiceInputBtn">
+                                    <span class="pmi-icon"><i class="fas fa-microphone"></i></span>
+                                    <span class="pmi-label">語音輸入</span>
+                                </button>
+                                <button type="button" class="plus-menu-item" id="webcamBtn">
+                                    <span class="pmi-icon"><i class="fas fa-camera"></i></span>
+                                    <span class="pmi-label">攝影機</span>
+                                </button>
+                            </div>
+                            <button type="button" id="plusMenuBtn" class="input-action-btn plus-btn" title="更多選項">
+                                <i class="fas fa-plus"></i>
                             </button>
                         </div>
-                        <button type="button" id="plusMenuBtn" class="input-action-btn plus-btn" title="更多選項">
-                            <i class="fas fa-plus"></i>
-                        </button>
-                    </div>
 
-                    <textarea id="messageInput" rows="1" placeholder="在這裡輸入您的問題..."></textarea>
-                    <input type="file" id="fileInput" accept="image/*,video/*,application/pdf" multiple style="display: none;">
+                        <textarea id="messageInput" rows="1" placeholder="在這裡輸入您的問題..."></textarea>
+                        <input type="file" id="fileInput" accept="image/*,video/*,application/pdf" multiple style="display: none;">
 
-                    <!-- Model selector + its popup (wrapped so popup is always above button) -->
-                    <div class="btn-popup-wrapper">
-                        <div id="modelDropdown" class="model-dropdown" style="display:none;">
-                            <button type="button" class="model-dropdown-item" data-model="gemini-3-flash-preview">
-                                <div class="mdi-info">
-                                    <span class="mdi-name">Flash</span>
-                                    <span class="mdi-desc">快速回應・日常對話</span>
-                                </div>
-                            </button>
-                            <button type="button" class="model-dropdown-item" data-model="gemini-3.1-pro-preview">
-                                <div class="mdi-info">
-                                    <span class="mdi-name">Pro</span>
-                                    <span class="mdi-desc">強大精準・深度分析</span>
-                                </div>
+                        <!-- Model selector + its popup (wrapped so popup is always above button) -->
+                        <div class="btn-popup-wrapper">
+                            <div id="modelDropdown" class="model-dropdown" style="display:none;">
+                                <button type="button" class="model-dropdown-item" data-model="gemini-3-flash-preview">
+                                    <div class="mdi-info">
+                                        <span class="mdi-name">Flash</span>
+                                        <span class="mdi-desc">快速回應・日常對話</span>
+                                    </div>
+                                </button>
+                                <button type="button" class="model-dropdown-item" data-model="gemini-3.1-pro-preview">
+                                    <div class="mdi-info">
+                                        <span class="mdi-name">Pro</span>
+                                        <span class="mdi-desc">強大精準・深度分析</span>
+                                    </div>
+                                </button>
+                            </div>
+                            <button type="button" id="inputModelBtn" class="input-model-btn" title="切換 AI 模型">
+                                <span id="inputModelLabel">Flash</span>
+                                <i class="fas fa-chevron-up" id="inputModelChevron"></i>
                             </button>
                         </div>
-                        <button type="button" id="inputModelBtn" class="input-model-btn" title="切換 AI 模型">
-                            <span id="inputModelLabel">Flash</span>
-                            <i class="fas fa-chevron-up" id="inputModelChevron"></i>
-                        </button>
-                    </div>
 
-                    <button type="button" id="sendButton" title="Send message"><i class="fas fa-paper-plane"></i></button>
-                    <button type="button" id="poseDetectionPageBtn" class="pose-page-btn" title="姿態分析" onclick="window.location.href='/pose_detection'"><i class="fas fa-running"></i></button>
+                        <button type="button" id="sendButton" title="Send message"><i class="fas fa-paper-plane"></i></button>
+                        <button type="button" id="poseDetectionPageBtn" class="pose-page-btn" title="姿態分析" onclick="window.location.href='/pose_detection'"><i class="fas fa-running"></i></button>
+                    </div>
                 </div>
-                
-                <!-- File Preview Container -->
-                <div id="filePreviewContainer" class="file-preview-container" style="display: none;"></div>
                 
                 <!-- Emoji Picker (kept for potential use) -->
                 <div id="emojiPicker" class="emoji-picker" style="display: none;">

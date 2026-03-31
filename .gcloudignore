@@ -1,0 +1,14 @@
+# Keep gcloud-specific ignore rules explicit and deterministic.
+.gcloudignore
+.git
+
+# Import existing local ignore rules.
+#!include:.gitignore
+
+# Required for Flask-Migrate during container startup.
+!migrations/
+!migrations/**
+
+# Keep uploads lean by excluding generated cache files.
+migrations/**/__pycache__/
+migrations/**/*.pyc

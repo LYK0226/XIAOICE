@@ -7,9 +7,10 @@ from flask_socketio import emit, join_room, leave_room
 from socketio.exceptions import ConnectionRefusedError
 from flask_jwt_extended import decode_token, verify_jwt_in_request
 from app import socketio, get_app
-from .models import db, User, Conversation, Message, UserProfile, UserApiKey, hk_now
+from .models import db, User, Conversation, Message, UserProfile, UserApiKey, VertexServiceAccount, hk_now
 from datetime import datetime
 import logging
+import os
 import threading
 from .agent import chat_agent
 
@@ -271,23 +272,70 @@ def handle_send_message(data):
         # Get user's API key and model settings
         user_profile = UserProfile.query.filter_by(user_id=user_id).first()
         api_key = None
-        ai_model = 'gemini-3-flash'
+        ai_model = 'gemini-3-flash-preview'
         ai_provider = 'ai_studio'
         vertex_config = None
         provider_for_request = 'ai_studio'
         
         if user_profile:
-            if user_profile.selected_api_key:
+            if user_profile.selected_api_key and user_profile.selected_api_key.provider == 'ai_studio':
                 api_key = user_profile.selected_api_key.get_decrypted_key()
             if user_profile.ai_model:
                 ai_model = user_profile.ai_model
             if user_profile.ai_provider:
                 ai_provider = user_profile.ai_provider
+
             if ai_provider == 'vertex_ai':
-                vertex_config = {
-                    'service_account': user_profile.get_decrypted_vertex_service_account(),
-                    'project_id': user_profile.vertex_project_id
-                }
+                vertex_account = None
+                if user_profile.selected_vertex_account_id:
+                    vertex_account = VertexServiceAccount.query.filter_by(
+                        id=user_profile.selected_vertex_account_id,
+                        user_id=user_id
+                    ).first()
+
+                if vertex_account:
+                    vertex_config = {
+                        'auth_mode': 'service_account',
+                        'service_account': vertex_account.get_decrypted_credentials(),
+                        'project_id': vertex_account.project_id,
+                        'location': os.environ.get('GOOGLE_CLOUD_LOCATION') or vertex_account.location or 'global'
+                    }
+                    if not vertex_config['service_account'] or not vertex_config['project_id']:
+                        emit('ai_response_error', {
+                            'error': 'Vertex AI service account is missing or invalid',
+                            'conversation_id': conversation_id
+                        }, room=room)
+                        return
+                else:
+                    vertex_api_key_record = None
+                    if user_profile.selected_vertex_api_key_id:
+                        vertex_api_key_record = UserApiKey.query.filter_by(
+                            id=user_profile.selected_vertex_api_key_id,
+                            user_id=user_id,
+                            provider='vertex_ai'
+                        ).first()
+
+                    if not vertex_api_key_record:
+                        emit('ai_response_error', {
+                            'error': 'Vertex AI credential is not configured',
+                            'conversation_id': conversation_id
+                        }, room=room)
+                        return
+
+                    decrypted_vertex_api_key = vertex_api_key_record.get_decrypted_key()
+                    if not decrypted_vertex_api_key:
+                        emit('ai_response_error', {
+                            'error': 'Vertex AI API key is missing or invalid',
+                            'conversation_id': conversation_id
+                        }, room=room)
+                        return
+
+                    vertex_config = {
+                        'auth_mode': 'api_key',
+                        'api_key': decrypted_vertex_api_key,
+                        'location': os.environ.get('GOOGLE_CLOUD_LOCATION') or user_profile.vertex_location or 'global'
+                    }
+
                 provider_for_request = 'vertex_ai'
             else:
                 provider_for_request = 'ai_studio'

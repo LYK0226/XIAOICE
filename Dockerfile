@@ -7,6 +7,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     libpango-1.0-0 libpangoft2-1.0-0 libpangocairo-1.0-0 \
     libgdk-pixbuf-2.0-0 libcairo2 libcairo2-dev libffi-dev shared-mime-info \
+    fontconfig fonts-noto-cjk fonts-noto-color-emoji \
     ghostscript poppler-utils curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -49,6 +50,7 @@ ENV FIREBASE_PROJECT_ID=fyp-project-4f3b7
 
 ENV POSE_DETECTION_ENABLED=false
 ENV USE_CLOUD_TASKS=true
+ENV RUN_DB_MIGRATIONS_ON_STARTUP=false
 
 EXPOSE 8080
-CMD ["sh", "-c", "gunicorn --worker-class gthread --threads 8 -w 1 --bind 0.0.0.0:${PORT} --timeout 120 --keep-alive 5 --log-level info run:app"]
+CMD ["sh", "-c", "if [ \"${RUN_DB_MIGRATIONS_ON_STARTUP}\" = \"true\" ]; then flask db -d /app/migrations upgrade; fi && gunicorn --worker-class gthread --threads 8 -w 1 --bind 0.0.0.0:${PORT} --timeout 120 --keep-alive 5 --log-level info run:app"]

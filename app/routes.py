@@ -162,29 +162,62 @@ def serve_pose_detection_js(filename):
 @bp.route('/chat/stream', methods=['POST'])
 @jwt_required()
 def chat_stream():
-    """Handle streaming chat messages and image uploads."""
+    """Handle streaming chat messages and multimodal uploads."""
     from flask_jwt_extended import get_jwt_identity
-    from .models import UserProfile, UserApiKey, VertexServiceAccount
+    from .models import Conversation, FileUpload, Message, UserProfile, UserApiKey, VertexServiceAccount
     
     user_id = get_jwt_identity()
     # Ensure bucket env var is available for background streaming work
     bucket_name = current_app.config.get('GCS_BUCKET_NAME')
     if bucket_name:
         os.environ['GCS_BUCKET_NAME'] = bucket_name
-    
-    if 'message' not in request.form and 'image' not in request.files and 'image_url' not in request.form:
-        return jsonify({'error': 'No message, image, or image_url provided'}), 400
 
     message = request.form.get('message', '')
+    conversation_id = request.form.get('conversation_id', type=int)
     image_file = request.files.get('image')
-    
-    image_path = None
-    image_mime_type = None
+
+    file_attachments = []
+    seen_attachment_paths = set()
+
+    def _append_attachment(file_path, mime_type=None):
+        if not file_path:
+            return
+        normalized_path = str(file_path).strip()
+        if not normalized_path or normalized_path in seen_attachment_paths:
+            return
+
+        normalized_mime = (mime_type or '').strip().lower()
+        if not normalized_mime or normalized_mime == 'application/octet-stream':
+            normalized_mime = gcp_bucket.get_content_type_from_url(normalized_path)
+
+        seen_attachment_paths.add(normalized_path)
+        file_attachments.append({
+            'path': normalized_path,
+            'mime_type': normalized_mime
+        })
 
     try:
+        # New multi-file payload support.
+        file_urls_raw = request.form.get('file_urls')
+        file_mime_types_raw = request.form.get('file_mime_types')
+        if file_urls_raw:
+            try:
+                parsed_urls = json.loads(file_urls_raw)
+                parsed_mime_types = json.loads(file_mime_types_raw) if file_mime_types_raw else []
+                if not isinstance(parsed_urls, list):
+                    return jsonify({'error': 'file_urls must be a JSON array'}), 400
+                if parsed_mime_types and not isinstance(parsed_mime_types, list):
+                    return jsonify({'error': 'file_mime_types must be a JSON array'}), 400
+
+                for idx, file_url in enumerate(parsed_urls):
+                    mime_type = parsed_mime_types[idx] if idx < len(parsed_mime_types) else None
+                    _append_attachment(file_url, mime_type)
+            except Exception:
+                return jsonify({'error': 'Invalid file_urls or file_mime_types payload'}), 400
+
+        # Legacy single-file URL payload support.
         if 'image_url' in request.form:
-            image_path = request.form['image_url']
-            image_mime_type = request.form.get('image_mime_type')
+            _append_attachment(request.form.get('image_url'), request.form.get('image_mime_type'))
         elif image_file:
             if not image_file.filename:
                  return jsonify({'error': 'No selected file'}), 400
@@ -194,8 +227,52 @@ def chat_stream():
                 return jsonify({'error': 'Invalid file name'}), 400
 
             # Upload to Google Cloud Storage
-            image_path = gcp_bucket.upload_image_to_gcs(image_file, filename, user_id=user_id)
-            image_mime_type = image_file.mimetype
+            uploaded_path = gcp_bucket.upload_image_to_gcs(image_file, filename, user_id=user_id)
+            _append_attachment(uploaded_path, image_file.mimetype)
+
+        # Reuse latest user attachments in this conversation for follow-up questions
+        # when the user does not upload new files.
+        if not file_attachments and conversation_id:
+            conversation = Conversation.query.filter_by(id=conversation_id, user_id=user_id).first()
+            if conversation:
+                recent_messages = (
+                    Message.query
+                    .filter_by(conversation_id=conversation.id, sender='user')
+                    .order_by(Message.created_at.desc())
+                    .limit(30)
+                    .all()
+                )
+
+                recent_uploaded_urls = []
+                for recent_message in recent_messages:
+                    urls = recent_message.uploaded_files if isinstance(recent_message.uploaded_files, list) else []
+                    urls = [u for u in urls if isinstance(u, str) and u.strip()]
+                    if urls:
+                        recent_uploaded_urls = urls
+                        break
+
+                if recent_uploaded_urls:
+                    file_rows = (
+                        FileUpload.query
+                        .filter_by(user_id=user_id, conversation_id=conversation.id)
+                        .filter(FileUpload.file_path.in_(recent_uploaded_urls))
+                        .order_by(FileUpload.uploaded_at.desc())
+                        .all()
+                    )
+                    mime_map = {}
+                    for row in file_rows:
+                        if row.file_path not in mime_map and row.content_type:
+                            mime_map[row.file_path] = row.content_type
+
+                    for url in recent_uploaded_urls:
+                        _append_attachment(url, mime_map.get(url))
+
+        if not message.strip() and not file_attachments:
+            return jsonify({'error': 'No message or files provided'}), 400
+
+        primary_attachment = file_attachments[0] if file_attachments else None
+        image_path = primary_attachment.get('path') if primary_attachment else None
+        image_mime_type = primary_attachment.get('mime_type') if primary_attachment else None
 
         # Parse optional conversation history sent from client
         history = None
@@ -206,10 +283,10 @@ def chat_stream():
             except Exception:
                 current_app.logger.warning('Unable to parse history from request; ignoring history.')
 
-        # Get user's selected API key
+        # Get user's selected AI Studio API key
         api_key = None
         user_profile = UserProfile.query.filter_by(user_id=user_id).first()
-        if user_profile and user_profile.selected_api_key:
+        if user_profile and user_profile.selected_api_key and user_profile.selected_api_key.provider == 'ai_studio':
             api_key = user_profile.selected_api_key.get_decrypted_key()
 
         # Get user's selected AI model and provider
@@ -235,22 +312,41 @@ def chat_stream():
                 elif user_profile.selected_vertex_account:
                     vertex_account = user_profile.selected_vertex_account
 
-                if not vertex_account:
-                    return jsonify({'error': 'Vertex AI service account is not configured'}), 400
+                if vertex_account:
+                    vertex_config = {
+                        'auth_mode': 'service_account',
+                        'service_account': vertex_account.get_decrypted_credentials(),
+                        'project_id': vertex_account.project_id,
+                        'location': os.environ.get('GOOGLE_CLOUD_LOCATION') or vertex_account.location or 'global'
+                    }
+                    if not vertex_config['service_account'] or not vertex_config['project_id']:
+                        return jsonify({'error': 'Vertex AI service account is missing or invalid'}), 400
+                else:
+                    vertex_api_key = None
+                    if user_profile.selected_vertex_api_key_id:
+                        vertex_api_key = UserApiKey.query.filter_by(
+                            id=user_profile.selected_vertex_api_key_id,
+                            user_id=user_id,
+                            provider='vertex_ai'
+                        ).first()
+                    elif user_profile.selected_vertex_api_key and user_profile.selected_vertex_api_key.provider == 'vertex_ai':
+                        vertex_api_key = user_profile.selected_vertex_api_key
 
-                vertex_config = {
-                    'service_account': vertex_account.get_decrypted_credentials(),
-                    'project_id': vertex_account.project_id,
-                    'location': os.environ.get('GOOGLE_CLOUD_LOCATION') or vertex_account.location or 'global'
-                }
-                if not vertex_config['service_account'] or not vertex_config['project_id']:
-                    return jsonify({'error': 'Vertex AI service account is missing or invalid'}), 400
+                    if not vertex_api_key:
+                        return jsonify({'error': 'Vertex AI credential is not configured'}), 400
+
+                    decrypted_vertex_api_key = vertex_api_key.get_decrypted_key()
+                    if not decrypted_vertex_api_key:
+                        return jsonify({'error': 'Vertex AI API key is missing or invalid'}), 400
+
+                    vertex_config = {
+                        'auth_mode': 'api_key',
+                        'api_key': decrypted_vertex_api_key,
+                        'location': os.environ.get('GOOGLE_CLOUD_LOCATION') or user_profile.vertex_location or 'global'
+                    }
                 provider_for_request = 'vertex_ai'
             else:
                 provider_for_request = 'ai_studio'
-
-        # Get conversation_id if provided (for session persistence)
-        conversation_id = request.form.get('conversation_id', type=int)
 
         def generate():
             try:
@@ -258,6 +354,7 @@ def chat_stream():
                     message,
                     image_path=image_path,
                     image_mime_type=image_mime_type,
+                    file_attachments=file_attachments,
                     history=history,
                     api_key=api_key,
                     model_name=ai_model,
@@ -312,7 +409,8 @@ def get_api_keys():
         
         result = {
             'api_keys': [key.to_dict() for key in api_keys],
-            'selected_api_key_id': user_profile.selected_api_key_id if user_profile else None
+            'selected_api_key_id': user_profile.selected_api_key_id if user_profile else None,
+            'selected_vertex_api_key_id': user_profile.selected_vertex_api_key_id if user_profile else None
         }
         
         return jsonify(result)
@@ -340,7 +438,8 @@ def create_api_key():
     if not name or not api_key:
         return jsonify({'error': 'Name and API key cannot be empty'}), 400
     
-    if provider != 'ai_studio':
+    allowed_providers = {'ai_studio', 'vertex_ai'}
+    if provider not in allowed_providers:
         return jsonify({'error': 'Invalid provider'}), 400
     
     try:
@@ -350,15 +449,24 @@ def create_api_key():
         db.session.add(new_key)
         db.session.commit()
         
-        # Auto-select the newly created API key
+        # Auto-select the newly created key for the matching provider path
         user_profile = UserProfile.query.filter_by(user_id=user_id).first()
         if not user_profile:
             user_profile = UserProfile(user_id=user_id)
             db.session.add(user_profile)
-        user_profile.selected_api_key_id = new_key.id
+
+        if provider == 'vertex_ai':
+            user_profile.selected_vertex_api_key_id = new_key.id
+            user_profile.selected_vertex_account_id = None
+            user_profile.ai_provider = 'vertex_ai'
+            success_message = 'Vertex AI API key created and selected successfully'
+        else:
+            user_profile.selected_api_key_id = new_key.id
+            success_message = 'API key created and selected successfully'
+
         db.session.commit()
         
-        return jsonify({'message': 'API key created and selected successfully', 'api_key': new_key.to_dict()}), 201
+        return jsonify({'message': success_message, 'api_key': new_key.to_dict()}), 201
     except Exception as e:
         db.session.rollback()
         current_app.logger.error(f"Error creating API key: {e}")
@@ -383,6 +491,9 @@ def delete_api_key(key_id):
         if user_profile and user_profile.selected_api_key_id == key_id:
             user_profile.selected_api_key_id = None
             db.session.add(user_profile)
+        if user_profile and user_profile.selected_vertex_api_key_id == key_id:
+            user_profile.selected_vertex_api_key_id = None
+            db.session.add(user_profile)
         
         db.session.delete(api_key)
         db.session.commit()
@@ -406,6 +517,8 @@ def toggle_api_key(key_id):
         api_key = UserApiKey.query.filter_by(id=key_id, user_id=user_id).first()
         if not api_key:
             return jsonify({'error': 'API key not found'}), 404
+        if api_key.provider != 'ai_studio':
+            return jsonify({'error': 'Only AI Studio API keys can be toggled from this endpoint'}), 400
         
         user_profile = UserProfile.query.filter_by(user_id=user_id).first()
         if not user_profile:
@@ -434,7 +547,7 @@ def toggle_api_key(key_id):
 def get_user_model():
     """Get the current user's selected AI model and provider."""
     from flask_jwt_extended import get_jwt_identity
-    from .models import UserProfile, VertexServiceAccount
+    from .models import UserApiKey, UserProfile, VertexServiceAccount
     
     user_id = get_jwt_identity()
     
@@ -446,7 +559,10 @@ def get_user_model():
                 'ai_model': 'gemini-3-flash-preview',
                 'ai_provider': 'ai_studio',
                 'selected_vertex_account_id': None,
-                'vertex_account': None
+                'vertex_account': None,
+                'selected_vertex_api_key_id': None,
+                'vertex_api_key': None,
+                'vertex_auth_mode': None
             })
         
         # Get selected vertex account details if any
@@ -455,6 +571,23 @@ def get_user_model():
             vertex_account = VertexServiceAccount.query.get(user_profile.selected_vertex_account_id)
             if vertex_account:
                 vertex_account_data = vertex_account.to_dict()
+
+        vertex_api_key_data = None
+        if user_profile.selected_vertex_api_key_id:
+            vertex_api_key = UserApiKey.query.filter_by(
+                id=user_profile.selected_vertex_api_key_id,
+                user_id=user_id,
+                provider='vertex_ai'
+            ).first()
+            if vertex_api_key:
+                vertex_api_key_data = vertex_api_key.to_dict()
+
+        vertex_auth_mode = None
+        if user_profile.ai_provider == 'vertex_ai':
+            if vertex_account_data:
+                vertex_auth_mode = 'service_account'
+            elif vertex_api_key_data:
+                vertex_auth_mode = 'api_key'
 
         # Choose a sensible default model depending on provider
         if user_profile.ai_model:
@@ -466,7 +599,10 @@ def get_user_model():
             'ai_model': ai_model,
             'ai_provider': user_profile.ai_provider or 'ai_studio',
             'selected_vertex_account_id': user_profile.selected_vertex_account_id,
-            'vertex_account': vertex_account_data
+            'vertex_account': vertex_account_data,
+            'selected_vertex_api_key_id': user_profile.selected_vertex_api_key_id,
+            'vertex_api_key': vertex_api_key_data,
+            'vertex_auth_mode': vertex_auth_mode
         })
     except Exception as e:
         current_app.logger.error(f"Error getting user model: {e}")
@@ -1934,6 +2070,7 @@ def activate_vertex_account(account_id):
         
         # Set as selected
         profile.selected_vertex_account_id = account_id
+        profile.selected_vertex_api_key_id = None
         profile.ai_provider = 'vertex_ai'  # Also switch provider to Vertex AI
         
         # Update last_used_at
@@ -1950,3 +2087,43 @@ def activate_vertex_account(account_id):
         db.session.rollback()
         current_app.logger.error(f"Error activating Vertex account: {e}")
         return jsonify({'error': 'Failed to activate Vertex AI configuration'}), 500
+
+
+@bp.route('/api/vertex/api-keys/<int:key_id>/activate', methods=['POST'])
+@jwt_required()
+def activate_vertex_api_key(key_id):
+    """Activate a Vertex AI API key (set as selected Vertex credential)."""
+    from flask_jwt_extended import get_jwt_identity
+    from .models import UserApiKey, UserProfile, db
+
+    user_id = get_jwt_identity()
+
+    try:
+        api_key = UserApiKey.query.filter_by(
+            id=key_id,
+            user_id=user_id,
+            provider='vertex_ai'
+        ).first()
+        if not api_key:
+            return jsonify({'error': 'Vertex API key not found'}), 404
+
+        profile = UserProfile.query.filter_by(user_id=user_id).first()
+        if not profile:
+            profile = UserProfile(user_id=user_id)
+            db.session.add(profile)
+
+        profile.selected_vertex_api_key_id = key_id
+        profile.selected_vertex_account_id = None
+        profile.ai_provider = 'vertex_ai'
+
+        db.session.commit()
+
+        return jsonify({
+            'message': 'Vertex AI API key activated successfully',
+            'api_key': api_key.to_dict(),
+            'selected_vertex_api_key_id': profile.selected_vertex_api_key_id
+        })
+    except Exception as e:
+        db.session.rollback()
+        current_app.logger.error(f"Error activating Vertex API key: {e}")
+        return jsonify({'error': 'Failed to activate Vertex AI API key'}), 500
