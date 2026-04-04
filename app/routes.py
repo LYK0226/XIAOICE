@@ -5,7 +5,7 @@ from flask import Blueprint, render_template, request, jsonify, current_app, red
 _HK_TZ = timezone(timedelta(hours=8))
 def hk_now() -> datetime:
     return datetime.now(_HK_TZ).replace(tzinfo=None)
-from flask_jwt_extended import jwt_required, decode_token
+from flask_jwt_extended import decode_token, jwt_required, unset_jwt_cookies
 import os
 import json
 from . import agent
@@ -37,7 +37,7 @@ def index():
             return redirect(url_for('main.login_page'))
     except Exception:
         response = redirect(url_for('main.login_page'))
-        response.delete_cookie('access_token')
+        unset_jwt_cookies(response)
         return response
 
     return render_template('index.html', user=user)
@@ -78,7 +78,7 @@ def chatbox_page():
         decode_token(token)
     except Exception:
         response = redirect(url_for('main.login_page'))
-        response.delete_cookie('access_token')
+        unset_jwt_cookies(response)
         return response
 
     return render_template('chatbox.html')
@@ -103,7 +103,7 @@ def child_assessment_page():
         decode_token(token)
     except Exception:
         response = redirect(url_for('main.login_page'))
-        response.delete_cookie('access_token')
+        unset_jwt_cookies(response)
         return response
 
     return render_template('child_assessment.html')
@@ -125,7 +125,7 @@ def pose_detection_page():
             return redirect(url_for('main.login_page'))
     except Exception:
         response = redirect(url_for('main.login_page'))
-        response.delete_cookie('access_token')
+        unset_jwt_cookies(response)
         return response
 
     return render_template('pose_detection.html', user=user)
@@ -148,7 +148,7 @@ def video_management_page():
             return redirect(url_for('main.login_page'))
     except Exception:
         response = redirect(url_for('main.login_page'))
-        response.delete_cookie('access_token')
+        unset_jwt_cookies(response)
         return response
 
     return render_template('video_access.html', user=user)

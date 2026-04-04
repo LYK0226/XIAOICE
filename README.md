@@ -80,7 +80,7 @@ gcloud run deploy steup-growth \
 	--allow-unauthenticated \
 	--service-account steup-growth@fyp-project-4f3b7.iam.gserviceaccount.com \
 	--add-cloudsql-instances fyp-project-4f3b7:us-central1:xiaoice \
-	--set-env-vars "FLASK_ENV=production,GCS_BUCKET_NAME=steup-growth,GOOGLE_CLOUD_PROJECT=fyp-project-4f3b7,GOOGLE_CLOUD_LOCATION=global,GEMINI_MODEL=gemini-3-flash-preview,GOOGLE_SEARCH_ENABLED=true,POSE_DETECTION_ENABLED=false,USE_CLOUD_TASKS=true,JWT_COOKIE_SECURE=true,JWT_COOKIE_SAMESITE=Lax,JWT_COOKIE_CSRF_PROTECT=false,SOCKETIO_PING_TIMEOUT=60,SOCKETIO_PING_INTERVAL=25,SOCKETIO_IDLE_TIMEOUT_SECONDS=3600,SOCKETIO_MAX_RECONNECT_ATTEMPTS=3,FIREBASE_AUTH_DOMAIN=fyp-project-4f3b7.firebaseapp.com,FIREBASE_PROJECT_ID=fyp-project-4f3b7" \
+	--set-env-vars "GOOGLE_CLOUD_PROJECT=fyp-project-4f3b7" \
 	--set-secrets "SECRET_KEY=steup-growth-secret-key:latest,JWT_SECRET_KEY=steup-growth-jwt-secret:latest,ENCRYPTION_KEY=steup-growth-encryption-key:latest,FIREBASE_API_KEY=steup-growth-firebase-api-key:latest,DATABASE_URL=steup-growth-database-url:latest"
 ```
 

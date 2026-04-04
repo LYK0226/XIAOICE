@@ -1,5 +1,5 @@
 from flask import Blueprint, Response, current_app, jsonify, redirect, render_template, request, url_for
-from flask_jwt_extended import jwt_required, decode_token, get_jwt_identity as _get_jwt_identity
+from flask_jwt_extended import decode_token, get_jwt_identity as _get_jwt_identity, jwt_required, unset_jwt_cookies
 
 
 admin_bp = Blueprint('admin', __name__)
@@ -328,7 +328,7 @@ def admin():
 			return redirect(url_for('main.index'))
 	except Exception:
 		response = redirect(url_for('main.login_page'))
-		response.delete_cookie('access_token')
+		unset_jwt_cookies(response)
 		return response
 
 	return render_template('admin.html', user=user)

@@ -9,7 +9,15 @@ Sections:
 """
 
 from flask import Blueprint, request, jsonify, current_app
-from flask_jwt_extended import create_access_token, create_refresh_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import (
+    create_access_token,
+    create_refresh_token,
+    get_jwt_identity,
+    jwt_required,
+    set_access_cookies,
+    set_refresh_cookies,
+    unset_jwt_cookies,
+)
 from .models import db, User, UserProfile, hk_now
 from functools import wraps
 import re
@@ -305,25 +313,10 @@ def _issue_tokens_and_response(user, remember=False):
     })
 
     cookie_max_age = 30 * 24 * 60 * 60 if remember else 24 * 60 * 60
-    secure_cookie = current_app.config.get('SESSION_COOKIE_SECURE', False)
 
-    response.set_cookie(
-        'access_token',
-        access_token,
-        max_age=cookie_max_age,
-        httponly=True,
-        secure=secure_cookie,
-        samesite='Lax'
-    )
-
-    response.set_cookie(
-        'refresh_token',
-        refresh_token,
-        max_age=cookie_max_age,
-        httponly=True,
-        secure=secure_cookie,
-        samesite='Lax'
-    )
+    # Use Flask-JWT-Extended helpers so JWT and CSRF cookies stay in sync.
+    set_access_cookies(response, access_token, max_age=cookie_max_age)
+    set_refresh_cookies(response, refresh_token, max_age=cookie_max_age)
 
     return response
 
@@ -472,15 +465,7 @@ def refresh():
             'access_token': new_access_token
         })
 
-        secure_cookie = current_app.config.get('SESSION_COOKIE_SECURE', False)
-        response.set_cookie(
-            'access_token',
-            new_access_token,
-            max_age=24 * 60 * 60,  # 1 day
-            httponly=True,
-            secure=secure_cookie,
-            samesite='Lax'
-        )
+        set_access_cookies(response, new_access_token, max_age=24 * 60 * 60)
 
         return response, 200
     except Exception as e:
@@ -491,8 +476,7 @@ def refresh():
 def logout():
     """Handle user logout."""
     response = jsonify({'message': 'Logged out successfully'})
-    response.delete_cookie('access_token')
-    response.delete_cookie('refresh_token')
+    unset_jwt_cookies(response)
     return response, 200
 
 @auth_bp.route('/me', methods=['GET'])
@@ -907,8 +891,7 @@ def delete_account():
                 current_app.logger.warning(f'Failed to delete Firebase identity for uid {firebase_uid}')
 
         response = jsonify({'message': 'Account deleted successfully'})
-        response.delete_cookie('access_token')
-        response.delete_cookie('refresh_token')
+        unset_jwt_cookies(response)
         return response, 200
 
     except Exception as e:
