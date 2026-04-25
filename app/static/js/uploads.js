@@ -312,7 +312,7 @@ class UploadsManager {
             });
             const payload = await res.json().catch(() => ({}));
             if (!res.ok || !payload.report) {
-                alert(payload.error || '無法載入報告');
+                alert(payload.error || this.t('video.reportQueryFailed'));
                 return;
             }
             const report = payload.report;
@@ -324,12 +324,12 @@ class UploadsManager {
                 modal.style.display = 'block';
             } else {
                 const w = window.open('', '_blank');
-                w.document.write(`<html><head><title>分析報告</title><meta charset="UTF-8"></head><body style="font-family:sans-serif;max-width:800px;margin:40px auto;padding:0 20px;">${this._buildReportHtml(report)}</body></html>`);
+                w.document.write(`<html><head><title>${this.t('video.reportTitle')}</title><meta charset="UTF-8"></head><body style="font-family:sans-serif;max-width:800px;margin:40px auto;padding:0 20px;">${this._buildReportHtml(report)}</body></html>`);
                 w.document.close();
             }
         } catch (err) {
             console.error('viewReport error:', err);
-            alert('載入報告失敗：' + err.message);
+            alert(`${this.t('video.reportQueryFailed') || 'Failed to fetch report'}：${err.message}`);
         }
     }
 
@@ -347,23 +347,27 @@ class UploadsManager {
 
         const statusBadge = (s) => {
             const colors = { TYPICAL: '#c6f6d5', CONCERN: '#fefcbf', NEEDS_ATTENTION: '#fed7d7' };
-            const labels = { TYPICAL: '✅ 正常', CONCERN: '⚠️ 需要關注', NEEDS_ATTENTION: '🔴 需要注意' };
+            const labels = {
+                TYPICAL: this.t('video.reportStatusTypical'),
+                CONCERN: this.t('video.reportStatusConcern'),
+                NEEDS_ATTENTION: this.t('video.reportStatusNeedsAttention')
+            };
             const bg = colors[s] || '#e2e8f0';
             const label = labels[s] || s || '—';
             return `<span style="background:${bg};padding:2px 10px;border-radius:12px;font-weight:bold;">${this.escapeHtml(label)}</span>`;
         };
 
         const listHtml = (items) => {
-            if (!items || items.length === 0) return '<li>無</li>';
+            if (!items || items.length === 0) return `<li>${this.escapeHtml(this.t('video.reportNoItems'))}</li>`;
             if (typeof items === 'string') return `<li>${this.escapeHtml(items)}</li>`;
             return items.map(i => `<li>${this.escapeHtml(i)}</li>`).join('');
         };
 
         const complianceStatusLabel = (s) => {
             const map = {
-                PASS: { label: '✅ 達標', bg: '#c6f6d5', color: '#22543d' },
-                CONCERN: { label: '⚠️ 需關注', bg: '#fefcbf', color: '#744210' },
-                UNABLE_TO_ASSESS: { label: '❓ 無法評估', bg: '#e2e8f0', color: '#4a5568' },
+                PASS: { label: this.t('video.reportStdPass'), bg: '#c6f6d5', color: '#22543d' },
+                CONCERN: { label: this.t('video.reportStdConcern'), bg: '#fefcbf', color: '#744210' },
+                UNABLE_TO_ASSESS: { label: this.t('video.reportStdUnable'), bg: '#e2e8f0', color: '#4a5568' },
             };
             const m = map[s] || { label: s || '—', bg: '#e2e8f0', color: '#4a5568' };
             return `<span style="background:${m.bg};color:${m.color};padding:1px 6px;border-radius:8px;font-size:0.85em;font-weight:bold;">${this.escapeHtml(m.label)}</span>`;
@@ -387,7 +391,7 @@ class UploadsManager {
 
         const standardsTableHtml = (standards, ragAvailable) => {
             if (ragAvailable === false) {
-                return '<p style="background:#fffbeb;border-left:4px solid #f6ad55;padding:8px 12px;border-radius:4px;font-size:0.9em;color:#744210;">⚠️ 未找到該年齡層的參考標準，無法進行逐項評估。</p>';
+                return `<p style="background:#fffbeb;border-left:4px solid #f6ad55;padding:8px 12px;border-radius:4px;font-size:0.9em;color:#744210;">${this.escapeHtml(this.t('video.reportStandardsNoRag'))}</p>`;
             }
             if (!standards || !Array.isArray(standards) || standards.length === 0) return '';
             let rows = standards.map(item => `
@@ -398,14 +402,14 @@ class UploadsManager {
                     <td style="font-size:0.85em;">${this.escapeHtml(item.rationale || '—')}</td>
                 </tr>`).join('');
             return `
-                <p><strong>📊 年齡標準評估表</strong></p>
+                <p><strong>${this.escapeHtml(this.t('video.reportStandardsTable'))}</strong></p>
                 <div style="overflow-x:auto;">
                 <table style="width:100%;border-collapse:collapse;font-size:0.9em;margin:8px 0;">
                     <thead><tr style="background:#edf2f7;">
-                        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #cbd5e0;">標準項目</th>
-                        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #cbd5e0;">分類</th>
-                        <th style="padding:6px 8px;text-align:center;border-bottom:2px solid #cbd5e0;">評估結果</th>
-                        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #cbd5e0;">說明</th>
+                        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #cbd5e0;">${this.escapeHtml(this.t('video.reportStdHeader'))}</th>
+                        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #cbd5e0;">${this.escapeHtml(this.t('video.reportStdCategory'))}</th>
+                        <th style="padding:6px 8px;text-align:center;border-bottom:2px solid #cbd5e0;">${this.escapeHtml(this.t('video.reportStdResult'))}</th>
+                        <th style="padding:6px 8px;text-align:left;border-bottom:2px solid #cbd5e0;">${this.escapeHtml(this.t('video.reportStdRationale'))}</th>
                     </tr></thead>
                     <tbody>${rows}</tbody>
                 </table>
@@ -418,12 +422,12 @@ class UploadsManager {
             let html = `<h4>${title} ${statusBadge(section?.status)}</h4>`;
             html += `<p>${this.escapeHtml(section?.findings || '')}</p>`;
             html += standardsTableHtml(standards, ragAvailable);
-            if (section?.concerns?.length) html += '<p><strong>關注事項：</strong></p><ul>' + listHtml(section.concerns) + '</ul>';
-            if (section?.recommendations?.length) html += '<p><strong>建議：</strong></p><ul>' + listHtml(section.recommendations) + '</ul>';
+            if (section?.concerns?.length) html += `<p><strong>${this.escapeHtml(this.t('video.reportConcerns'))}</strong></p><ul>${listHtml(section.concerns)}</ul>`;
+            if (section?.recommendations?.length) html += `<p><strong>${this.escapeHtml(this.t('video.reportRecommendations'))}</strong></p><ul>${listHtml(section.recommendations)}</ul>`;
             return html;
         };
 
-        const execSummary = overall?.executive_summary || '分析已完成';
+        const execSummary = overall?.executive_summary || this.t('video.reportCompleted');
         const pickSection = (primary, fallback) => (primary && Object.keys(primary).length ? primary : fallback);
         const motorSection = pickSection(overall?.motor_development, motor);
         const langSection = pickSection(overall?.language_development, language);
@@ -435,23 +439,25 @@ class UploadsManager {
 
         const downloadBtn = report?.pdf_gcs_url
             ? `<a href="/api/video-analysis-report/${report.report_id}/download" class="btn btn-primary" style="margin-top:12px;display:inline-block;text-decoration:none;">
-                 <i class="fas fa-download"></i> 下載完整報告
+                 <i class="fas fa-download"></i> ${this.escapeHtml(this.t('video.reportDownload'))}
                </a>`
             : '';
 
+        const ageLabel = this.t('admin.reports.ageMonths') || 'months';
+
         return `
-            <h3>🧒 兒童發展影片分析報告</h3>
-            <p><strong>兒童：</strong>${this.escapeHtml(report?.child_name || '')}
-               <strong style="margin-left:16px;">年齡：</strong>${report?.child_age_months?.toFixed(0) || '?'} 個月</p>
-            <h4>📋 綜合摘要</h4>
+            <h3>${this.escapeHtml(this.t('video.reportTitle'))}</h3>
+            <p><strong>${this.escapeHtml(this.t('video.reportChildLabel'))}</strong>${this.escapeHtml(report?.child_name || '')}
+               <strong style="margin-left:16px;">${this.escapeHtml(this.t('video.reportAgeLabel'))}</strong>${report?.child_age_months?.toFixed(0) || '?'} ${this.escapeHtml(ageLabel)}</p>
+            <h4>${this.escapeHtml(this.t('video.reportSummaryTitle'))}</h4>
             <p>${this.escapeHtml(execSummary)}</p>
-            ${dimensionHtml('🏃 身體動作發展', motorSection, motor)}
-            ${dimensionHtml('🗣️ 語言發展', langSection, language)}
-            ${dimensionHtml('👥 社交情緒發展', socialSection, socialEmotional)}
-            ${dimensionHtml('🧠 認知發展', cognitiveSection, cognitive)}
-            ${dimensionHtml('🔄 適應性行為', adaptiveSection, adaptiveBehavior)}
-            ${dimensionHtml('🧹 自理能力', selfcareSection, selfcare)}
-            ${overallRecs.length ? '<h4>📌 整體建議</h4><ul>' + listHtml(overallRecs) + '</ul>' : ''}
+            ${dimensionHtml(this.t('video.reportMotorTitle'), motorSection, motor)}
+            ${dimensionHtml(this.t('video.reportLanguageTitle'), langSection, language)}
+            ${dimensionHtml(this.t('video.reportSocialEmotionalTitle'), socialSection, socialEmotional)}
+            ${dimensionHtml(this.t('video.reportCognitiveTitle'), cognitiveSection, cognitive)}
+            ${dimensionHtml(this.t('video.reportAdaptiveBehaviorTitle'), adaptiveSection, adaptiveBehavior)}
+            ${dimensionHtml(this.t('video.reportSelfcareTitle'), selfcareSection, selfcare)}
+            ${overallRecs.length ? `<h4>${this.escapeHtml(this.t('video.reportOverallRecommendations'))}</h4><ul>${listHtml(overallRecs)}</ul>` : ''}
             ${downloadBtn}
         `;
     }
@@ -460,7 +466,7 @@ class UploadsManager {
 
     renderUploadCard(upload) {
         const isVideo = this.currentCategory === 'video_assess';
-        const uploadDate = new Date(upload.uploaded_at || upload.created_at).toLocaleDateString('zh-TW');
+        const uploadDate = new Date(upload.uploaded_at || upload.created_at).toLocaleDateString(this._resolveLanguage());
 
         const displayName = this._simplifyFilename(upload.original_filename || upload.filename);
 

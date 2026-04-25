@@ -287,6 +287,14 @@ function applySettingsLanguage(t) {
         }
     });
 
+    // Update title attributes
+    document.querySelectorAll('[data-i18n-title]').forEach(element => {
+        const key = element.getAttribute('data-i18n-title');
+        if (t[key]) {
+            element.title = t[key];
+        }
+    });
+
     // Update placeholders
     const apiKeyNameInput = document.getElementById('apiKeyName');
     const apiKeyValueInput = document.getElementById('apiKeyValue');
@@ -730,7 +738,7 @@ function showChildrenReminder() {
     const t = window.translations && window.translations[currentLang] ? window.translations[currentLang] : {};
     
     const message = t['settings.children.reminder'] || 
-        '建議您先添加小朋友的基本資料，這樣在使用評估功能時會有更好的體驗。\n\n是否現在前往設定頁面添加？';
+        'We recommend adding your child profile first so assessments have better context.\n\nWould you like to open Settings now and add one?';
     
     showCustomConfirm(message, (confirmed) => {
         if (confirmed) {
@@ -2498,7 +2506,7 @@ async function activateConfig(type, id) {
 // Delete a configuration
 async function deleteConfig(type, id, name) {
     const t = getSettingsTranslations();
-    const confirmMessage = t['settings.advanced.delete_config_confirm'] || `確定要刪除配置 "${name}" 嗎？`;
+    const confirmMessage = t['settings.advanced.delete_config_confirm'] || `Are you sure you want to delete the configuration "${name}"?`;
     
     showCustomConfirm(confirmMessage, async (confirmed) => {
         if (!confirmed) return;
@@ -3438,7 +3446,10 @@ function renderChildren(children) {
         };
         const genderText = child.gender ? genderMap[child.gender] || child.gender : '';
         const yearsDown = (Math.floor((child.age_months / 12) * 10) / 10).toFixed(1);
-        const ageText = `${yearsDown} 歲 (${Math.floor(child.age_months)} 個月)`;
+        const isEnglish = String(currentLang || '').toLowerCase().startsWith('en');
+        const ageText = isEnglish
+            ? `${yearsDown} years (${Math.floor(child.age_months)} months)`
+            : `${yearsDown} 歲 (${Math.floor(child.age_months)} 個月)`;
         const details = [genderText, ageText].filter(Boolean).join(' · ');
         
         const encodedName = encodeURIComponent(child.name);
@@ -3509,7 +3520,7 @@ function showChildModal(child = null) {
     if (child) {
         // Edit mode
         editingChildId = child.id;
-        childModalTitle.textContent = t['settings.children.form.edit'] || '編輯小朋友';
+        childModalTitle.textContent = t['settings.children.form.edit'] || 'Edit Child';
         childModalName.value = child.name;
         childModalBirthdate.value = child.birthdate;
         childModalGender.value = child.gender || '';
@@ -3517,7 +3528,7 @@ function showChildModal(child = null) {
     } else {
         // Add mode
         editingChildId = null;
-        childModalTitle.textContent = t['settings.children.form.add'] || '添加小朋友';
+        childModalTitle.textContent = t['settings.children.form.add'] || 'Add Child';
         childModalName.value = '';
         childModalBirthdate.value = '';
         childModalGender.value = '';
@@ -3575,8 +3586,8 @@ if (saveChildModalBtn) {
         
         if (!name || !birthdate) {
             showCustomAlert(window.translations && window.translations[currentLanguage] ? 
-                window.translations[currentLanguage]['settings.children.form.required'] || '請填寫姓名和出生日期' : 
-                '請填寫姓名和出生日期');
+                window.translations[currentLanguage]['settings.children.form.required'] || 'Please fill in the name and birth date' : 
+                'Please fill in the name and birth date');
             return;
         }
         
@@ -3653,7 +3664,7 @@ async function editChild(childId) {
 function confirmDeleteChild(childId, childName) {
     const currentLang = typeof currentLanguage !== 'undefined' ? currentLanguage : 'zh-TW';
     const t = window.translations && window.translations[currentLang] ? window.translations[currentLang] : {};
-    const message = (t['settings.children.confirm_delete'] || '確定要刪除 {name} 的資料嗎？').replace('{name}', childName);
+    const message = (t['settings.children.confirm_delete'] || 'Are you sure you want to delete {name}?').replace('{name}', childName);
     
     showCustomConfirm(message, (confirmed) => {
         if (confirmed) {

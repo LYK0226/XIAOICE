@@ -724,7 +724,7 @@ def start_child_analysis(video_id):
     Start AI child-development analysis on an uploaded video.
     Requires a child_id in JSON body so the system knows age / name.
     """
-    from .models import db, VideoRecord, VideoAnalysisReport, Child
+    from .models import db, VideoRecord, VideoAnalysisReport, Child, UserProfile
 
     user_id = int(get_jwt_identity())
 
@@ -741,6 +741,9 @@ def start_child_analysis(video_id):
         video = VideoRecord.query.filter_by(id=video_id, user_id=user_id).first()
         if not video:
             return jsonify({'error': '找不到影片'}), 404
+
+        user_profile = UserProfile.query.filter_by(user_id=user_id).first()
+        interface_language = user_profile.language if user_profile and user_profile.language else 'zh-TW'
 
         # Create report record
         report = VideoAnalysisReport(
@@ -786,6 +789,7 @@ def start_child_analysis(video_id):
                         video_mime_type=mime_type,
                         child_name=rpt.child_name,
                         child_age_months=rpt.child_age_months,
+                        interface_language=interface_language,
                         model_name=ai_model,
                         user_id=str(user_id),
                         vertex_config=vertex_config,
@@ -826,6 +830,7 @@ def start_child_analysis(video_id):
                         child_age_months=rpt.child_age_months,
                         user_id=user_id,
                         report_id=report_uuid,
+                        language=interface_language,
                     )
                     if pdf_result.get('success'):
                         rpt.pdf_gcs_url = pdf_result['pdf_gcs_url']
@@ -946,12 +951,19 @@ def download_analysis_report(report_id):
             file_bytes = gcp_bucket.download_file_from_gcs(
                 report.pdf_gcs_url
             )
+            report_language = (report.overall_assessment or {}).get('report_language', 'zh-TW')
             if report.pdf_storage_key.endswith('.pdf'):
                 content_type = 'application/pdf'
-                download_name = f"兒童發展分析報告_{report.child_name}_{report.report_id[:8]}.pdf"
+                if str(report_language).lower().startswith('en'):
+                    download_name = f"child_development_report_{report.child_name}_{report.report_id[:8]}.pdf"
+                else:
+                    download_name = f"兒童發展分析報告_{report.child_name}_{report.report_id[:8]}.pdf"
             else:
                 content_type = 'text/html'
-                download_name = f"兒童發展分析報告_{report.child_name}_{report.report_id[:8]}.html"
+                if str(report_language).lower().startswith('en'):
+                    download_name = f"child_development_report_{report.child_name}_{report.report_id[:8]}.html"
+                else:
+                    download_name = f"兒童發展分析報告_{report.child_name}_{report.report_id[:8]}.html"
             encoded_name = quote(download_name, safe='')
             return Response(
                 file_bytes,

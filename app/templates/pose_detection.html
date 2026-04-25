@@ -191,9 +191,9 @@
     <!-- Floating Actions: Settings & Logout -->
     <div class="floating-actions" aria-label="快速操作">
         {% if user and user.is_admin() %}
-        <button id="admin" class="floating-btn" type="button" title="管理員" onclick="window.location.href='/admin'">
+        <button id="admin" class="floating-btn" type="button" title="管理員" data-i18n-title="admin.access" onclick="window.location.href='/admin'">
             <i class="fas fa-user-shield"></i>
-            <span>管理員</span>
+            <span data-i18n="admin.access">管理員</span>
         </button>
         {% endif %}
         <button id="settings" class="floating-btn" type="button" title="設定">

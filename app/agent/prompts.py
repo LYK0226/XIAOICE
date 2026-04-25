@@ -303,3 +303,197 @@ Important:
 - If professional_referral_needed is true, referral_reason must be a non-empty explanation.
 - If professional_referral_needed is false, set referral_reason to null.
 """
+
+
+def _is_english_language(language: str) -> bool:
+    """Return True when the requested language should be English."""
+    return str(language or '').lower().startswith('en')
+
+
+_VIDEO_TRANSCRIPTION_INSTRUCTION_EN = """You are a professional child development video transcription specialist.
+
+Tasks:
+1. Carefully watch and listen to the video.
+2. Transcribe all audible speech and vocalizations (including children, caregivers, and others).
+3. Describe development-relevant non-verbal sounds: laughter, crying, babbling.
+4. When possible, annotate timestamps (e.g., "0:15 - child says 'mama'").
+
+Output format (strict JSON):
+{
+  "transcription": "Full text transcription",
+  "child_vocalisations": ["List of sounds/words produced by the child"],
+  "caregiver_speech": "Summary of caregiver speech",
+  "audio_quality": "good / fair / poor / no_audio"
+}
+
+If the video has no audio:
+{
+  "transcription": "",
+  "child_vocalisations": [],
+  "caregiver_speech": "",
+  "audio_quality": "no_audio"
+}
+
+Important:
+- Output ONLY valid JSON, no other text.
+- Do NOT wrap output in markdown or code fences.
+- Use English for descriptions and summaries.
+- Keep quoted spoken words in original language when needed; do not rewrite names or quotes inaccurately.
+- Use empty string "" or empty array [] when unknown; avoid null unless explicitly required.
+"""
+
+_VIDEO_ANALYSIS_INSTRUCTION_EN = """You are a child development assessment specialist. Analyze the child's motor and language development based on the video provided in the conversation.
+
+{child_info}
+
+=== Video Transcription Result ===
+{transcription}
+
+=== RAG Knowledge Base Reference ===
+{rag_context}
+
+Analyze the following two dimensions. For each dimension:
+- Carefully observe behaviors demonstrated in the video
+- Evaluate item by item against the developmental standards from the RAG knowledge base above
+- If RAG provides standards, list each one in standards_compliance (use the original RAG text if it is already English, otherwise translate it into clear English)
+- For each standard, set category to the category name directly reflected by the RAG source or heading, translated into clear English
+- If RAG provides no standards, set standards_compliance to an empty array [] and rag_available to false
+
+Scoring definitions:
+- PASS (Meets expectations): The child demonstrates the expected behavior
+- CONCERN (Needs attention): The child only partially demonstrates the ability, or performs below expectations
+- UNABLE_TO_ASSESS (Cannot evaluate): There was absolutely no opportunity to observe this skill in the video (use only in this case)
+
+Output format (strict JSON):
+{{
+  "motor_development": {{
+    "gross_motor": {{
+      "observations": "Gross motor observation description",
+      "overall_status": "TYPICAL|CONCERN|UNABLE_TO_ASSESS"
+    }},
+    "fine_motor": {{
+      "observations": "Fine motor observation description",
+      "overall_status": "TYPICAL|CONCERN|UNABLE_TO_ASSESS"
+    }},
+    "standards_compliance": [
+      {{"standard": "Original or translated RAG standard text", "category": "Category names translated into clear English", "status": "PASS|CONCERN|UNABLE_TO_ASSESS", "rationale": "Explanation"}}
+    ],
+    "rag_available": true,
+    "summary": "Motor development summary"
+  }},
+  "language_development": {{
+    "speech_production": {{
+      "observations": "Speech production observations",
+      "clarity": "clear|partially_clear|unclear|no_speech",
+      "vocabulary_estimate": "Vocabulary estimate",
+      "sentence_complexity": "single_words|two_word|multi_word|complex|none"
+    }},
+    "language_comprehension": {{
+      "observations": "Comprehension observations",
+      "status": "TYPICAL|CONCERN|UNABLE_TO_ASSESS"
+    }},
+    "standards_compliance": [
+      {{"standard": "Original or translated RAG standard text", "category": "Category names translated into clear English", "status": "PASS|CONCERN|UNABLE_TO_ASSESS", "rationale": "Explanation"}}
+    ],
+    "rag_available": true,
+    "overall_status": "TYPICAL|CONCERN|UNABLE_TO_ASSESS",
+    "summary": "Language development summary"
+  }}
+}}
+
+Important:
+- Output ONLY valid JSON, no other text.
+- Do NOT wrap output in markdown or code fences.
+- All descriptions should be in English.
+- Base conclusions only on observable video evidence and transcription; do not invent unseen abilities.
+- standards_compliance must ONLY contain standards actually returned by the RAG knowledge base; never add your own.
+- category should be a clear English label corresponding to the RAG source heading.
+- If a dimension's RAG returned no standards, set that dimension's standards_compliance to [] and rag_available to false.
+- If standards_compliance is non-empty, rag_available must be true.
+- Prefer PASS or CONCERN; use UNABLE_TO_ASSESS only when the skill is completely unobservable in the video.
+- In each standards_compliance rationale, cite concrete observed evidence from the video/transcription.
+"""
+
+_VIDEO_REPORT_INSTRUCTION_EN = """You are a child development report writing specialist. Based on the analysis results below, write a comprehensive parent-friendly report.
+
+{child_info}
+
+=== Transcription Result ===
+{transcription}
+
+=== Full Analysis Result (Motor and Language Development) ===
+{analysis_result}
+
+Extract the motor_development and language_development content from the full analysis result above.
+Synthesize all analysis results into a report covering motor and language development. The report should:
+- Be parent-friendly and easy to understand
+- Provide specific, actionable improvement suggestions for any areas of concern
+- Be encouraging but honest about developmental concerns
+- Include a standards_table for each dimension (copy directly from standards_compliance in the analysis results)
+
+Output format (strict JSON):
+{{
+  "report_language": "en",
+  "report_title": "Child Development Video Analysis Report",
+  "child_name": "...",
+  "child_age_months": ...,
+  "analysis_date": "YYYY-MM-DD",
+  "executive_summary": "2-3 sentence overall assessment summary covering motor and language development",
+  "motor_development": {{
+    "status": "TYPICAL|CONCERN|NEEDS_ATTENTION",
+    "findings": "Detailed findings",
+    "strengths": ["List of strengths"],
+    "concerns": ["List of concerns (if any)"],
+    "recommendations": ["Specific activity/exercise suggestions"],
+    "standards_table": [
+      {{"standard": "...", "category": "...", "status": "PASS|CONCERN|UNABLE_TO_ASSESS", "rationale": "..."}}
+    ],
+    "rag_available": true
+  }},
+  "language_development": {{
+    "status": "TYPICAL|CONCERN|NEEDS_ATTENTION",
+    "findings": "Detailed findings",
+    "strengths": ["List of strengths"],
+    "concerns": ["List of concerns (if any)"],
+    "recommendations": ["Specific suggestions"],
+    "standards_table": [...],
+    "rag_available": true
+  }},
+  "overall_recommendations": [
+    "Overall improvement suggestions",
+    "Home activity suggestions",
+    "When to seek professional assessment"
+  ],
+  "professional_referral_needed": true/false,
+  "referral_reason": "Reason for referral recommendation (null if not needed)",
+  "citations": ["Knowledge base source citation list (if any)"]
+}}
+
+Important:
+- Output ONLY valid JSON, no other text.
+- Do NOT wrap output in markdown or code fences.
+- All text content should be in English.
+- Recommendations must be specific: mention actual games, exercises, interaction strategies, and suggested frequency.
+- If a dimension is UNABLE_TO_ASSESS, suggest what type of video would help with assessment.
+- Copy standards_compliance directly from the analysis results into standards_table; do not add your own standards.
+- Preserve each standard item's category text exactly as it appears in the analysis results; do not normalize it.
+- If a dimension's rag_available is false, its standards_table must be an empty array [].
+- citations must only contain sources actually returned by RAG; set to [] if none.
+- If professional_referral_needed is true, referral_reason must be a non-empty explanation.
+- If professional_referral_needed is false, set referral_reason to null.
+"""
+
+
+def get_video_transcription_instruction(language: str = 'zh-TW') -> str:
+    """Return the transcription prompt in the requested language."""
+    return _VIDEO_TRANSCRIPTION_INSTRUCTION_EN if _is_english_language(language) else VIDEO_TRANSCRIPTION_INSTRUCTION
+
+
+def get_video_analysis_instruction(language: str = 'zh-TW') -> str:
+    """Return the analysis prompt in the requested language."""
+    return _VIDEO_ANALYSIS_INSTRUCTION_EN if _is_english_language(language) else VIDEO_ANALYSIS_INSTRUCTION
+
+
+def get_video_report_instruction(language: str = 'zh-TW') -> str:
+    """Return the report-writing prompt in the requested language."""
+    return _VIDEO_REPORT_INSTRUCTION_EN if _is_english_language(language) else VIDEO_REPORT_INSTRUCTION

@@ -48,6 +48,113 @@ let poseState = {
 let statsData = null;
 
 document.addEventListener('DOMContentLoaded', () => {
+	// ===== Language System =====
+	const ADMIN_I18N_CACHE_KEY = 'i18n_cache_admin_';
+	const SUPPORTED_LANGS = ['zh-TW', 'zh-CN', 'en', 'ja'];
+	window.adminTranslations = window.adminTranslations || {};
+
+	function loadAdminTranslationCache(lang) {
+		try {
+			const cached = localStorage.getItem(ADMIN_I18N_CACHE_KEY + lang);
+			return cached ? JSON.parse(cached) : null;
+		} catch (e) {
+			return null;
+		}
+	}
+
+	function storeAdminTranslationCache(lang, data) {
+		try {
+			localStorage.setItem(ADMIN_I18N_CACHE_KEY + lang, JSON.stringify(data));
+		} catch (e) {}
+	}
+
+	function applyAdminLanguage(t) {
+		if (!t) return;
+		document.querySelectorAll('[data-i18n]').forEach(el => {
+			const key = el.getAttribute('data-i18n');
+			if (t[key]) el.textContent = t[key];
+		});
+		document.querySelectorAll('option[data-i18n]').forEach(option => {
+			const key = option.getAttribute('data-i18n');
+			if (t[key]) option.textContent = t[key];
+		});
+		document.querySelectorAll('[data-i18n-placeholder]').forEach(el => {
+			const key = el.getAttribute('data-i18n-placeholder');
+			if (t[key]) el.placeholder = t[key];
+		});
+		document.querySelectorAll('[data-i18n-title]').forEach(el => {
+			const key = el.getAttribute('data-i18n-title');
+			if (t[key]) el.title = t[key];
+		});
+	}
+
+	function getAdminT() {
+		return window.adminTranslations[window.currentLanguage] || {};
+	}
+
+	async function initializeAdminLanguage() {
+		const savedLang = localStorage.getItem('preferredLanguage') || 'zh-TW';
+		const langToUse = SUPPORTED_LANGS.includes(savedLang) ? savedLang : 'zh-TW';
+
+		let langData = window.adminTranslations[langToUse];
+		if (!langData) {
+			const cached = loadAdminTranslationCache(langToUse);
+			if (cached) {
+				langData = cached;
+				window.adminTranslations[langToUse] = cached;
+			}
+		}
+
+		if (!langData) {
+			try {
+				const res = await fetch(`/static/i18n/${langToUse}.json`, { cache: 'no-store' });
+				if (res.ok) {
+					langData = await res.json();
+					storeAdminTranslationCache(langToUse, langData);
+					window.adminTranslations[langToUse] = langData;
+				}
+			} catch (e) {
+				console.warn('Failed to load admin translations for', langToUse, e);
+			}
+		}
+
+		if (langData) {
+			applyAdminLanguage(langData);
+		}
+		window.currentLanguage = langToUse;
+		document.documentElement.setAttribute('data-i18n-ready', 'true');
+	}
+
+	window.addEventListener('languageChanged', async (e) => {
+		const lang = e.detail?.lang || localStorage.getItem('preferredLanguage') || 'zh-TW';
+		window.currentLanguage = lang;
+
+		if (!window.adminTranslations[lang]) {
+			const cached = loadAdminTranslationCache(lang);
+			if (cached) {
+				window.adminTranslations[lang] = cached;
+			} else {
+				try {
+					const res = await fetch(`/static/i18n/${lang}.json`, { cache: 'no-store' });
+					if (res.ok) {
+						const data = await res.json();
+						storeAdminTranslationCache(lang, data);
+						window.adminTranslations[lang] = data;
+					}
+				} catch (e) {
+					console.warn('Failed to load admin translations for', lang, e);
+				}
+			}
+		}
+
+		const t = window.adminTranslations[lang];
+		if (t) {
+			applyAdminLanguage(t);
+		}
+	});
+
+	initializeAdminLanguage();
+
 	// ===== Modal: Add User =====
 	const modal = document.getElementById('userModal');
 	const btnAddUser = document.getElementById('btnAddUser');
@@ -108,14 +215,14 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 			const data = await res.json();
 			if (res.ok) {
-				alert('用戶創建成功！');
+				alert(window.currentLanguage === 'en' ? 'User created successfully!' : '用戶創建成功！');
 				modal.classList.remove('active');
 				loadUsers();
 			} else {
-				alert(`錯誤: ${data.error || '創建失敗'}`);
+				alert(window.currentLanguage === 'en' ? `Error: ${data.error || 'Creation failed'}` : `錯誤: ${data.error || '創建失敗'}`);
 			}
 		} catch (err) {
-			alert(`創建失敗: ${err.message}`);
+			alert(window.currentLanguage === 'en' ? `Creation failed: ${err.message}` : `創建失敗: ${err.message}`);
 		}
 	});
 
@@ -154,14 +261,14 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 			const result = await res.json();
 			if (res.ok) {
-				alert('用戶更新成功！');
+				alert(window.currentLanguage === 'en' ? 'User updated successfully!' : '用戶更新成功！');
 				editModal.classList.remove('active');
 				loadUsers();
 			} else {
-				alert(`錯誤: ${result.error || '更新失敗'}`);
+				alert(window.currentLanguage === 'en' ? `Error: ${result.error || 'Update failed'}` : `錯誤: ${result.error || '更新失敗'}`);
 			}
 		} catch (err) {
-			alert(`更新失敗: ${err.message}`);
+			alert(window.currentLanguage === 'en' ? `Update failed: ${err.message}` : `更新失敗: ${err.message}`);
 		}
 	});
 
@@ -245,25 +352,30 @@ document.addEventListener('DOMContentLoaded', () => {
 			totalUsersStat.textContent = (statsData.users.total || 0).toLocaleString();
 		}
 		if (newUsersBadge) {
-			newUsersBadge.textContent = `+${statsData.users.new_today || 0} 今日`;
+			newUsersBadge.textContent = window.currentLanguage === 'en'
+				? `+${statsData.users.new_today || 0} today`
+				: `+${statsData.users.new_today || 0} 今日`;
 		}
 		if (activeUsersStat) {
 			activeUsersStat.textContent = (statsData.users.active || 0).toLocaleString();
 		}
 		if (adminUsersBadge) {
-			adminUsersBadge.textContent = `${statsData.users.admins || 0} 位管理員`;
+			const t = getAdminT();
+			adminUsersBadge.textContent = `${statsData.users.admins || 0} ${t['admin.stat.admins'] || '位管理員'}`;
 		}
 		if (assessmentsStat) {
 			assessmentsStat.textContent = (statsData.assessments.total || 0).toLocaleString();
 		}
 		if (completedAssessmentsBadge) {
-			completedAssessmentsBadge.textContent = `${statsData.assessments.flagged || 0} 需關注`;
+			const t = getAdminT();
+			completedAssessmentsBadge.textContent = `${statsData.assessments.flagged || 0} ${t['admin.stat.needsAttention'] || '需關注'}`;
 		}
 		if (videosStat) {
 			videosStat.textContent = (statsData.videos.total || 0).toLocaleString();
 		}
 		if (childrenStatBadge) {
-			childrenStatBadge.textContent = `${statsData.videos.failed || 0} 筆失敗`;
+			const t = getAdminT();
+			childrenStatBadge.textContent = `${statsData.videos.failed || 0} ${t['admin.stat.failed'] || '筆失敗'}`;
 		}
 		if (flaggedReportsCount) {
 			flaggedReportsCount.textContent = (statsData.reports?.flagged || 0).toLocaleString();
@@ -277,7 +389,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	async function loadUsers() {
-		usersTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">載入中...</td></tr>';
+		const t = getAdminT();
+		usersTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">${t['admin.users.loading'] || '載入中...'}</td></tr>`;
 		try {
 			const params = new URLSearchParams({
 				page: userState.page,
@@ -293,7 +406,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			const data = await res.json();
 
 			if (!res.ok) {
-				usersTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">錯誤: ${data.error || '載入失敗'}</td></tr>`;
+				usersTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">${t['admin.kb.searchError'] || '錯誤'}: ${data.error || t['admin.users.loadError'] || '載入失敗'}</td></tr>`;
 				return;
 			}
 
@@ -301,20 +414,23 @@ document.addEventListener('DOMContentLoaded', () => {
 			renderUsersTable(data.users);
 			updatePagination();
 		} catch (e) {
-			usersTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">錯誤: ${e.message}</td></tr>`;
+			usersTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">${t['admin.kb.searchError'] || '錯誤'}: ${e.message}</td></tr>`;
 		}
 	}
 
 	function renderUsersTable(users) {
+		const t = getAdminT();
 		if (!users || users.length === 0) {
-			usersTableBody.innerHTML = '<tr><td colspan="7" style="text-align:center;">尚無用戶數據</td></tr>';
+			usersTableBody.innerHTML = `<tr><td colspan="7" style="text-align:center;">${t['admin.users.noData'] || '尚無用戶數據'}</td></tr>`;
 			return;
 		}
 
 		usersTableBody.innerHTML = users.map((u) => {
-			const roleLabel = { admin: '管理員', teacher: '教師', user: '學生' }[u.role] || u.role;
+			const roleLabels = { admin: t['admin.users.roleAdmin'] || '管理員', teacher: t['admin.users.roleTeacher'] || '教師', user: t['admin.users.roleStudent'] || '學生' };
+			const roleLabel = roleLabels[u.role] || u.role;
 			const roleClass = { admin: 'admin', teacher: 'teacher', user: 'student' }[u.role] || 'student';
-			const statusLabel = u.is_active ? '活躍' : '停用';
+			const statusLabels = { active: t['admin.users.statusActive'] || '活躍', inactive: t['admin.users.statusInactive'] || '停用' };
+			const statusLabel = statusLabels[u.is_active ? 'active' : 'inactive'];
 			const statusClass = u.is_active ? 'active' : 'inactive';
 			const createdDate = u.created_at ? new Date(u.created_at).toLocaleDateString('zh-TW') : '-';
 			const rawUsername = typeof u.username === 'string' ? u.username.trim() : '';
@@ -378,14 +494,14 @@ document.addEventListener('DOMContentLoaded', () => {
 			filterTabs.forEach((t) => t.classList.remove('active'));
 			this.classList.add('active');
 
-			const filterText = this.textContent.trim();
-			if (filterText === '全部') {
+			const filterKey = this.getAttribute('data-i18n');
+			if (filterKey === 'admin.users.filterAll' || (!filterKey && this.textContent.trim() === (getAdminT()['admin.users.filterAll'] || '全部'))) {
 				userState.role = '';
-			} else if (filterText === '管理員') {
+			} else if (filterKey === 'admin.users.filterAdmin' || this.textContent.trim().includes(getAdminT()['admin.users.roleAdmin'] || '管理員')) {
 				userState.role = 'admin';
-			} else if (filterText === '教師') {
+			} else if (filterKey === 'admin.users.filterTeacher' || this.textContent.trim().includes(getAdminT()['admin.users.roleTeacher'] || '教師')) {
 				userState.role = 'teacher';
-			} else if (filterText === '學生') {
+			} else if (filterKey === 'admin.users.filterStudent' || this.textContent.trim().includes(getAdminT()['admin.users.roleStudent'] || '學生')) {
 				userState.role = 'user';
 			}
 			userState.page = 1;
@@ -423,7 +539,7 @@ document.addEventListener('DOMContentLoaded', () => {
 	};
 
 	window.deleteUser = async function (id) {
-		if (!confirm('確定要刪除此用戶嗎？此操作無法復原。')) return;
+		if (!confirm(window.currentLanguage === 'en' ? 'Delete this user? This cannot be undone.' : '確定要刪除此用戶嗎？此操作無法復原。')) return;
 		try {
 			const res = await fetch(`/admin/users/${id}`, {
 				method: 'DELETE',
@@ -431,13 +547,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 			const data = await res.json();
 			if (res.ok) {
-				alert('用戶已刪除');
+				alert(window.currentLanguage === 'en' ? 'User deleted' : '用戶已刪除');
 				loadUsers();
 			} else {
-				alert(`錯誤: ${data.error || '刪除失敗'}`);
+				alert(window.currentLanguage === 'en' ? `Error: ${data.error || 'Delete failed'}` : `錯誤: ${data.error || '刪除失敗'}`);
 			}
 		} catch (e) {
-			alert(`刪除失敗: ${e.message}`);
+			alert(window.currentLanguage === 'en' ? `Delete failed: ${e.message}` : `刪除失敗: ${e.message}`);
 		}
 	};
 
@@ -502,23 +618,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	function attentionBadge(attention) {
 		if (!attention || !attention.is_flagged) {
-			return '<span class="attention-badge normal">正常</span>';
+			return `<span class="attention-badge normal">${window.currentLanguage === 'en' ? 'Normal' : '正常'}</span>`;
 		}
+		const t = getAdminT();
 		const level = attention.attention_level || 'warning';
-		const label = level === 'critical' ? '需立即關注' : '需關注';
+		const label = level === 'critical' ? (t['admin.filterCritical'] || '需立即關注') : (t['admin.focus.flaggedReports'] || '需關注');
 		const title = (attention.attention_reasons || []).join('、');
 		return `<span class="attention-badge ${escapeHtml(level)}" title="${escapeHtml(title)}">${escapeHtml(label)}</span>`;
 	}
 
 	function statusChip(status) {
 		const normalized = String(status || 'unknown').toLowerCase();
+		const t = getAdminT();
 		const labels = {
-			completed: '已完成',
-			processing: '處理中',
-			pending: '等待中',
-			failed: '失敗',
-			active: '啟用',
-			inactive: '停用'
+			completed: t['admin.filterCompleted'] || '已完成',
+			processing: t['admin.filterProcessing'] || '處理中',
+			pending: t['admin.filterPending'] || '等待中',
+			failed: t['admin.filterFailed'] || '失敗',
+			active: t['admin.users.statusActive'] || '啟用',
+			inactive: t['admin.users.statusInactive'] || '停用'
 		};
 		return `<span class="status-chip ${escapeHtml(normalized)}">${escapeHtml(labels[normalized] || status || '—')}</span>`;
 	}
@@ -541,13 +659,15 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	function updateSectionPagination(state, infoEl, prevEl, nextEl) {
-		infoEl.textContent = `第 ${state.page} 頁，共 ${Math.max(state.totalPages || 1, 1)} 頁`;
+		infoEl.textContent = window.currentLanguage === 'en'
+			? `Page ${state.page} of ${Math.max(state.totalPages || 1, 1)}`
+			: `第 ${state.page} 頁，共 ${Math.max(state.totalPages || 1, 1)} 頁`;
 		prevEl.disabled = state.page <= 1;
 		nextEl.disabled = state.page >= Math.max(state.totalPages || 1, 1);
 	}
 
 	function createDetailList(items) {
-		if (!items || items.length === 0) return '<li>無</li>';
+		if (!items || items.length === 0) return window.currentLanguage === 'en' ? '<li>None</li>' : '<li>無</li>';
 		return items.map((item) => `<li>${escapeHtml(item)}</li>`).join('');
 	}
 
@@ -574,12 +694,13 @@ document.addEventListener('DOMContentLoaded', () => {
 	}
 
 	function kbStatusLabel(status) {
+		const t = getAdminT();
 		const labels = {
-			processing: '進行中',
-			ready: '完成',
-			error: '失敗',
-			failed: '失敗',
-			unknown: '未知'
+			processing: t['admin.kb.status.processing'] || '進行中',
+			ready: t['admin.kb.status.ready'] || '完成',
+			error: t['admin.kb.status.error'] || '失敗',
+			failed: t['admin.kb.status.failed'] || '失敗',
+			unknown: t['admin.kb.status.unknown'] || '未知'
 		};
 		return labels[status] || status;
 	}
@@ -589,7 +710,8 @@ document.addEventListener('DOMContentLoaded', () => {
 	async function loadAdminPoseRuns() { /* extracted below */ }
 
 	loadAdminReports = async function () {
-		adminReportsBody.innerHTML = '<tr><td colspan="7" class="kb-empty">載入中...</td></tr>';
+		const t = getAdminT();
+		adminReportsBody.innerHTML = `<tr><td colspan="7" class="kb-empty">${t['admin.reports.loading'] || '載入中...'}</td></tr>`;
 		try {
 			const params = new URLSearchParams({
 				page: reportState.page,
@@ -598,23 +720,31 @@ document.addEventListener('DOMContentLoaded', () => {
 				status: reportState.status,
 				attention: reportState.attention
 			});
-			const res = await fetch(`/admin/video-reports?${params}`, { headers: { Authorization: `Bearer ${getToken()}` } });
+			const res = await fetch(`/admin/video-reports?${params}`, {
+				headers: {
+					Authorization: `Bearer ${getToken()}`,
+					'X-Interface-Language': window.currentLanguage || 'zh-TW'
+				}
+			});
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || '載入失敗');
+			const t = getAdminT();
+			if (!res.ok) throw new Error(data.error || t['admin.reports.loadFailed'] || '載入失敗');
 
 			reportState.totalPages = data.pages || 1;
-			reportListSummary.textContent = `共 ${data.total || 0} 筆影片分析報告`;
+			reportListSummary.textContent = (t['admin.reports.count'] || '共 {count} 筆影片分析報告').replace('{count}', data.total || 0);
 			if (!data.reports || data.reports.length === 0) {
-				adminReportsBody.innerHTML = '<tr><td colspan="7" class="kb-empty">目前沒有符合條件的影片分析報告</td></tr>';
+				adminReportsBody.innerHTML = `<tr><td colspan="7" class="kb-empty">${t['admin.reports.noData'] || '目前沒有符合條件的影片分析報告'}</td></tr>`;
 			} else {
+				const ageMonths = t['admin.reports.ageMonths'] || '個月';
+				const clickHint = t['admin.reports.clickHint'] || '點擊查看詳細內容';
 				adminReportsBody.innerHTML = data.reports.map((report) => `
-					<tr class="${report.attention?.is_flagged ? `row-flagged row-${report.attention.attention_level}` : ''}" onclick="viewAdminReport('${report.report_id}')" style="cursor: pointer;" title="點擊查看詳細內容">
+					<tr class="${report.attention?.is_flagged ? `row-flagged row-${report.attention.attention_level}` : ''}" onclick="viewAdminReport('${report.report_id}')" style="cursor: pointer;" title="${clickHint}">
 						<td>
 							<div class="table-primary">${escapeHtml(report.report_id.slice(0, 8))}</div>
 							<div class="table-secondary">${escapeHtml(report.report_id)}</div>
 						</td>
 						<td><div class="table-primary">${escapeHtml(report.username)}</div><div class="table-secondary">${escapeHtml(report.email)}</div></td>
-						<td><div class="table-primary">${escapeHtml(report.child_name)}</div><div class="table-secondary">${escapeHtml((report.child_age_months || 0).toFixed(0))} 個月</div></td>
+						<td><div class="table-primary">${escapeHtml(report.child_name)}</div><div class="table-secondary">${escapeHtml((report.child_age_months || 0).toFixed(0))} ${ageMonths}</div></td>
 						<td>${escapeHtml(report.video_filename || '-')}</td>
 						<td>${statusChip(report.status)}</td>
 						<td>${attentionBadge(report.attention)}<div class="table-secondary">${summarizeReasons(report.attention)}</div></td>
@@ -625,12 +755,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 			updateSectionPagination(reportState, reportPageInfo, reportPrevPage, reportNextPage);
 		} catch (error) {
-			adminReportsBody.innerHTML = `<tr><td colspan="7" class="kb-empty">錯誤：${escapeHtml(error.message)}</td></tr>`;
+			adminReportsBody.innerHTML = `<tr><td colspan="7" class="kb-empty">${t['admin.kb.searchError'] || '錯誤'}：${escapeHtml(error.message)}</td></tr>`;
 		}
 	};
 
 	loadAdminAssessments = async function () {
-		adminAssessmentsBody.innerHTML = '<tr><td colspan="8" class="kb-empty">載入中...</td></tr>';
+		const t = getAdminT();
+		adminAssessmentsBody.innerHTML = `<tr><td colspan="8" class="kb-empty">${t['admin.assessments.loading'] || '載入中...'}</td></tr>`;
 		try {
 			const params = new URLSearchParams({
 				page: assessmentState.page,
@@ -641,18 +772,20 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 			const res = await fetch(`/admin/assessments?${params}`, { headers: { Authorization: `Bearer ${getToken()}` } });
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || '載入失敗');
+			if (!res.ok) throw new Error(data.error || t['admin.assessments.loadFailed'] || '載入失敗');
 
 			assessmentState.totalPages = data.pages || 1;
-			assessmentListSummary.textContent = `共 ${data.total || 0} 筆發展評估紀錄`;
+			assessmentListSummary.textContent = (t['admin.assessments.count'] || '共 {count} 筆評估記錄').replace('{count}', data.total || 0);
 			if (!data.assessments || data.assessments.length === 0) {
-				adminAssessmentsBody.innerHTML = '<tr><td colspan="8" class="kb-empty">目前沒有符合條件的發展評估紀錄</td></tr>';
+				adminAssessmentsBody.innerHTML = `<tr><td colspan="8" class="kb-empty">${t['admin.assessments.noData'] || '目前沒有符合條件的發展評估紀錄'}</td></tr>`;
 			} else {
+				const ageMonths = t['admin.assessments.ageMonths'] || '個月';
+				const clickHint = t['admin.reports.clickHint'] || '點擊查看詳細內容';
 				adminAssessmentsBody.innerHTML = data.assessments.map((record) => `
-					<tr class="${record.attention?.is_flagged ? `row-flagged row-${record.attention.attention_level}` : ''}" onclick="viewAdminAssessment('${record.assessment_id}')" style="cursor: pointer;" title="點擊查看詳細內容">
+					<tr class="${record.attention?.is_flagged ? `row-flagged row-${record.attention.attention_level}` : ''}" onclick="viewAdminAssessment('${record.assessment_id}')" style="cursor: pointer;" title="${clickHint}">
 						<td><div class="table-primary">${escapeHtml(record.assessment_id.slice(0, 8))}</div><div class="table-secondary">${escapeHtml(record.assessment_id)}</div></td>
 						<td><div class="table-primary">${escapeHtml(record.username)}</div><div class="table-secondary">${escapeHtml(record.email)}</div></td>
-						<td><div class="table-primary">${escapeHtml(record.child_name)}</div><div class="table-secondary">${escapeHtml((record.child_age_months || 0).toFixed(1))} 個月</div></td>
+						<td><div class="table-primary">${escapeHtml(record.child_name)}</div><div class="table-secondary">${escapeHtml((record.child_age_months || 0).toFixed(1))} ${ageMonths}</div></td>
 						<td>${record.overall_dq ?? '-'}</td>
 						<td>${escapeHtml(record.dq_level || '-')}</td>
 						<td>${statusChip(record.is_completed ? 'completed' : 'pending')}</td>
@@ -664,12 +797,13 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 			updateSectionPagination(assessmentState, assessmentPageInfo, assessmentPrevPage, assessmentNextPage);
 		} catch (error) {
-			adminAssessmentsBody.innerHTML = `<tr><td colspan="7" class="kb-empty">錯誤：${escapeHtml(error.message)}</td></tr>`;
+			adminAssessmentsBody.innerHTML = `<tr><td colspan="8" class="kb-empty">${t['admin.kb.searchError'] || '錯誤'}：${escapeHtml(error.message)}</td></tr>`;
 		}
 	};
 
 	loadAdminPoseRuns = async function () {
-		adminPoseRunsBody.innerHTML = '<tr><td colspan="7" class="kb-empty">載入中...</td></tr>';
+		const t = getAdminT();
+		adminPoseRunsBody.innerHTML = `<tr><td colspan="7" class="kb-empty">${t['admin.pose.loading'] || '載入中...'}</td></tr>`;
 		try {
 			const params = new URLSearchParams({
 				page: poseState.page,
@@ -679,17 +813,18 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 			const res = await fetch(`/admin/pose-runs?${params}`, { headers: { Authorization: `Bearer ${getToken()}` } });
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || '載入失敗');
+			if (!res.ok) throw new Error(data.error || t['admin.pose.loadFailed'] || '載入失敗');
 
 			poseState.totalPages = data.pages || 1;
-			poseListSummary.textContent = `共 ${data.total || 0} 筆姿態測驗紀錄`;
+			poseListSummary.textContent = (t['admin.pose.count'] || '共 {count} 筆姿態記錄').replace('{count}', data.total || 0);
 			if (!data.runs || data.runs.length === 0) {
-				adminPoseRunsBody.innerHTML = '<tr><td colspan="7" class="kb-empty">目前沒有符合條件的姿態測驗紀錄</td></tr>';
+				adminPoseRunsBody.innerHTML = `<tr><td colspan="7" class="kb-empty">${t['admin.pose.noData'] || '目前沒有符合條件的姿態測驗紀錄'}</td></tr>`;
 			} else {
+				const clickHint = t['admin.reports.clickHint'] || '點擊查看詳細內容';
 				adminPoseRunsBody.innerHTML = data.runs.map((run) => {
 					const score = run.evaluation?.score || {};
 					return `
-						<tr class="${run.attention?.is_flagged ? `row-flagged row-${run.attention.attention_level}` : ''}" onclick="viewAdminPoseRun('${run.run_id}')" style="cursor: pointer;" title="點擊查看詳細內容">
+						<tr class="${run.attention?.is_flagged ? `row-flagged row-${run.attention.attention_level}` : ''}" onclick="viewAdminPoseRun('${run.run_id}')" style="cursor: pointer;" title="${clickHint}">
 							<td><div class="table-primary">${escapeHtml(run.run_id.slice(0, 8))}</div><div class="table-secondary">${escapeHtml(run.run_id)}</div></td>
 							<td><div class="table-primary">${escapeHtml(run.username)}</div><div class="table-secondary">${escapeHtml(run.email)}</div></td>
 							<td>${score.completed ?? 0} / ${score.total ?? 0}</td>
@@ -704,26 +839,34 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 			updateSectionPagination(poseState, posePageInfo, posePrevPage, poseNextPage);
 		} catch (error) {
-			adminPoseRunsBody.innerHTML = `<tr><td colspan="7" class="kb-empty">錯誤：${escapeHtml(error.message)}</td></tr>`;
+			adminPoseRunsBody.innerHTML = `<tr><td colspan="7" class="kb-empty">${t['admin.kb.searchError'] || '錯誤'}：${escapeHtml(error.message)}</td></tr>`;
 		}
 	};
 
 	window.viewAdminReport = async function (reportId) {
+		const t = getAdminT();
+		const isEnglish = window.currentLanguage === 'en';
 		try {
-			const res = await fetch(`/admin/video-reports/${reportId}`, { headers: { Authorization: `Bearer ${getToken()}` } });
+			const res = await fetch(`/admin/video-reports/${reportId}`, {
+				headers: {
+					Authorization: `Bearer ${getToken()}`,
+					'X-Interface-Language': window.currentLanguage || 'zh-TW'
+				}
+			});
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || '載入失敗');
+			if (!res.ok) throw new Error(data.error || t['admin.reports.loadFailed'] || '載入失敗');
 			const report = data.report;
 			const overall = report.overall_assessment || {};
 			const recommendationItems = Array.isArray(report.recommendations) ? report.recommendations : (overall.overall_recommendations || []);
+			const ageMonths = t['admin.reports.detail.childAge'] || '個月';
 			const videoPreviewHtml = report.video_stream_url
 				? `
 					<div class="detail-section">
-						<h4>相關影片</h4>
+						<h4>${t['admin.kb.colAction'] || (isEnglish ? 'Action' : '操作')}</h4>
 						<div class="detail-actions">
 							<a class="detail-link-btn" href="${escapeHtml(report.video_stream_url)}" target="_blank" rel="noopener noreferrer">
 								<i class="fas fa-film"></i>
-								<span>查看原始影片</span>
+								<span>${t['admin.reports.clickHint'] || '點擊查看詳細內容'}</span>
 								<i class="fas fa-arrow-up-right-from-square detail-link-btn__icon"></i>
 							</a>
 						</div>
@@ -731,97 +874,103 @@ document.addEventListener('DOMContentLoaded', () => {
 				`
 				: `
 					<div class="detail-section">
-						<h4>相關影片</h4>
-						<p>目前沒有可用的影片連結。</p>
+						<h4>${t['admin.kb.colAction'] || (isEnglish ? 'Action' : '操作')}</h4>
+						<p>${t['admin.reports.noVideo'] || '目前沒有可用的影片連結。'}</p>
 					</div>
 				`;
-			openDetailModal('影片分析報告詳情', `
+			const reportLabel = (key, en, zh) => t[key] || (isEnglish ? en : zh);
+			openDetailModal(t['admin.reports.detail.title'] || '影片分析報告詳情', `
 				<div class="detail-grid">
-					<div class="detail-grid-card"><strong>報告 ID</strong><span>${escapeHtml(report.report_id)}</span></div>
-					<div class="detail-grid-card"><strong>用戶</strong><span>${escapeHtml(report.username)} / ${escapeHtml(report.email)}</span></div>
-					<div class="detail-grid-card"><strong>兒童</strong><span>${escapeHtml(report.child_name)}（${escapeHtml((report.child_age_months || 0).toFixed(0))} 個月）</span></div>
-					<div class="detail-grid-card"><strong>原始影片</strong><span>${escapeHtml(report.video_filename || '-')}</span></div>
-					<div class="detail-grid-card"><strong>狀態</strong><span>${escapeHtml(report.status)}</span></div>
-					<div class="detail-grid-card"><strong>轉介建議</strong><span>${overall.professional_referral_needed ? '需要' : '否'}</span></div>
+					<div class="detail-grid-card"><strong>${reportLabel('admin.reports.detail.reportId', 'Report ID', '報告 ID')}</strong><span>${escapeHtml(report.report_id)}</span></div>
+					<div class="detail-grid-card"><strong>${reportLabel('admin.reports.detail.user', 'User', '用戶')}</strong><span>${escapeHtml(report.username)} / ${escapeHtml(report.email)}</span></div>
+					<div class="detail-grid-card"><strong>${t['admin.reports.colChild'] || '兒童'}</strong><span>${escapeHtml(report.child_name)}（${escapeHtml((report.child_age_months || 0).toFixed(0))} ${ageMonths}）</span></div>
+					<div class="detail-grid-card"><strong>${reportLabel('admin.reports.detail.originalVideo', 'Original Video', '原始影片')}</strong><span>${escapeHtml(report.video_filename || '-')}</span></div>
+					<div class="detail-grid-card"><strong>${t['admin.reports.colStatus'] || '狀態'}</strong><span>${escapeHtml(report.status)}</span></div>
+					<div class="detail-grid-card"><strong>${reportLabel('admin.reports.detail.referral', 'Referral Recommendation', '轉介建議')}</strong><span>${overall.professional_referral_needed ? (isEnglish ? 'Yes' : '是') : (isEnglish ? 'No' : '否')}</span></div>
 				</div>
 				<div class="detail-section">
-					<h4>關注原因</h4>
+					<h4>${t['admin.reports.colAttention'] || '關注'}</h4>
 					<ul class="detail-list">${createDetailList(report.attention?.attention_reasons)}</ul>
 				</div>
 				<div class="detail-section">
-					<h4>綜合摘要</h4>
+					<h4>${t['video.reportSummaryTitle'] || '綜合摘要'}</h4>
 					<p>${escapeHtml(overall.executive_summary || '—')}</p>
 				</div>
 				<div class="detail-section">
-					<h4>整體建議</h4>
+					<h4>${t['video.reportOverallRecommendations'] || '整體建議'}</h4>
 					<ul class="detail-list">${createDetailList(recommendationItems)}</ul>
 				</div>
 				${videoPreviewHtml}
 			`);
 		} catch (error) {
-			alert(`載入報告詳情失敗：${error.message}`);
+			alert(`${t['admin.kb.searchError'] || '錯誤'}：${error.message}`);
 		}
 	};
 
 	window.viewAdminAssessment = async function (assessmentId) {
+		const t = getAdminT();
+		const isEnglish = window.currentLanguage === 'en';
 		try {
 			const res = await fetch(`/admin/assessments/${assessmentId}`, { headers: { Authorization: `Bearer ${getToken()}` } });
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || '載入失敗');
+			if (!res.ok) throw new Error(data.error || t['admin.assessments.loadFailed'] || '載入失敗');
 			const assessment = data.assessment;
 			const areas = assessment.area_results || {};
-			const areaRows = Object.entries(areas).map(([key, value]) => `<li><strong>${escapeHtml(value.label || key)}</strong>：${escapeHtml(value.status || '—')}｜心智年齡 ${escapeHtml(value.mental_age || '-')}</li>`).join('') || '<li>無</li>';
-			openDetailModal('發展評估詳情', `
+			const ageMonths = t['admin.assessments.detail.childAge'] || '個月';
+			const areaRows = Object.entries(areas).map(([key, value]) => `<li><strong>${escapeHtml(value.label || key)}</strong>: ${escapeHtml(value.status || '—')} | ${isEnglish ? 'Mental age' : '心智年齡'} ${escapeHtml(value.mental_age || '-')}</li>`).join('') || (isEnglish ? '<li>None</li>' : '<li>無</li>');
+			openDetailModal(isEnglish ? 'Development Assessment Details' : '發展評估詳情', `
 				<div class="detail-grid">
-					<div class="detail-grid-card"><strong>評估 ID</strong><span>${escapeHtml(assessment.assessment_id)}</span></div>
-					<div class="detail-grid-card"><strong>用戶</strong><span>${escapeHtml(assessment.username)} / ${escapeHtml(assessment.email)}</span></div>
-					<div class="detail-grid-card"><strong>兒童</strong><span>${escapeHtml(assessment.child_name)}（${escapeHtml((assessment.child_age_months || 0).toFixed(1))} 個月）</span></div>
+					<div class="detail-grid-card"><strong>${isEnglish ? 'Assessment ID' : '評估 ID'}</strong><span>${escapeHtml(assessment.assessment_id)}</span></div>
+					<div class="detail-grid-card"><strong>${isEnglish ? 'User' : '用戶'}</strong><span>${escapeHtml(assessment.username)} / ${escapeHtml(assessment.email)}</span></div>
+					<div class="detail-grid-card"><strong>${t['admin.assessments.colChild'] || '兒童'}</strong><span>${escapeHtml(assessment.child_name)}（${escapeHtml((assessment.child_age_months || 0).toFixed(1))} ${ageMonths}）</span></div>
 					<div class="detail-grid-card"><strong>DQ</strong><span>${escapeHtml(assessment.overall_dq ?? '-')}</span></div>
-					<div class="detail-grid-card"><strong>DQ 等級</strong><span>${escapeHtml(assessment.dq_level || '-')}</span></div>
-					<div class="detail-grid-card"><strong>完成狀態</strong><span>${assessment.is_completed ? '已完成' : '未完成'}</span></div>
+					<div class="detail-grid-card"><strong>${isEnglish ? 'DQ Level' : 'DQ 等級'}</strong><span>${escapeHtml(assessment.dq_level || '-')}</span></div>
+					<div class="detail-grid-card"><strong>${t['admin.assessments.colCompletion'] || (isEnglish ? 'Completion Status' : '完成狀態')}</strong><span>${assessment.is_completed ? (isEnglish ? 'Completed' : '已完成') : (isEnglish ? 'Incomplete' : '未完成')}</span></div>
 				</div>
 				<div class="detail-section">
-					<h4>關注原因</h4>
+					<h4>${t['admin.reports.colAttention'] || (isEnglish ? 'Attention' : '關注')}</h4>
 					<ul class="detail-list">${createDetailList(assessment.attention?.attention_reasons)}</ul>
 				</div>
 				<div class="detail-section">
-					<h4>各領域結果</h4>
+					<h4>${isEnglish ? 'Domain Results' : '各領域結果'}</h4>
 					<ul class="detail-list">${areaRows}</ul>
 				</div>
 			`);
 		} catch (error) {
-			alert(`載入評估詳情失敗：${error.message}`);
+			alert(`${t['admin.kb.searchError'] || '錯誤'}：${error.message}`);
 		}
 	};
 
 	window.viewAdminPoseRun = async function (runId) {
+		const t = getAdminT();
+		const isEnglish = window.currentLanguage === 'en';
 		try {
 			const res = await fetch(`/admin/pose-runs/${runId}`, { headers: { Authorization: `Bearer ${getToken()}` } });
 			const data = await res.json();
-			if (!res.ok) throw new Error(data.error || '載入失敗');
+			if (!res.ok) throw new Error(data.error || t['admin.pose.loadFailed'] || '載入失敗');
 			const run = data.run;
 			const score = run.evaluation?.score || {};
 			const steps = run.evaluation?.steps || [];
-			openDetailModal('姿態檢測詳情', `
+			openDetailModal(isEnglish ? 'Pose Assessment Details' : '姿態檢測詳情', `
 				<div class="detail-grid">
 					<div class="detail-grid-card"><strong>Run ID</strong><span>${escapeHtml(run.run_id)}</span></div>
-					<div class="detail-grid-card"><strong>用戶</strong><span>${escapeHtml(run.username)} / ${escapeHtml(run.email)}</span></div>
-					<div class="detail-grid-card"><strong>完成率</strong><span>${escapeHtml(score.percent ?? 0)}%</span></div>
-					<div class="detail-grid-card"><strong>完成步數</strong><span>${escapeHtml(score.completed ?? 0)} / ${escapeHtml(score.total ?? 0)}</span></div>
-					<div class="detail-grid-card"><strong>評級</strong><span>${escapeHtml(run.evaluation?.level || '-')}</span></div>
-					<div class="detail-grid-card"><strong>建立時間</strong><span>${escapeHtml(formatDate(run.created_at))}</span></div>
+					<div class="detail-grid-card"><strong>${isEnglish ? 'User' : '用戶'}</strong><span>${escapeHtml(run.username)} / ${escapeHtml(run.email)}</span></div>
+					<div class="detail-grid-card"><strong>${isEnglish ? 'Completion Rate' : '完成率'}</strong><span>${escapeHtml(score.percent ?? 0)}%</span></div>
+					<div class="detail-grid-card"><strong>${isEnglish ? 'Completed Steps' : '完成步數'}</strong><span>${escapeHtml(score.completed ?? 0)} / ${escapeHtml(score.total ?? 0)}</span></div>
+					<div class="detail-grid-card"><strong>${isEnglish ? 'Level' : '評級'}</strong><span>${escapeHtml(run.evaluation?.level || '-')}</span></div>
+					<div class="detail-grid-card"><strong>${isEnglish ? 'Created At' : '建立時間'}</strong><span>${escapeHtml(formatDate(run.created_at))}</span></div>
 				</div>
 				<div class="detail-section">
-					<h4>關注原因</h4>
+					<h4>${isEnglish ? 'Attention Reasons' : '關注原因'}</h4>
 					<ul class="detail-list">${createDetailList(run.attention?.attention_reasons)}</ul>
 				</div>
 				<div class="detail-section">
-					<h4>動作步驟結果</h4>
-					<ul class="detail-list">${steps.length ? steps.map((step) => `<li><strong>${escapeHtml(step.nameZh || step.key || '步驟')}</strong>：${escapeHtml(step.passed ? '通過' : '未通過')}｜${escapeHtml((step.notes || []).join('、') || '—')}</li>`).join('') : '<li>無步驟資料</li>'}</ul>
+					<h4>${isEnglish ? 'Step Results' : '動作步驟結果'}</h4>
+					<ul class="detail-list">${steps.length ? steps.map((step) => `<li><strong>${escapeHtml(step.nameEn || step.nameZh || step.key || (isEnglish ? 'Step' : '步驟'))}</strong>: ${escapeHtml(step.passed ? (isEnglish ? 'Pass' : '通過') : (isEnglish ? 'Fail' : '未通過'))} | ${escapeHtml((step.notes || []).join('、') || (isEnglish ? 'None' : '無'))}</li>`).join('') : `<li>${isEnglish ? 'No step data' : '無步驟資料'}</li>`}</ul>
 				</div>
 			`);
 		} catch (error) {
-			alert(`載入姿態詳情失敗：${error.message}`);
+			alert(`${isEnglish ? 'Failed to load pose details' : '載入姿態詳情失敗'}：${error.message}`);
 		}
 	};
 
@@ -941,7 +1090,9 @@ document.addEventListener('DOMContentLoaded', () => {
 	window.batchDeleteDocs = async function () {
 		const ids = Array.from(document.querySelectorAll('.kb-doc-checkbox:checked')).map((cb) => parseInt(cb.value, 10));
 		if (ids.length === 0) return;
-		if (!confirm(`確定刪除已選的 ${ids.length} 個文件及所有相關資料？`)) return;
+		if (!confirm(window.currentLanguage === 'en'
+			? `Delete the ${ids.length} selected documents and all related data?`
+			: `確定刪除已選的 ${ids.length} 個文件及所有相關資料？`)) return;
 		try {
 			const res = await fetch('/admin/rag/documents/batch', {
 				method: 'DELETE',
@@ -949,10 +1100,10 @@ document.addEventListener('DOMContentLoaded', () => {
 				body: JSON.stringify({ document_ids: ids })
 			});
 			const data = await res.json();
-			alert(data.message || '刪除完成');
+			alert(data.message || (window.currentLanguage === 'en' ? 'Deleted' : '刪除完成'));
 			loadKbDocuments();
 		} catch (e) {
-			alert(`批量刪除失敗: ${e.message}`);
+			alert(window.currentLanguage === 'en' ? `Batch delete failed: ${e.message}` : `批量刪除失敗: ${e.message}`);
 		}
 	};
 
@@ -981,7 +1132,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 		for (let i = 0; i < fileArray.length; i += 1) {
 			const file = fileArray[i];
-			kbUploadArea.innerHTML = `<div class="upload-icon spin"><i class="fas fa-spinner"></i></div><div class="upload-text"><h3>上傳中... (${i + 1}/${total})</h3><p>${file.name}</p></div>`;
+			kbUploadArea.innerHTML = `<div class="upload-icon spin"><i class="fas fa-spinner"></i></div><div class="upload-text"><h3>${window.currentLanguage === 'en' ? 'Uploading...' : '上傳中...'} (${i + 1}/${total})</h3><p>${file.name}</p></div>`;
 
 			const fd = new FormData();
 			fd.append('file', file);
@@ -996,7 +1147,7 @@ document.addEventListener('DOMContentLoaded', () => {
 					successCount += 1;
 				} else {
 					failCount += 1;
-					errors.push(`${file.name}: ${data.error || '上傳失敗'}`);
+					errors.push(`${file.name}: ${data.error || (window.currentLanguage === 'en' ? 'Upload failed' : '上傳失敗')}`);
 				}
 			} catch (e) {
 				failCount += 1;
@@ -1004,18 +1155,24 @@ document.addEventListener('DOMContentLoaded', () => {
 			}
 		}
 
-		let message = `已提交 ${successCount} 個文件，背景處理中`;
+		let message = window.currentLanguage === 'en'
+			? `Submitted ${successCount} document(s); processing in the background`
+			: `已提交 ${successCount} 個文件，背景處理中`;
 		if (failCount > 0) {
-			message += `，失敗 ${failCount} 個`;
+			message += window.currentLanguage === 'en' ? `, ${failCount} failed` : `，失敗 ${failCount} 個`;
 		}
 		if (errors.length > 0 && errors.length <= 3) {
 			message += `\n${errors.join('\n')}`;
 		} else if (errors.length > 3) {
-			message += `\n${errors.slice(0, 3).join('\n')}\n...及其他 ${errors.length - 3} 個錯誤`;
+			message += window.currentLanguage === 'en'
+				? `\n${errors.slice(0, 3).join('\n')}\n...and ${errors.length - 3} more error(s)`
+				: `\n${errors.slice(0, 3).join('\n')}\n...及其他 ${errors.length - 3} 個錯誤`;
 		}
 		alert(message);
 
-		kbUploadArea.innerHTML = '<div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div><div class="upload-text"><h3>點擊或拖放文件上傳</h3><p>支援格式：PDF、TXT、Markdown（可批量上傳）</p></div><input type="file" id="kbFileInput" accept=".pdf,.txt,.md" multiple style="display:none;">';
+		kbUploadArea.innerHTML = window.currentLanguage === 'en'
+			? '<div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div><div class="upload-text"><h3>Click or drop files to upload</h3><p>Supported formats: PDF, TXT, Markdown (batch upload supported)</p></div><input type="file" id="kbFileInput" accept=".pdf,.txt,.md" multiple style="display:none;">'
+			: '<div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div><div class="upload-text"><h3>點擊或拖放文件上傳</h3><p>支援格式：PDF、TXT、Markdown（可批量上傳）</p></div><input type="file" id="kbFileInput" accept=".pdf,.txt,.md" multiple style="display:none;">';
 		document.getElementById('kbFileInput').addEventListener('change', () => {
 			if (kbFileInput.files.length) uploadKbFiles(kbFileInput.files);
 		});
@@ -1024,17 +1181,18 @@ document.addEventListener('DOMContentLoaded', () => {
 
 	// --- Document list ---
 	async function loadKbDocuments() {
+		const t = getAdminT();
 		try {
 			const res = await fetch('/admin/rag/documents', { headers: { Authorization: `Bearer ${getToken()}` } });
 			const data = await res.json();
 			if (!res.ok) {
-				kbDocBody.innerHTML = '<tr><td colspan="6" class="kb-empty">載入失敗</td></tr>';
+				kbDocBody.innerHTML = `<tr><td colspan="6" class="kb-empty">${t['admin.kb.loadFailed'] || '載入失敗'}</td></tr>`;
 				return;
 			}
 
 			const docs = data.documents || [];
 			if (docs.length === 0) {
-				kbDocBody.innerHTML = '<tr><td colspan="6" class="kb-empty">尚無文件。上傳文件以建立知識庫。</td></tr>';
+				kbDocBody.innerHTML = `<tr><td colspan="6" class="kb-empty">${t['admin.kb.noDocuments'] || '尚無文件。上傳文件以建立知識庫。'}</td></tr>`;
 				document.getElementById('kbSelectAll').checked = false;
 				document.getElementById('kbSelectAll').indeterminate = false;
 				updateBatchDeleteBtn();
@@ -1060,7 +1218,7 @@ document.addEventListener('DOMContentLoaded', () => {
 			document.getElementById('kbSelectAll').checked = false;
 			updateBatchDeleteBtn();
 		} catch (e) {
-			kbDocBody.innerHTML = `<tr><td colspan="6" class="kb-empty">錯誤: ${e.message}</td></tr>`;
+			kbDocBody.innerHTML = `<tr><td colspan="6" class="kb-empty">${t['admin.kb.searchError'] || '錯誤'}: ${e.message}</td></tr>`;
 		}
 	}
 
@@ -1170,7 +1328,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				if (reason === 'io server disconnect') {
 					refreshRequired = true;
 					socket.io.opts.reconnection = false;
-					alert('連線已被伺服器中斷，請重新整理頁面後再連線。');
+					const t = window.translations && window.translations[window.currentLanguage] || {};
+					alert(t['admin.socket.disconnected'] || '連線已被伺服器中斷，請重新整理頁面後再連線。');
 				}
 			});
 
@@ -1178,7 +1337,8 @@ document.addEventListener('DOMContentLoaded', () => {
 				refreshRequired = true;
 				socket.io.opts.reconnection = false;
 				socket.disconnect();
-				alert((data && data.message) || '連線已因閒置中斷，請重新整理頁面後再繼續使用。');
+				const t = window.translations && window.translations[window.currentLanguage] || {};
+				alert((data && data.message) || t['admin.socket.idle'] || '連線已因閒置中斷，請重新整理頁面後再繼續使用。');
 			});
 
 			socket.on('rag_document_status', (data) => {
@@ -1202,9 +1362,10 @@ document.addEventListener('DOMContentLoaded', () => {
 	});
 
 	async function searchKb() {
+		const t = window.translations && window.translations[window.currentLanguage] || {};
 		const query = kbSearchInput.value.trim();
 		if (!query) return;
-		kbSearchResults.innerHTML = '<div class="kb-empty">搜尋中...</div>';
+		kbSearchResults.innerHTML = `<div class="kb-empty">${t['admin.kb.searchSearching'] || '搜尋中...'}</div>`;
 		try {
 			const res = await fetch('/admin/rag/search', {
 				method: 'POST',
@@ -1213,25 +1374,28 @@ document.addEventListener('DOMContentLoaded', () => {
 			});
 			const data = await res.json();
 			if (!res.ok) {
-				kbSearchResults.innerHTML = `<div class="kb-empty">錯誤: ${data.error || '搜尋失敗'}</div>`;
+				kbSearchResults.innerHTML = `<div class="kb-empty">${t['admin.kb.searchError'] || '錯誤'}: ${data.error || t['admin.kb.searchFailed'] || '搜尋失敗'}</div>`;
 				return;
 			}
 
 			const results = data.results || [];
 			if (results.length === 0) {
-				kbSearchResults.innerHTML = '<div class="kb-empty">未找到相關結果</div>';
+				kbSearchResults.innerHTML = `<div class="kb-empty">${t['admin.kb.searchNoResults'] || '未找到相關結果'}</div>`;
 				return;
 			}
+			const resultFormat = t['admin.kb.searchResultFormat'] || '#{index} | {name}{page}{heading} | 相關度: {score}%';
+			const pageSuffix = t['admin.kb.searchResultPage'] || ' p.{page}';
+			const headingSuffix = t['admin.kb.searchResultHeading'] || ' | {heading}';
 			kbSearchResults.innerHTML = results.map((r, i) => `
 				<div class="kb-result-item">
 					<div class="kb-result-meta">
-						<i class="fas fa-file-alt"></i> #${i + 1} | ${r.document_name}${r.page_number ? ` p.${r.page_number}` : ''}${r.heading ? ` | ${r.heading}` : ''} | 相關度: ${(r.similarity * 100).toFixed(0)}%
+						<i class="fas fa-file-alt"></i> ${resultFormat.replace('#{index}', i + 1).replace('{name}', r.document_name).replace('{page}', r.page_number ? pageSuffix.replace('{page}', r.page_number) : '').replace('{heading}', r.heading ? headingSuffix.replace('{heading}', r.heading) : '').replace('{score}', (r.similarity * 100).toFixed(0))}
 					</div>
 					<div class="kb-result-content">${r.content.length > 500 ? `${r.content.slice(0, 500)}...` : r.content}</div>
 				</div>
 			`).join('');
 		} catch (e) {
-			kbSearchResults.innerHTML = `<div class="kb-empty">錯誤: ${e.message}</div>`;
+			kbSearchResults.innerHTML = `<div class="kb-empty">${t['admin.kb.searchError'] || '錯誤'}: ${e.message}</div>`;
 		}
 	}
 });

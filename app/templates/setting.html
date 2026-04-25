@@ -277,12 +277,12 @@
         <div class="config-form-content" id="aiStudioConfigForm">
             <div class="form-group">
                 <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="config_modal.ai_studio.name">配置名稱</label>
-                <input type="text" id="configAiStudioName" class="custom-modal-input" placeholder="例如：My Gemini Key" required>
+                <input type="text" id="configAiStudioName" class="custom-modal-input" data-i18n-placeholder="config_modal.ai_studio.name_placeholder" placeholder="e.g. My Gemini Key" required>
             </div>
             
             <div class="form-group">
                 <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="config_modal.ai_studio.api_key">API 金鑰</label>
-                <input type="password" id="configAiStudioKey" class="custom-modal-input" placeholder="輸入您的 Google AI API 金鑰" required>
+                <input type="password" id="configAiStudioKey" class="custom-modal-input" data-i18n-placeholder="placeholder.apiKeyValue" placeholder="Enter your Google AI API key" required>
                 <small class="form-hint" style="display: block; margin-top: 8px; color: #8B7AA8; font-size: 12px;" data-i18n="config_modal.hint">您的 API 金鑰將被加密存儲</small>
             </div>
         </div>
@@ -291,23 +291,23 @@
         <div class="config-form-content" id="vertexAiConfigForm" style="display: none;">
             <div class="form-group">
                 <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="config_modal.vertex.name">配置名稱</label>
-                <input type="text" id="configVertexName" class="custom-modal-input" placeholder="例如：My Vertex Account" required>
+                <input type="text" id="configVertexName" class="custom-modal-input" data-i18n-placeholder="config_modal.vertex.name_placeholder" placeholder="e.g. My Vertex Account" required>
             </div>
             
             <div class="form-group">
                 <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="config_modal.vertex.auth_mode">驗證方式</label>
                 <div id="configVertexAuthToggle" style="display: flex; gap: 8px; border-bottom: 2px solid #e0e0e0; margin-bottom: 12px;">
                     <button type="button" class="config-vertex-auth-btn active" data-auth-mode="service_account" style="flex: 1; padding: 10px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid #8B7AA8; font-weight: 600; color: #8B7AA8;">
-                        <span>Service Account</span>
+                        <span data-i18n="settings.advanced.vertex.auth_mode.service_account">Service Account</span>
                     </button>
                     <button type="button" class="config-vertex-auth-btn" data-auth-mode="api_key" style="flex: 1; padding: 10px; border: none; background: transparent; cursor: pointer; border-bottom: 3px solid transparent; font-weight: 500; color: #666;">
-                        <span>API Key</span>
+                        <span data-i18n="settings.advanced.vertex.auth_mode.api_key">API Key</span>
                     </button>
                 </div>
             </div>
 
             <div class="form-group" id="configVertexServiceAccountGroup">
-                <label style="display: block; margin-bottom: 8px; font-weight: 500;">Service Account JSON</label>
+                <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="settings.advanced.vertex.service_account">Service Account JSON</label>
                 <div style="display: flex; gap: 8px; margin-bottom: 8px;">
                     <button type="button" id="configVertexUploadBtn" class="add-api-key-btn" style="flex: 1; margin: 0; padding: 10px;">
                         <i class="fas fa-upload"></i> <span data-i18n="config_modal.vertex.upload">上傳檔案</span>
@@ -326,7 +326,7 @@
 
             <div class="form-group" id="configVertexApiKeyGroup" style="display: none;">
                 <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="config_modal.vertex.api_key">Vertex API Key</label>
-                <input type="password" id="configVertexApiKey" class="custom-modal-input" placeholder="輸入 Vertex API Key" autocomplete="new-password">
+                <input type="password" id="configVertexApiKey" class="custom-modal-input" data-i18n-placeholder="config_modal.vertex.api_key_placeholder" placeholder="Enter your Vertex API key" autocomplete="new-password">
                 <small class="form-hint" style="display: block; margin-top: 8px; color: #666; font-size: 12px;" data-i18n="config_modal.vertex.api_key_hint">使用 Google Cloud Console 產生的 Vertex API Key（Express mode）</small>
             </div>
         </div>
@@ -348,11 +348,11 @@
         <h2 data-i18n="api_key_modal.title">添加 API 金鑰</h2>
         <div class="api-key-form">
             <div class="form-group">
-                <input type="text" id="apiKeyName" class="custom-modal-input" placeholder="金鑰名稱 (例如：My Gemini Key)" required>
+                <input type="text" id="apiKeyName" class="custom-modal-input" data-i18n-placeholder="config_modal.ai_studio.name_placeholder" placeholder="e.g. My Gemini Key" required>
             </div>
             
             <div class="form-group">
-                <input type="password" id="apiKeyValue" class="custom-modal-input" placeholder="輸入您的 Google AI API 金鑰" required>
+                <input type="password" id="apiKeyValue" class="custom-modal-input" data-i18n-placeholder="placeholder.apiKeyValue" placeholder="Enter your Google AI API key" required>
                 <small class="form-hint" style="display: block; text-align: center; margin-bottom: 20px; color: #8B7AA8; font-weight: 600;" data-i18n="api_key_modal.hint">您的 API 金鑰將被加密存儲</small>
             </div>
             
@@ -371,9 +371,9 @@
 <!-- Edit Username Modal -->
 <div id="editUsernameModal" class="modal">
     <div class="modal-content custom-modal-mini">
-        <h2 data-i18n="settings.profile.edit_username">編輯用戶名稱</h2>
+        <h2 data-i18n="settings.profile.edit_username">Edit Username</h2>
         <div class="form-group">
-            <input type="text" id="editUsernameInput" class="custom-modal-input" placeholder="輸入新的用戶名稱" required>
+            <input type="text" id="editUsernameInput" class="custom-modal-input" data-i18n-placeholder="placeholder.editUsername" placeholder="Enter new username" required>
         </div>
         <div class="custom-modal-actions">
             <button id="saveUsernameBtn" class="custom-modal-btn primary">
@@ -389,13 +389,13 @@
 <!-- Edit Email Modal -->
 <div id="editEmailModal" class="modal">
     <div class="modal-content custom-modal-mini">
-        <h2 data-i18n="settings.profile.edit_email">編輯電子郵件</h2>
+        <h2 data-i18n="settings.profile.edit_email">Edit Email</h2>
         <p style="text-align:center; margin-bottom:12px; color:#666; font-size:13px;">
             <i class="fas fa-info-circle"></i>
             <span data-i18n="settings.profile.edit_email_note">驗證電郵將發送至新地址，驗證後自動更新。</span>
         </p>
         <div class="form-group">
-            <input type="email" id="editEmailInput" class="custom-modal-input" placeholder="輸入新的電子郵件地址" required>
+            <input type="email" id="editEmailInput" class="custom-modal-input" data-i18n-placeholder="placeholder.editEmail" placeholder="Enter new email address" required>
         </div>
         <div class="custom-modal-actions">
             <button id="saveEmailBtn" class="custom-modal-btn primary">
@@ -411,8 +411,8 @@
 <!-- Change Password Modal — now just sends reset email -->
 <div id="changePasswordModal" class="modal">
     <div class="modal-content custom-modal-mini">
-        <h2 data-i18n="settings.profile.change_password">重設密碼</h2>
-        <p style="text-align: center; margin-bottom: 16px; color: #666;">將向您的電子郵件發送密碼重設連結。</p>
+        <h2 data-i18n="settings.profile.change_password">Reset Password</h2>
+        <p style="text-align: center; margin-bottom: 16px; color: #666;" data-i18n="settings.profile.reset_password.desc">A password reset link will be sent to your email address.</p>
         <div class="custom-modal-actions">
             <button id="savePasswordBtn" class="custom-modal-btn primary">
                 <i class="fas fa-paper-plane"></i> <span data-i18n="settings.profile.send_reset">發送重設郵件</span>
@@ -427,10 +427,10 @@
 <!-- Delete Account Modal -->
 <div id="deleteAccountModal" class="modal">
     <div class="modal-content custom-modal-mini">
-        <h2 data-i18n="settings.profile.delete_account">刪除帳號</h2>
-        <p id="deleteAccountPrompt" style="text-align: center; margin-bottom: 12px; color: #b00020; font-size: 14px;">請輸入您的密碼以確認刪除帳號。</p>
+        <h2 data-i18n="settings.profile.delete_account">Delete Account</h2>
+        <p id="deleteAccountPrompt" style="text-align: center; margin-bottom: 12px; color: #b00020; font-size: 14px;" data-i18n="settings.profile.delete_account.prompt">Please enter your password to confirm account deletion.</p>
         <div class="custom-modal-input-group">
-            <input type="password" id="deleteAccountPasswordInput" class="custom-modal-input" placeholder="輸入密碼" required>
+            <input type="password" id="deleteAccountPasswordInput" class="custom-modal-input" data-i18n-placeholder="placeholder.confirmDeletionPassword" placeholder="Enter your password" required>
         </div>
         <div class="custom-modal-actions">
             <button id="confirmDeleteAccountBtn" class="custom-modal-btn delete-btn" style="background-color: #b00020; color: white;">
@@ -446,20 +446,20 @@
 <!-- Add/Edit Child Modal -->
 <div id="childModal" class="modal">
     <div class="modal-content custom-modal-mini" style="max-width: 500px; width: 90%;">
-        <h2 id="childModalTitle" data-i18n="settings.children.form.add">添加小朋友</h2>
+        <h2 id="childModalTitle" data-i18n="settings.children.form.add">Add Child</h2>
         
         <div class="form-group" style="margin-bottom: 20px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="settings.children.form.name">姓名 *</label>
-            <input type="text" id="childModalName" class="custom-modal-input" placeholder="例如：小明" required>
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="settings.children.form.name">Name *</label>
+            <input type="text" id="childModalName" class="custom-modal-input" data-i18n-placeholder="settings.children.form.name_placeholder" placeholder="e.g. Oliver" required>
         </div>
         
         <div class="form-group" style="margin-bottom: 20px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="settings.children.form.birthdate">出生日期 *</label>
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="settings.children.form.birthdate">Birth Date *</label>
             <input type="date" id="childModalBirthdate" class="custom-modal-input" required style="cursor: pointer;">
         </div>
         
         <div class="form-group" style="margin-bottom: 20px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="settings.children.form.gender">性別</label>
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="settings.children.form.gender">Gender</label>
             <select id="childModalGender" class="custom-modal-input">
                 <option value="" data-i18n="settings.children.form.gender.unspecified">不透露</option>
                 <option value="male" data-i18n="settings.children.form.gender.male">男</option>
@@ -469,8 +469,8 @@
         </div>
         
         <div class="form-group" style="margin-bottom: 20px;">
-            <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="settings.children.form.notes">備註</label>
-            <textarea id="childModalNotes" class="custom-modal-input" rows="3" placeholder="例如：早產、過敏等特殊情況" style="resize: vertical; min-height: 80px; padding: 12px;"></textarea>
+            <label style="display: block; margin-bottom: 8px; font-weight: 500;" data-i18n="settings.children.form.notes">Notes</label>
+            <textarea id="childModalNotes" class="custom-modal-input" rows="3" data-i18n-placeholder="settings.children.form.notes_placeholder" placeholder="e.g. Premature birth, allergies, or other notes" style="resize: vertical; min-height: 80px; padding: 12px;"></textarea>
         </div>
         
         <div class="custom-modal-actions" style="margin-top: 24px;">

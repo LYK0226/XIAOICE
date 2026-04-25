@@ -28,9 +28,9 @@ from google.genai import types
 
 from app import gcp_bucket
 from app.agent.prompts import (
-    VIDEO_TRANSCRIPTION_INSTRUCTION,
-    VIDEO_ANALYSIS_INSTRUCTION,
-    VIDEO_REPORT_INSTRUCTION,
+    get_video_transcription_instruction,
+    get_video_analysis_instruction,
+    get_video_report_instruction,
 )
 
 logger = logging.getLogger(__name__)
@@ -251,6 +251,24 @@ def _collect_rag_context(age_months: float) -> str:
     return "\n\n".join(sections)
 
 
+def _build_child_info(child_name: str, child_age_months: float, age_bracket: str, language: str) -> str:
+    """Build the child info block in the requested language."""
+    if str(language or '').lower().startswith('en'):
+        return (
+            "Child information:\n"
+            f"- Name: {child_name}\n"
+            f"- Age: {child_age_months:.1f} months\n"
+            f"- Age bracket: {age_bracket} months"
+        )
+
+    return (
+        "兒童資料：\n"
+        f"- 姓名：{child_name}\n"
+        f"- 年齡：{child_age_months:.1f} 個月\n"
+        f"- 年齡段：{age_bracket} 個月"
+    )
+
+
 def _safe_parse(text) -> Any:
     """Try to parse JSON from text, return as-is if not JSON."""
     if isinstance(text, dict):
@@ -413,6 +431,7 @@ def _build_generation_config(
 def _create_video_pipeline(
     model_name: str,
     vertex_config: Dict[str, Any],
+    interface_language: str = 'zh-TW',
 ) -> SequentialAgent:
     """Create a 3-step SequentialAgent for video analysis.
 
@@ -445,7 +464,7 @@ def _create_video_pipeline(
     transcription_agent = Agent(
         name="video_transcription",
         model=_create_vertex_model(model_name, client),
-        instruction=VIDEO_TRANSCRIPTION_INSTRUCTION,
+        instruction=get_video_transcription_instruction(interface_language),
         output_key="transcription",
         generate_content_config=transcription_generation_config,
     )
@@ -453,7 +472,7 @@ def _create_video_pipeline(
     analysis_agent = Agent(
         name="video_analysis",
         model=_create_vertex_model(model_name, client),
-        instruction=VIDEO_ANALYSIS_INSTRUCTION,
+        instruction=get_video_analysis_instruction(interface_language),
         output_key="analysis_result",
         generate_content_config=analysis_generation_config,
     )
@@ -461,7 +480,7 @@ def _create_video_pipeline(
     report_agent = Agent(
         name="video_report",
         model=_create_vertex_model(model_name, client),
-        instruction=VIDEO_REPORT_INSTRUCTION,
+        instruction=get_video_report_instruction(interface_language),
         output_key="final_report",
         generate_content_config=report_generation_config,
     )
@@ -547,6 +566,7 @@ def run_video_analysis(
     video_mime_type: str,
     child_name: str,
     child_age_months: float,
+    interface_language: str = 'zh-TW',
     model_name: str = "gemini-2.0-flash",
     user_id: str = "default",
     vertex_config: Optional[Dict[str, Any]] = None,
@@ -588,25 +608,22 @@ def run_video_analysis(
             file_data = gcp_bucket.download_file_from_gcs(video_gcs_url)
             age_bracket = _get_age_bracket(child_age_months)
 
-            child_info = (
-                f"兒童資料：\n"
-                f"- 姓名：{child_name}\n"
-                f"- 年齡：{child_age_months:.1f} 個月\n"
-                f"- 年齡段：{age_bracket} 個月"
-            )
+            child_info = _build_child_info(child_name, child_age_months, age_bracket, interface_language)
 
             # --- Pre-compute RAG context ---
             logger.info("[Step 0] Collecting RAG context...")
             rag_context = _collect_rag_context(child_age_months)
 
             # --- Create pipeline (with injected Vertex credentials) ---
-            pipeline = _create_video_pipeline(model_name, vertex_config)
+            pipeline = _create_video_pipeline(model_name, vertex_config, interface_language=interface_language)
 
             # --- Build user message with video ---
             video_part = types.Part.from_bytes(data=file_data, mime_type=video_mime_type)
-            text_part = types.Part.from_text(
-                text=f"Please analyze the child's development in this video.\n\n{child_info}"
-            )
+            if str(interface_language or '').lower().startswith('en'):
+                request_text = f"Please analyze the child's development in this video.\n\n{child_info}"
+            else:
+                request_text = f"請分析這段影片中的兒童發展情況。\n\n{child_info}"
+            text_part = types.Part.from_text(text=request_text)
             user_content = types.Content(
                 role="user",
                 parts=[text_part, video_part],
@@ -642,6 +659,7 @@ def run_video_analysis(
             final_report = _safe_parse(results["final_report"])
             if isinstance(analysis_result, dict) and isinstance(final_report, dict):
                 final_report = _merge_report_with_analysis(final_report, analysis_result)
+                final_report["report_language"] = interface_language
 
             logger.info("[Step 1/3] Transcription done.")
             logger.info("[Step 2/3] Analysis done.")

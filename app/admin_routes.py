@@ -12,6 +12,64 @@ ATTENTION_LEVEL_RANK = {
 }
 
 
+def _is_english_language(language):
+	"""Return True when the requested language should be English."""
+	return str(language or '').lower().startswith('en')
+
+
+def _get_admin_interface_language(default_language='zh-TW'):
+	"""Return the preferred interface language for admin responses."""
+	return request.headers.get('X-Interface-Language') or default_language
+
+
+def _get_report_language(report, fallback_language='zh-TW'):
+	"""Return the language associated with a video report."""
+	overall = report.overall_assessment or {}
+	return overall.get('report_language') or getattr(report, 'report_language', None) or fallback_language
+
+
+def _get_video_report_texts(language):
+	"""Return localized attention text snippets for video reports."""
+	if _is_english_language(language):
+		return {
+			'report_failed': 'Report processing failed',
+			'transcription_failed': 'Transcription failed',
+			'analysis_failed': 'Video analysis failed',
+			'professional_referral': 'Professional referral recommended',
+			'referral_reason': 'Referral reason: {reason}',
+			'needs_attention': '{section}: needs attention',
+			'concern': '{section}: attention needed',
+			'standards_concern': '{section}: age-standard comparison shows concerns',
+			'section_names': {
+				'motor': 'Motor development',
+				'language': 'Language development',
+				'social_emotional': 'Social-emotional development',
+				'cognitive': 'Cognitive development',
+				'adaptive_behavior': 'Adaptive behavior',
+				'selfcare': 'Self-care',
+			},
+		}
+
+	return {
+		'report_failed': '報告處理失敗',
+		'transcription_failed': '轉錄失敗',
+		'analysis_failed': '影片分析失敗',
+		'professional_referral': '建議專業轉介',
+		'referral_reason': '轉介原因：{reason}',
+		'needs_attention': '{section}：需要注意',
+		'concern': '{section}：需要關注',
+		'standards_concern': '{section}：年齡標準比對有關注項目',
+		'section_names': {
+			'motor': '身體動作',
+			'language': '語言發展',
+			'social_emotional': '社交情緒',
+			'cognitive': '認知發展',
+			'adaptive_behavior': '適應行為',
+			'selfcare': '自理能力',
+		},
+	}
+
+
 def _get_admin_request_user():
 	"""Return the current admin user or an error response."""
 	from .models import User
@@ -30,39 +88,43 @@ def _promote_attention_level(current_level, next_level):
 	return current_level
 
 
-def _collect_dimension_sections(report):
+def _collect_dimension_sections(report, language='zh-TW'):
 	"""Collect all structured dimension sections from a video report."""
 	overall = report.overall_assessment or {}
+	texts = _get_video_report_texts(language)
+	section_names = texts['section_names']
 	return [
-		('身體動作', report.motor_analysis or overall.get('motor_development') or {}),
-		('語言發展', report.language_analysis or overall.get('language_development') or {}),
-		('社交情緒', report.social_emotional_analysis or overall.get('social_emotional') or {}),
-		('認知發展', report.cognitive_analysis or overall.get('cognitive') or {}),
-		('適應行為', report.adaptive_behavior_analysis or overall.get('adaptive_behavior') or {}),
-		('自理能力', report.selfcare_analysis or overall.get('selfcare') or {}),
+		(section_names['motor'], report.motor_analysis or overall.get('motor_development') or {}),
+		(section_names['language'], report.language_analysis or overall.get('language_development') or {}),
+		(section_names['social_emotional'], report.social_emotional_analysis or overall.get('social_emotional') or {}),
+		(section_names['cognitive'], report.cognitive_analysis or overall.get('cognitive') or {}),
+		(section_names['adaptive_behavior'], report.adaptive_behavior_analysis or overall.get('adaptive_behavior') or {}),
+		(section_names['selfcare'], report.selfcare_analysis or overall.get('selfcare') or {}),
 	]
 
 
-def _build_video_report_attention(report):
+def _build_video_report_attention(report, language=None):
 	"""Build normalized attention metadata for a structured video report."""
 	level = 'normal'
 	reasons = []
 	overall = report.overall_assessment or {}
+	report_language = language or _get_report_language(report, _get_admin_interface_language())
+	texts = _get_video_report_texts(report_language)
 
 	if report.status == 'failed':
 		level = _promote_attention_level(level, 'critical')
-		reasons.append('報告處理失敗')
+		reasons.append(texts['report_failed'])
 
 	if overall.get('professional_referral_needed'):
 		level = _promote_attention_level(level, 'critical')
-		reasons.append('建議專業轉介')
+		reasons.append(texts['professional_referral'])
 
 	referral_reason = overall.get('referral_reason')
 	if referral_reason:
-		reasons.append(f'轉介原因：{referral_reason}')
+		reasons.append(texts['referral_reason'].format(reason=referral_reason))
 
 	dimension_statuses = []
-	for section_name, section_data in _collect_dimension_sections(report):
+	for section_name, section_data in _collect_dimension_sections(report, report_language):
 		if not isinstance(section_data, dict) or not section_data:
 			continue
 
@@ -72,15 +134,15 @@ def _build_video_report_attention(report):
 
 		if section_status == 'NEEDS_ATTENTION':
 			level = _promote_attention_level(level, 'critical')
-			reasons.append(f'{section_name}：需要注意')
+			reasons.append(texts['needs_attention'].format(section=section_name))
 		elif section_status == 'CONCERN':
 			level = _promote_attention_level(level, 'warning')
-			reasons.append(f'{section_name}：需要關注')
+			reasons.append(texts['concern'].format(section=section_name))
 
 		standards = section_data.get('standards_table') or section_data.get('standards_compliance') or []
 		if isinstance(standards, list) and any((item or {}).get('status') == 'CONCERN' for item in standards):
 			level = _promote_attention_level(level, 'warning')
-			reasons.append(f'{section_name}：年齡標準比對有關注項目')
+			reasons.append(texts['standards_concern'].format(section=section_name))
 
 	normalized_reasons = []
 	for reason in reasons:
@@ -96,21 +158,22 @@ def _build_video_report_attention(report):
 	}
 
 
-def _build_video_attention(video, latest_report=None):
+def _build_video_attention(video, latest_report=None, language=None):
 	"""Build normalized attention metadata for a video record."""
 	level = 'normal'
 	reasons = []
+	texts = _get_video_report_texts(language or _get_admin_interface_language())
 
 	if video.transcription_status == 'failed':
 		level = _promote_attention_level(level, 'critical')
-		reasons.append('轉錄失敗')
+		reasons.append(texts['transcription_failed'])
 	if video.analysis_status == 'failed':
 		level = _promote_attention_level(level, 'critical')
-		reasons.append('影片分析失敗')
+		reasons.append(texts['analysis_failed'])
 
 	report_attention = None
 	if latest_report:
-		report_attention = _build_video_report_attention(latest_report)
+		report_attention = _build_video_report_attention(latest_report, language=language)
 		level = _promote_attention_level(level, report_attention['attention_level'])
 		reasons.extend(report_attention['attention_reasons'])
 
